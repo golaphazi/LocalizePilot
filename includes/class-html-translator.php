@@ -1,6 +1,6 @@
 <?php
 
-namespace NextTranslate;
+namespace LocalizePilot;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -119,7 +119,7 @@ final class HTML_Translator {
 							if ( '' === trim( $value ) || ! preg_match( '/[\p{L}\p{N}]/u', $value ) ) {
 								return $attribute_match[0];
 							}
-							$marker = '__NEXT_TRANSLATE_ATTRIBUTE_' . $attribute_counter++ . '__';
+							$marker = '__LOCALIZEPILOT_ATTRIBUTE_' . $attribute_counter++ . '__';
 							$attribute_entries[ $marker ] = $value;
 							$unique[ $value ] = true;
 							return $attribute_match[1] . '=' . $attribute_match[2] . $marker . $attribute_match[2];
@@ -333,7 +333,7 @@ final class HTML_Translator {
 
 	private function rewrite_internal_links( \DOMDocument $dom, string $language ): void {
 		$xpath = new \DOMXPath( $dom );
-		foreach ( array( array( '//a[@href]', 'href' ), array( '//form[@action]', 'action' ) ) as $definition ) {
+		foreach ( array( array( '//a[@href]', 'href' ) ) as $definition ) {
 			$nodes = $xpath->query( $definition[0] );
 			if ( ! $nodes ) {
 				continue;

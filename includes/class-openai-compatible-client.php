@@ -1,6 +1,6 @@
 <?php
 
-namespace NextTranslate;
+namespace LocalizePilot;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -62,6 +62,7 @@ final class OpenAI_Compatible_Client extends AI_Client_Base {
 			$content = implode( '', $parts );
 		}
 		if ( ! is_string( $content ) || '' === trim( $content ) ) {
+			/* translators: %s is the selected AI provider name. */
 			throw new \RuntimeException( sprintf( __( '%s returned an empty response.', 'localizepilot' ), Provider_Catalog::label( $this->provider_id ) ) );
 		}
 		return $this->parse_translations( $content, count( $texts ) );

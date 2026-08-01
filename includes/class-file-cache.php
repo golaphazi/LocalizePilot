@@ -1,6 +1,6 @@
 <?php
 
-namespace NextTranslate;
+namespace LocalizePilot;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -8,18 +8,11 @@ final class File_Cache {
 	private array $settings;
 	private string $directory;
 	private string $page_directory;
-	private string $group = 'next_translate_html';
+	private string $group = 'localizepilot_html';
 
 	public function __construct( array $settings ) {
 		$this->settings = $settings;
-		$new_directory  = trailingslashit( WP_CONTENT_DIR ) . 'cache/localizepilot';
-		$old_directory  = trailingslashit( WP_CONTENT_DIR ) . 'cache/next-translate';
-
-		if ( ! is_dir( $new_directory ) && is_dir( $old_directory ) ) {
-			if ( ! @rename( $old_directory, $new_directory ) ) {
-				$new_directory = $old_directory;
-			}
-		}
+		$new_directory = trailingslashit( WP_CONTENT_DIR ) . 'cache/localizepilot';
 
 		$this->directory      = $new_directory;
 		$this->page_directory = trailingslashit( $this->directory ) . 'pages';
@@ -484,6 +477,11 @@ final class File_Cache {
 		if ( ! is_file( $htaccess ) ) {
 			$this->atomic_write( $htaccess, "<IfModule mod_authz_core.c>\nRequire all denied\n</IfModule>\n<IfModule !mod_authz_core.c>\nDeny from all\n</IfModule>\n" );
 		}
+
+		$web_config = trailingslashit( $this->directory ) . 'web.config';
+		if ( ! is_file( $web_config ) ) {
+			$this->atomic_write( $web_config, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<configuration><system.webServer><security><authorization><remove users=\"*\" roles=\"\" verbs=\"\"/><add accessType=\"Deny\" users=\"*\"/></authorization></security></system.webServer></configuration>\n" );
+		}
 	}
 
 	private function read_metadata( string $path ): array {
@@ -531,7 +529,7 @@ final class File_Cache {
 
 		if ( ! $locked ) {
 			fclose( $handle );
-			@unlink( $temporary );
+			unlink( $temporary );
 			return false;
 		}
 
@@ -540,7 +538,7 @@ final class File_Cache {
 			if ( false === $bytes || 0 === $bytes ) {
 				flock( $handle, LOCK_UN );
 				fclose( $handle );
-				@unlink( $temporary );
+				unlink( $temporary );
 				return false;
 			}
 			$written += $bytes;
@@ -550,8 +548,13 @@ final class File_Cache {
 		flock( $handle, LOCK_UN );
 		fclose( $handle );
 
+		if ( '\\' === DIRECTORY_SEPARATOR && is_file( $path ) && ! unlink( $path ) ) {
+			unlink( $temporary );
+			return false;
+		}
+
 		if ( ! rename( $temporary, $path ) ) {
-			@unlink( $temporary );
+			unlink( $temporary );
 			return false;
 		}
 

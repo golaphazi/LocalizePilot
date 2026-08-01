@@ -15,29 +15,32 @@ $translation_ids = get_posts(
 		'no_found_rows'  => true,
 	)
 );
+
 foreach ( $translation_ids as $translation_id ) {
 	wp_delete_post( $translation_id, true );
 }
 
-$directories = array(
-	trailingslashit( WP_CONTENT_DIR ) . 'cache/localizepilot',
-	trailingslashit( WP_CONTENT_DIR ) . 'cache/next-translate',
-);
+$cache_directory = trailingslashit( WP_CONTENT_DIR ) . 'cache/localizepilot';
 
-foreach ( $directories as $directory ) {
-if ( is_dir( $directory ) ) {
+if ( is_dir( $cache_directory ) ) {
 	$iterator = new RecursiveIteratorIterator(
-		new RecursiveDirectoryIterator( $directory, FilesystemIterator::SKIP_DOTS ),
+		new RecursiveDirectoryIterator( $cache_directory, FilesystemIterator::SKIP_DOTS ),
 		RecursiveIteratorIterator::CHILD_FIRST
 	);
+
 	foreach ( $iterator as $item ) {
+		$path = $item->getPathname();
+
 		if ( $item->isDir() ) {
-			@rmdir( $item->getPathname() );
-		} else {
-			@unlink( $item->getPathname() );
+			if ( is_dir( $path ) ) {
+				rmdir( $path );
+			}
+		} elseif ( is_file( $path ) ) {
+			wp_delete_file( $path );
 		}
 	}
-	@rmdir( $directory );
-}
 
+	if ( is_dir( $cache_directory ) ) {
+		rmdir( $cache_directory );
+	}
 }

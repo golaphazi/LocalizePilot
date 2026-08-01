@@ -1,6 +1,6 @@
 <?php
 
-namespace NextTranslate;
+namespace LocalizePilot;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -176,6 +176,7 @@ abstract class AI_Client_Base implements Translation_Client_Interface {
 		}
 
 		if ( ! is_array( $data ) ) {
+			/* translators: %s is the selected translation provider name. */
 			throw new \RuntimeException( sprintf( __( '%s returned invalid JSON.', 'localizepilot' ), Provider_Catalog::label( $this->provider_id ) ) );
 		}
 		return $data;

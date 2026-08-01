@@ -1,6 +1,6 @@
 <?php
 
-namespace NextTranslate;
+namespace LocalizePilot;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -129,15 +129,15 @@ final class Settings {
 			return;
 		}
 
-		wp_enqueue_style( 'localizepilot-admin', NEXT_TRANSLATE_URL . 'assets/admin.css', array(), NEXT_TRANSLATE_VERSION );
+		wp_enqueue_style( 'localizepilot-admin', LOCALIZEPILOT_URL . 'assets/admin.css', array(), LOCALIZEPILOT_VERSION );
 		if ( ! $is_settings ) {
 			return;
 		}
 
-		wp_enqueue_script( 'localizepilot-admin', NEXT_TRANSLATE_URL . 'assets/admin.js', array(), NEXT_TRANSLATE_VERSION, true );
+		wp_enqueue_script( 'localizepilot-admin', LOCALIZEPILOT_URL . 'assets/admin.js', array(), LOCALIZEPILOT_VERSION, true );
 		wp_localize_script(
 			'localizepilot-admin',
-			'nextTranslateAdmin',
+			'localizePilotAdmin',
 			array(
 				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
 				'nonce'   => wp_create_nonce( 'next_translate_test_api' ),
@@ -169,15 +169,15 @@ final class Settings {
 		<div class="wrap next-translate-admin localizepilot-admin">
 			<header class="nt-admin-hero">
 				<div class="nt-brand-lockup"><span class="nt-brand-icon">LP</span><div><span class="nt-eyebrow"><?php esc_html_e( 'Multilingual Content & Media', 'localizepilot' ); ?></span><h1><?php esc_html_e( 'LocalizePilot', 'localizepilot' ); ?></h1><p><?php esc_html_e( 'Translate, review, edit, cache, and personalize every WordPress language experience.', 'localizepilot' ); ?></p></div></div>
-				<div class="nt-hero-statuses"><span class="nt-pill <?php echo empty( $options['enabled'] ) ? 'is-off' : 'is-on'; ?>"><i></i><?php echo empty( $options['enabled'] ) ? esc_html__( 'Translation off', 'localizepilot' ) : esc_html__( 'Translation active', 'localizepilot' ); ?></span><span class="nt-pill"><strong><?php echo esc_html( Provider_Catalog::label( $provider ) ); ?></strong></span></div>
+				<div class="nt-hero-statuses"><span class="nt-pill <?php echo esc_attr( empty( $options['enabled'] ) ? 'is-off' : 'is-on' ); ?>"><i></i><?php echo empty( $options['enabled'] ) ? esc_html__( 'Translation off', 'localizepilot' ) : esc_html__( 'Translation active', 'localizepilot' ); ?></span><span class="nt-pill"><strong><?php echo esc_html( Provider_Catalog::label( $provider ) ); ?></strong></span></div>
 			</header>
 
-			<?php settings_errors(); ?>
-			<?php if ( ! empty( $_GET['localizepilot_cache_message'] ) ) : ?><div class="notice notice-success is-dismissible"><p><?php echo esc_html( sanitize_text_field( wp_unslash( $_GET['localizepilot_cache_message'] ) ) ); ?></p></div><?php endif; ?>
-
 			<nav class="nt-tabs" aria-label="<?php esc_attr_e( 'LocalizePilot settings', 'localizepilot' ); ?>">
-				<?php foreach ( $tabs as $slug => $tab ) : ?><a class="nt-tab <?php echo $slug === $active_tab ? 'is-active' : ''; ?>" href="<?php echo esc_url( add_query_arg( array( 'page' => 'localizepilot', 'tab' => $slug ), admin_url( 'admin.php' ) ) ); ?>"><span class="dashicons <?php echo esc_attr( $tab['icon'] ); ?>"></span><?php echo esc_html( $tab['label'] ); ?></a><?php endforeach; ?>
+				<?php foreach ( $tabs as $slug => $tab ) : ?><a class="nt-tab <?php echo esc_attr( $slug === $active_tab ? 'is-active' : '' ); ?>" href="<?php echo esc_url( add_query_arg( array( 'page' => 'localizepilot', 'tab' => $slug ), admin_url( 'admin.php' ) ) ); ?>"><span class="dashicons <?php echo esc_attr( $tab['icon'] ); ?>"></span><?php echo esc_html( $tab['label'] ); ?></a><?php endforeach; ?>
 			</nav>
+
+
+			<?php if ( ! empty( $_GET['localizepilot_cache_message'] ) ) : ?><div class="notice notice-success is-dismissible"><p><?php echo esc_html( sanitize_text_field( wp_unslash( $_GET['localizepilot_cache_message'] ) ) ); ?></p></div><?php endif; ?>
 
 			<div class="nt-tab-panel">
 				<?php
@@ -209,25 +209,25 @@ final class Settings {
 	}
 
 	private function form_start( string $tab ): void {
-		echo nextlang_print('<form method="post" action="options.php" class="nt-settings-form">');
+		echo ('<form method="post" action="options.php" class="nt-settings-form">');
 		settings_fields( 'next_translate_group' );
-		echo nextlang_print('<input type="hidden" name="' . esc_attr( Plugin::OPTION ) . '[settings_tab]" value="' . esc_attr( $tab ) . '">');
+		echo ('<input type="hidden" name="' . esc_attr( Plugin::OPTION ) . '[settings_tab]" value="' . esc_attr( $tab ) . '">');
 	}
 
 	private function form_end( string $label = '' ): void {
 		$label = $label ?: __( 'Save changes', 'localizepilot' );
-		echo nextlang_print('<div class="nt-save-bar"><div><strong>') . esc_html__( 'Save your LocalizePilot settings', 'localizepilot' ) . '</strong><span>' . esc_html__( 'Updated settings invalidate rendered page cache only. Gutenberg translations remain safe.', 'localizepilot' ) . '</span></div>';
+		echo ('<div class="nt-save-bar"><div><strong>') . esc_html__( 'Save your LocalizePilot settings', 'localizepilot' ) . '</strong><span>' . esc_html__( 'Updated settings invalidate rendered page cache only. Gutenberg translations remain safe.', 'localizepilot' ) . '</span></div>';
 		submit_button( $label, 'primary', 'submit', false );
-		echo nextlang_print('</div></form>');
+		echo ('</div></form>');
 	}
 
 	private function render_dashboard_tab( array $options, array $languages, array $usage, int $limit, array $stats, string $provider ): void {
 		$providers = Provider_Catalog::all();
 		$this->form_start( 'dashboard' ); ?>
 		<div class="nt-stat-grid">
-			<div class="nt-stat"><span><?php esc_html_e( 'Rendered cache', 'localizepilot' ); ?></span><strong><?php echo esc_html( (string) $stats['count'] ); ?></strong><small><?php echo esc_html( sprintf( __( '%d expired', 'localizepilot' ), $stats['expired'] ) ); ?></small></div>
+			<div class="nt-stat"><span><?php esc_html_e( 'Rendered cache', 'localizepilot' ); ?></span><strong><?php echo esc_html( (string) $stats['count'] ); ?></strong><small><?php /* translators: %d is the number of expired cache entries. */ echo esc_html( sprintf( __( '%d expired', 'localizepilot' ), $stats['expired'] ) ); ?></small></div>
 			<div class="nt-stat"><span><?php esc_html_e( 'Translation snapshots', 'localizepilot' ); ?></span><strong><?php echo esc_html( (string) ( $stats['snapshots'] ?? 0 ) ); ?></strong><small><?php esc_html_e( 'Gutenberg-generated HTML', 'localizepilot' ); ?></small></div>
-			<div class="nt-stat"><span><?php esc_html_e( 'Daily API use', 'localizepilot' ); ?></span><strong><?php echo esc_html( (string) $usage['count'] ); ?><em>/<?php echo esc_html( (string) $limit ); ?></em></strong><small><?php echo empty( $options['daily_limit_enabled'] ) ? esc_html__( 'Limit disabled', 'localizepilot' ) : esc_html( sprintf( __( '%d remaining', 'localizepilot' ), max( 0, $limit - $usage['count'] ) ) ); ?></small></div>
+			<div class="nt-stat"><span><?php esc_html_e( 'Daily API use', 'localizepilot' ); ?></span><strong><?php echo esc_html( (string) $usage['count'] ); ?><em>/<?php echo esc_html( (string) $limit ); ?></em></strong><small><?php echo empty( $options['daily_limit_enabled'] ) ? esc_html__( 'Limit disabled', 'localizepilot' ) : /* translators: %d is the remaining number of allowed translations today. */ esc_html( sprintf( __( '%d remaining', 'localizepilot' ), max( 0, $limit - $usage['count'] ) ) ); ?></small></div>
 			<div class="nt-stat"><span><?php esc_html_e( 'Languages', 'localizepilot' ); ?></span><strong><?php echo esc_html( (string) ( count( (array) $options['enabled_languages'] ) + 1 ) ); ?></strong><small><?php esc_html_e( 'Including English', 'localizepilot' ); ?></small></div>
 		</div>
 
@@ -259,7 +259,7 @@ final class Settings {
 			?>
 				<div class="nt-provider-panel" data-provider="<?php echo esc_attr( $provider_id ); ?>">
 					<div class="nt-provider-panel-grid">
-						<div class="nt-field"><label><?php echo esc_html( sprintf( __( '%s API key', 'localizepilot' ), (string) $config['label'] ) ); ?></label><div class="nt-input-action"><input type="password" name="<?php echo esc_attr( Plugin::OPTION ); ?>[<?php echo esc_attr( $key_field ); ?>]" value="" placeholder="<?php echo empty( $options[ $key_field ] ) ? esc_attr__( 'Paste API key', 'localizepilot' ) : esc_attr__( 'Saved key · leave blank to keep it', 'localizepilot' ); ?>" autocomplete="new-password"><button type="button" class="button nt-reveal-key"><?php esc_html_e( 'Show', 'localizepilot' ); ?></button></div><label class="nt-mini-check"><input type="checkbox" name="<?php echo esc_attr( Plugin::OPTION ); ?>[clear_<?php echo esc_attr( $key_field ); ?>]" value="1"> <?php esc_html_e( 'Remove saved key', 'localizepilot' ); ?></label></div>
+						<div class="nt-field"><label><?php /* translators: %s is the translation provider name. */ echo esc_html( sprintf( __( '%s API key', 'localizepilot' ), (string) $config['label'] ) ); ?></label><div class="nt-input-action"><input type="password" name="<?php echo esc_attr( Plugin::OPTION ); ?>[<?php echo esc_attr( $key_field ); ?>]" value="" placeholder="<?php echo empty( $options[ $key_field ] ) ? esc_attr__( 'Paste API key', 'localizepilot' ) : esc_attr__( 'Saved key · leave blank to keep it', 'localizepilot' ); ?>" autocomplete="new-password"><button type="button" class="button nt-reveal-key"><?php esc_html_e( 'Show', 'localizepilot' ); ?></button></div><label class="nt-mini-check"><input type="checkbox" name="<?php echo esc_attr( Plugin::OPTION ); ?>[clear_<?php echo esc_attr( $key_field ); ?>]" value="1"> <?php esc_html_e( 'Remove saved key', 'localizepilot' ); ?></label></div>
 						<?php if ( '' !== $model_field ) : ?><div class="nt-field"><label><?php esc_html_e( 'Model name', 'localizepilot' ); ?></label><input type="text" class="nt-provider-model" name="<?php echo esc_attr( Plugin::OPTION ); ?>[<?php echo esc_attr( $model_field ); ?>]" value="<?php echo esc_attr( (string) ( $options[ $model_field ] ?? $config['default_model'] ?? '' ) ); ?>" placeholder="<?php echo esc_attr( (string) ( $config['default_model'] ?? '' ) ); ?>"><small><?php esc_html_e( 'Enter a model ID supported by your provider account.', 'localizepilot' ); ?></small></div><?php endif; ?>
 					</div>
 				</div>
@@ -297,15 +297,15 @@ final class Settings {
 	}
 
 	private function render_cache_tab( array $options, File_Cache $cache, array $stats ): void {
-		$cache_page = max( 1, absint( $_GET['cache_page'] ?? 1 ) );
+		$cache_page = max( 1, absint( wp_unslash( $_GET['cache_page'] ?? 1 ) ) );
 		$cache_type = sanitize_key( wp_unslash( $_GET['cache_type'] ?? 'all' ) );
 		$cache_type = in_array( $cache_type, array( 'all', 'page', 'snapshot' ), true ) ? $cache_type : 'all';
 		$history    = $cache->history( $cache_page, 15, $cache_type );
 		$this->form_start( 'cache' ); ?>
-		<div class="nt-cache-summary"><div><span><?php esc_html_e( 'Rendered pages', 'localizepilot' ); ?></span><strong><?php echo esc_html( (string) $stats['count'] ); ?></strong></div><div><span><?php esc_html_e( 'Snapshots', 'localizepilot' ); ?></span><strong><?php echo esc_html( (string) ( $stats['snapshots'] ?? 0 ) ); ?></strong></div><div><span><?php esc_html_e( 'Total size', 'localizepilot' ); ?></span><strong><?php echo esc_html( size_format( (int) $stats['size'], 2 ) ); ?></strong></div><div><span><?php esc_html_e( 'Directory', 'localizepilot' ); ?></span><strong class="<?php echo $stats['writable'] ? 'is-good' : 'is-bad'; ?>"><?php echo $stats['writable'] ? esc_html__( 'Writable', 'localizepilot' ) : esc_html__( 'Not writable', 'localizepilot' ); ?></strong></div></div>
+		<div class="nt-cache-summary"><div><span><?php esc_html_e( 'Rendered pages', 'localizepilot' ); ?></span><strong><?php echo esc_html( (string) $stats['count'] ); ?></strong></div><div><span><?php esc_html_e( 'Snapshots', 'localizepilot' ); ?></span><strong><?php echo esc_html( (string) ( $stats['snapshots'] ?? 0 ) ); ?></strong></div><div><span><?php esc_html_e( 'Total size', 'localizepilot' ); ?></span><strong><?php echo esc_html( size_format( (int) $stats['size'], 2 ) ); ?></strong></div><div><span><?php esc_html_e( 'Directory', 'localizepilot' ); ?></span><strong class="<?php echo esc_attr( $stats['writable'] ? 'is-good' : 'is-bad' ); ?>"><?php echo $stats['writable'] ? esc_html__( 'Writable', 'localizepilot' ) : esc_html__( 'Not writable', 'localizepilot' ); ?></strong></div></div>
 		<section class="nt-card"><div class="nt-card-head"><div><span class="nt-section-kicker"><?php esc_html_e( 'Cache configuration', 'localizepilot' ); ?></span><h2><?php esc_html_e( 'HTML and object cache', 'localizepilot' ); ?></h2><p><?php esc_html_e( 'Translated pages are saved as files under wp-content/cache/localizepilot.', 'localizepilot' ); ?></p></div></div><div class="nt-option-grid"><label class="nt-toggle-row"><span><strong><?php esc_html_e( 'HTML file cache', 'localizepilot' ); ?></strong><small><?php esc_html_e( 'Save translated output as persistent HTML files.', 'localizepilot' ); ?></small></span><input type="checkbox" name="<?php echo esc_attr( Plugin::OPTION ); ?>[cache_enabled]" value="1" <?php checked( ! empty( $options['cache_enabled'] ) ); ?>><i></i></label><label class="nt-toggle-row"><span><strong><?php esc_html_e( 'WordPress object cache', 'localizepilot' ); ?></strong><small><?php esc_html_e( 'Use wp_cache_get and wp_cache_set as a fast first layer.', 'localizepilot' ); ?></small></span><input type="checkbox" name="<?php echo esc_attr( Plugin::OPTION ); ?>[object_cache_enabled]" value="1" <?php checked( ! empty( $options['object_cache_enabled'] ) ); ?>><i></i></label></div><div class="nt-field nt-cache-duration"><label><?php esc_html_e( 'Cache lifetime', 'localizepilot' ); ?></label><div class="nt-number"><input type="number" min="1" max="8760" name="<?php echo esc_attr( Plugin::OPTION ); ?>[cache_hours]" value="<?php echo esc_attr( (string) $options['cache_hours'] ); ?>"><span><?php esc_html_e( 'hours', 'localizepilot' ); ?></span></div></div><div class="nt-cache-path"><span><?php esc_html_e( 'Cache directory', 'localizepilot' ); ?></span><code><?php echo esc_html( $stats['path'] ); ?></code></div></section>
 		<?php $this->form_end( __( 'Save cache settings', 'localizepilot' ) ); ?>
-		<section class="nt-card nt-cache-history-card"><div class="nt-card-head"><div><span class="nt-section-kicker"><?php esc_html_e( 'Cache history', 'localizepilot' ); ?></span><h2><?php esc_html_e( 'Generated HTML history', 'localizepilot' ); ?></h2><p><?php echo esc_html( sprintf( __( '%d total HTML entries. Newest files appear first.', 'localizepilot' ), $history['total'] ) ); ?></p></div><div class="nt-cache-actions"><?php $this->cache_action_form( 'clear_expired', __( 'Clear expired pages', 'localizepilot' ), 'button', '', 'page', $cache_page, $cache_type ); ?><?php $this->cache_action_form( 'clear_all', __( 'Clear rendered cache', 'localizepilot' ), 'button button-secondary nt-danger', '', 'page', $cache_page, $cache_type ); ?><?php $this->cache_action_form( 'clear_snapshots', __( 'Clear snapshots', 'localizepilot' ), 'button button-secondary nt-danger', '', 'snapshot', $cache_page, $cache_type ); ?></div></div><div class="nt-history-filter"><a class="<?php echo nextlang_print('all' === $cache_type ? 'is-active' : ''); ?>" href="<?php echo esc_url( add_query_arg( array( 'page' => 'localizepilot', 'tab' => 'cache', 'cache_type' => 'all' ), admin_url( 'admin.php' ) ) ); ?>"><?php esc_html_e( 'All', 'localizepilot' ); ?></a><a class="<?php echo nextlang_print('page' === $cache_type ? 'is-active' : ''); ?>" href="<?php echo esc_url( add_query_arg( array( 'page' => 'localizepilot', 'tab' => 'cache', 'cache_type' => 'page' ), admin_url( 'admin.php' ) ) ); ?>"><?php esc_html_e( 'Rendered pages', 'localizepilot' ); ?></a><a class="<?php echo nextlang_print('snapshot' === $cache_type ? 'is-active' : ''); ?>" href="<?php echo esc_url( add_query_arg( array( 'page' => 'localizepilot', 'tab' => 'cache', 'cache_type' => 'snapshot' ), admin_url( 'admin.php' ) ) ); ?>"><?php esc_html_e( 'Gutenberg snapshots', 'localizepilot' ); ?></a></div><?php $this->render_cache_table( $history, $cache_page, $cache_type ); ?></section>
+		<section class="nt-card nt-cache-history-card"><div class="nt-card-head"><div><span class="nt-section-kicker"><?php esc_html_e( 'Cache history', 'localizepilot' ); ?></span><h2><?php esc_html_e( 'Generated HTML history', 'localizepilot' ); ?></h2><p><?php /* translators: %d is the total number of cached HTML entries. */ echo esc_html( sprintf( __( '%d total HTML entries. Newest files appear first.', 'localizepilot' ), $history['total'] ) ); ?></p></div><div class="nt-cache-actions"><?php $this->cache_action_form( 'clear_expired', __( 'Clear expired pages', 'localizepilot' ), 'button', '', 'page', $cache_page, $cache_type ); ?><?php $this->cache_action_form( 'clear_all', __( 'Clear rendered cache', 'localizepilot' ), 'button button-secondary nt-danger', '', 'page', $cache_page, $cache_type ); ?><?php $this->cache_action_form( 'clear_snapshots', __( 'Clear snapshots', 'localizepilot' ), 'button button-secondary nt-danger', '', 'snapshot', $cache_page, $cache_type ); ?></div></div><div class="nt-history-filter"><a class="<?php echo esc_attr( 'all' === $cache_type ? 'is-active' : '' ); ?>" href="<?php echo esc_url( add_query_arg( array( 'page' => 'localizepilot', 'tab' => 'cache', 'cache_type' => 'all' ), admin_url( 'admin.php' ) ) ); ?>"><?php esc_html_e( 'All', 'localizepilot' ); ?></a><a class="<?php echo esc_attr( 'page' === $cache_type ? 'is-active' : '' ); ?>" href="<?php echo esc_url( add_query_arg( array( 'page' => 'localizepilot', 'tab' => 'cache', 'cache_type' => 'page' ), admin_url( 'admin.php' ) ) ); ?>"><?php esc_html_e( 'Rendered pages', 'localizepilot' ); ?></a><a class="<?php echo esc_attr( 'snapshot' === $cache_type ? 'is-active' : '' ); ?>" href="<?php echo esc_url( add_query_arg( array( 'page' => 'localizepilot', 'tab' => 'cache', 'cache_type' => 'snapshot' ), admin_url( 'admin.php' ) ) ); ?>"><?php esc_html_e( 'Gutenberg snapshots', 'localizepilot' ); ?></a></div><?php $this->render_cache_table( $history, $cache_page, $cache_type ); ?></section>
 		<?php
 	}
 
@@ -352,11 +352,11 @@ final class Settings {
 
 	private function render_cache_table( array $history, int $cache_page, string $cache_type ): void {
 		if ( empty( $history['items'] ) ) {
-			echo nextlang_print('<div class="nt-empty-state"><span class="dashicons dashicons-database-remove"></span><h3>') . esc_html__( 'No cache history found', 'localizepilot' ) . '</h3><p>' . esc_html__( 'Open a translated page or save a Gutenberg translation to create HTML files.', 'localizepilot' ) . '</p></div>';
+			echo ('<div class="nt-empty-state"><span class="dashicons dashicons-database-remove"></span><h3>') . esc_html__( 'No cache history found', 'localizepilot' ) . '</h3><p>' . esc_html__( 'Open a translated page or save a Gutenberg translation to create HTML files.', 'localizepilot' ) . '</p></div>';
 			return;
 		}
 		?>
-		<div class="nt-table-wrap"><table class="nt-cache-table"><thead><tr><th><?php esc_html_e( 'Cache entry', 'localizepilot' ); ?></th><th><?php esc_html_e( 'Type', 'localizepilot' ); ?></th><th><?php esc_html_e( 'Language', 'localizepilot' ); ?></th><th><?php esc_html_e( 'Provider / status', 'localizepilot' ); ?></th><th><?php esc_html_e( 'Updated', 'localizepilot' ); ?></th><th><?php esc_html_e( 'Size', 'localizepilot' ); ?></th><th></th></tr></thead><tbody><?php foreach ( $history['items'] as $item ) : ?><tr class="<?php echo ! empty( $item['expired'] ) ? 'is-expired' : ''; ?>"><td><strong><?php echo esc_html( $item['url'] ?: $item['key'] . '.html' ); ?></strong><small><?php echo esc_html( $item['key'] . '.html' ); ?><?php if ( ! empty( $item['expired'] ) ) : ?> · <?php esc_html_e( 'Expired', 'localizepilot' ); ?><?php endif; ?></small></td><td><span class="nt-type-badge <?php echo nextlang_print('snapshot' === $item['type'] ? 'is-snapshot' : ''); ?>"><?php echo nextlang_print('snapshot') === $item['type'] ? esc_html__( 'Snapshot', 'localizepilot' ) : esc_html__( 'Page', 'localizepilot' ); ?></span></td><td><span class="nt-code-badge"><?php echo esc_html( strtoupper( (string) $item['language'] ) ); ?></span></td><td><?php echo esc_html( ucfirst( (string) ( $item['provider'] ?: $item['status'] ?: '—' ) ) ); ?></td><td><?php echo $item['modified'] ? esc_html( human_time_diff( (int) $item['modified'], time() ) . ' ' . __( 'ago', 'localizepilot' ) ) : '—'; ?></td><td><?php echo esc_html( size_format( (int) $item['bytes'], 1 ) ); ?></td><td><?php $this->cache_action_form( 'delete', __( 'Delete', 'localizepilot' ), 'button-link-delete', (string) $item['key'], (string) $item['type'], $cache_page, $cache_type ); ?></td></tr><?php endforeach; ?></tbody></table></div>
+		<div class="nt-table-wrap"><table class="nt-cache-table"><thead><tr><th><?php esc_html_e( 'Cache entry', 'localizepilot' ); ?></th><th><?php esc_html_e( 'Type', 'localizepilot' ); ?></th><th><?php esc_html_e( 'Language', 'localizepilot' ); ?></th><th><?php esc_html_e( 'Provider / status', 'localizepilot' ); ?></th><th><?php esc_html_e( 'Updated', 'localizepilot' ); ?></th><th><?php esc_html_e( 'Size', 'localizepilot' ); ?></th><th></th></tr></thead><tbody><?php foreach ( $history['items'] as $item ) : ?><tr class="<?php echo esc_attr( ! empty( $item['expired'] ) ? 'is-expired' : '' ); ?>"><td><strong><?php echo esc_html( $item['url'] ?: $item['key'] . '.html' ); ?></strong><small><?php echo esc_html( $item['key'] . '.html' ); ?><?php if ( ! empty( $item['expired'] ) ) : ?> · <?php esc_html_e( 'Expired', 'localizepilot' ); ?><?php endif; ?></small></td><td><span class="nt-type-badge <?php echo esc_attr( 'snapshot' === $item['type'] ? 'is-snapshot' : '' ); ?>"><?php echo 'snapshot' === $item['type'] ? esc_html__( 'Snapshot', 'localizepilot' ) : esc_html__( 'Page', 'localizepilot' ); ?></span></td><td><span class="nt-code-badge"><?php echo esc_html( strtoupper( (string) $item['language'] ) ); ?></span></td><td><?php echo esc_html( ucfirst( (string) ( $item['provider'] ?: $item['status'] ?: '—' ) ) ); ?></td><td><?php echo $item['modified'] ? esc_html( human_time_diff( (int) $item['modified'], time() ) . ' ' . __( 'ago', 'localizepilot' ) ) : esc_html( '—' ); ?></td><td><?php echo esc_html( size_format( (int) $item['bytes'], 1 ) ); ?></td><td><?php $this->cache_action_form( 'delete', __( 'Delete', 'localizepilot' ), 'button-link-delete', (string) $item['key'], (string) $item['type'], $cache_page, $cache_type ); ?></td></tr><?php endforeach; ?></tbody></table></div>
 		<?php if ( $history['pages'] > 1 ) : $base = add_query_arg( array( 'page' => 'localizepilot', 'tab' => 'cache', 'cache_type' => $cache_type, 'cache_page' => 999999999 ), admin_url( 'admin.php' ) ); ?><div class="nt-pagination"><?php echo wp_kses_post( paginate_links( array( 'base' => str_replace( '999999999', '%#%', esc_url( $base ) ), 'format' => '', 'current' => $history['page'], 'total' => $history['pages'], 'type' => 'list', 'prev_text' => '‹', 'next_text' => '›' ) ) ); ?></div><?php endif;
 	}
 
@@ -364,7 +364,7 @@ final class Settings {
 		$args = array( 'action' => 'next_translate_cache_action', 'cache_action' => $action, 'cache_item_type' => $item_type, 'cache_page' => $cache_page, 'cache_type' => $filter_type );
 		if ( '' !== $key ) { $args['cache_key'] = $key; }
 		$url = wp_nonce_url( add_query_arg( $args, admin_url( 'admin-post.php' ) ), 'next_translate_cache_action' );
-		echo nextlang_print('<a class="' . esc_attr( $class ) . '" href="' . esc_url( $url ) . '">' . esc_html( $label ) . '</a>');
+		echo ('<a class="' . esc_attr( $class ) . '" href="' . esc_url( $url ) . '">' . esc_html( $label ) . '</a>');
 	}
 
 	public function test_api(): void {
@@ -394,8 +394,8 @@ final class Settings {
 
 		$settings['ai_translation_style']   = sanitize_key( wp_unslash( $_POST['style'] ?? $settings['ai_translation_style'] ?? 'natural' ) );
 		$settings['ai_custom_instructions'] = sanitize_textarea_field( wp_unslash( $_POST['instructions'] ?? $settings['ai_custom_instructions'] ?? '' ) );
-		$settings['ai_temperature']         = max( 0, min( 1, (float) ( $_POST['temperature'] ?? $settings['ai_temperature'] ?? 0.2 ) ) );
-		$settings['ai_max_output_tokens']   = min( 32000, max( 512, absint( $_POST['max_tokens'] ?? $settings['ai_max_output_tokens'] ?? 8192 ) ) );
+		$settings['ai_temperature']         = max( 0, min( 1, (float) wp_unslash( $_POST['temperature'] ?? $settings['ai_temperature'] ?? 0.2 ) ) );
+		$settings['ai_max_output_tokens']   = min( 32000, max( 512, absint( wp_unslash( $_POST['max_tokens'] ?? $settings['ai_max_output_tokens'] ?? 8192 ) ) ) );
 
 		try {
 			$client = Client_Factory::make( $settings, false );
@@ -418,15 +418,26 @@ final class Settings {
 		if ( ! current_user_can( 'manage_options' ) ) { wp_die( esc_html__( 'Permission denied.', 'localizepilot' ) ); }
 		check_admin_referer( 'next_translate_cache_action' );
 		$cache       = new File_Cache( Plugin::instance()->get_settings() );
-		$action      = sanitize_key( wp_unslash( $_REQUEST['cache_action'] ?? '' ) );
-		$item_type   = sanitize_key( wp_unslash( $_REQUEST['cache_item_type'] ?? 'page' ) );
-		$cache_page  = max( 1, absint( $_REQUEST['cache_page'] ?? 1 ) );
-		$filter_type = sanitize_key( wp_unslash( $_REQUEST['cache_type'] ?? 'all' ) );
+		$action      = sanitize_key( wp_unslash( $_GET['cache_action'] ?? '' ) );
+		$item_type   = sanitize_key( wp_unslash( $_GET['cache_item_type'] ?? 'page' ) );
+		$cache_page  = max( 1, absint( wp_unslash( $_GET['cache_page'] ?? 1 ) ) );
+		$filter_type = sanitize_key( wp_unslash( $_GET['cache_type'] ?? 'all' ) );
 		$message     = __( 'No cache action was performed.', 'localizepilot' );
-		if ( 'clear_all' === $action ) { $message = sprintf( __( 'Cleared %d rendered cache files.', 'localizepilot' ), $cache->clear_all() ); }
-		elseif ( 'clear_expired' === $action ) { $message = sprintf( __( 'Cleared %d expired cache entries.', 'localizepilot' ), $cache->clear_expired() ); }
-		elseif ( 'clear_snapshots' === $action ) { $message = sprintf( __( 'Cleared %d translation snapshot files.', 'localizepilot' ), $cache->clear_snapshots() ); }
-		elseif ( 'delete' === $action ) { $key = sanitize_text_field( wp_unslash( $_REQUEST['cache_key'] ?? '' ) ); $deleted = $cache->delete_history_item( $item_type, $key ); $message = $deleted ? __( 'Cache entry deleted.', 'localizepilot' ) : __( 'Cache entry was not found.', 'localizepilot' ); }
+
+		if ( 'clear_all' === $action ) {
+			/* translators: %d is the number of deleted rendered cache files. */
+			$message = sprintf( __( 'Cleared %d rendered cache files.', 'localizepilot' ), $cache->clear_all() );
+		} elseif ( 'clear_expired' === $action ) {
+			/* translators: %d is the number of deleted expired cache entries. */
+			$message = sprintf( __( 'Cleared %d expired cache entries.', 'localizepilot' ), $cache->clear_expired() );
+		} elseif ( 'clear_snapshots' === $action ) {
+			/* translators: %d is the number of deleted translation snapshot files. */
+			$message = sprintf( __( 'Cleared %d translation snapshot files.', 'localizepilot' ), $cache->clear_snapshots() );
+		} elseif ( 'delete' === $action ) {
+			$key     = sanitize_text_field( wp_unslash( $_GET['cache_key'] ?? '' ) );
+			$deleted = $cache->delete_history_item( $item_type, $key );
+			$message = $deleted ? __( 'Cache entry deleted.', 'localizepilot' ) : __( 'Cache entry was not found.', 'localizepilot' );
+		}
 		wp_safe_redirect( add_query_arg( array( 'page' => 'localizepilot', 'tab' => 'cache', 'cache_page' => $cache_page, 'cache_type' => $filter_type, 'localizepilot_cache_message' => $message ), admin_url( 'admin.php' ) ) );
 		exit;
 	}

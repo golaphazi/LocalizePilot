@@ -1,6 +1,6 @@
 <?php
 
-namespace NextTranslate;
+namespace LocalizePilot;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -96,7 +96,9 @@ final class Translation_Manager {
 				'single'            => true,
 				'show_in_rest'      => true,
 				'sanitize_callback' => 'absint',
-				'auth_callback'     => static fn() => current_user_can( 'edit_posts' ),
+				'auth_callback'     => static function ( $allowed, $meta_key, $post_id ): bool {
+					return current_user_can( 'edit_post', (int) $post_id );
+				},
 			)
 		);
 
@@ -109,7 +111,9 @@ final class Translation_Manager {
 					'single'            => true,
 					'show_in_rest'      => true,
 					'sanitize_callback' => 'sanitize_text_field',
-					'auth_callback'     => static fn() => current_user_can( 'edit_posts' ),
+					'auth_callback'     => static function ( $allowed, $meta_key, $post_id ): bool {
+					return current_user_can( 'edit_post', (int) $post_id );
+				},
 				)
 			);
 		}
@@ -138,7 +142,7 @@ final class Translation_Manager {
 
 	public function render_source_meta_box( \WP_Post $post ): void {
 		if ( 'auto-draft' === $post->post_status ) {
-			echo nextlang_print('<p>' . esc_html__( 'Save the source post before creating translations.', 'localizepilot' ) . '</p>');
+			echo ('<p>' . esc_html__( 'Save the source post before creating translations.', 'localizepilot' ) . '</p>');
 			return;
 		}
 
@@ -147,7 +151,7 @@ final class Translation_Manager {
 		$enabled        = (array) ( $this->settings['enabled_languages'] ?? array() );
 		$statuses       = self::statuses();
 
-		echo nextlang_print('<div class="next-translate-source-box">');
+		echo ('<div class="next-translate-source-box">');
 		foreach ( $enabled as $language ) {
 			$language = sanitize_key( $language );
 			if ( ! isset( $languages[ $language ] ) ) {
@@ -155,14 +159,14 @@ final class Translation_Manager {
 			}
 
 			$translation = $this->get_translation( $post->ID, $language );
-			echo nextlang_print('<div class="nt-source-language-row">');
-			echo nextlang_print('<div><strong>') . esc_html( $languages[ $language ]['native'] ) . '</strong><small>' . esc_html( strtoupper( $language ) ) . '</small></div>';
+			echo ('<div class="nt-source-language-row">');
+			echo ('<div><strong>') . esc_html( $languages[ $language ]['native'] ) . '</strong><small>' . esc_html( strtoupper( $language ) ) . '</small></div>';
 
 			if ( $translation ) {
 				$status = (string) get_post_meta( $translation->ID, self::META_STATUS, true );
 				$status = isset( $statuses[ $status ] ) ? $status : 'automatic';
-				echo nextlang_print('<span class="nt-translation-status nt-status-' . esc_attr( $status ) . '">' . esc_html( $statuses[ $status ] ) . '</span>');
-				echo nextlang_print('<a class="button button-small" href="' . esc_url( get_edit_post_link( $translation->ID, '' ) ) . '">' . esc_html__( 'Edit', 'localizepilot' ) . '</a>');
+				echo ('<span class="nt-translation-status nt-status-' . esc_attr( $status ) . '">' . esc_html( $statuses[ $status ] ) . '</span>');
+				echo ('<a class="button button-small" href="' . esc_url( get_edit_post_link( $translation->ID, '' ) ) . '">' . esc_html__( 'Edit', 'localizepilot' ) . '</a>');
 			} else {
 				$url = wp_nonce_url(
 					add_query_arg(
@@ -175,11 +179,11 @@ final class Translation_Manager {
 					),
 					'next_translate_create_' . $post->ID . '_' . $language
 				);
-				echo nextlang_print('<a class="button button-small button-primary" href="' . esc_url( $url ) . '">' . esc_html__( 'Create', 'localizepilot' ) . '</a>');
+				echo ('<a class="button button-small button-primary" href="' . esc_url( $url ) . '">' . esc_html__( 'Create', 'localizepilot' ) . '</a>');
 			}
-			echo nextlang_print('</div>');
+			echo ('</div>');
 		}
-		echo nextlang_print('</div>');
+		echo ('</div>');
 	}
 
 	public function add_translation_meta_box( \WP_Post $post ): void {
@@ -206,19 +210,19 @@ final class Translation_Manager {
 		$cache       = new File_Cache( Plugin::instance()->get_settings() );
 
 		wp_nonce_field( 'next_translate_translation_meta', 'next_translate_translation_nonce' );
-		echo nextlang_print('<div class="next-translate-details-box">');
+		echo ('<div class="next-translate-details-box">');
 		if ( $source instanceof \WP_Post ) {
-			echo nextlang_print('<p><strong>') . esc_html__( 'Source', 'localizepilot' ) . '</strong><br><a href="' . esc_url( get_edit_post_link( $source_id, '' ) ) . '">' . esc_html( get_the_title( $source_id ) ) . '</a></p>';
+			echo ('<p><strong>') . esc_html__( 'Source', 'localizepilot' ) . '</strong><br><a href="' . esc_url( get_edit_post_link( $source_id, '' ) ) . '">' . esc_html( get_the_title( $source_id ) ) . '</a></p>';
 		}
-		echo nextlang_print('<p><strong>') . esc_html__( 'Language', 'localizepilot' ) . '</strong><br><span class="nt-code-badge">' . esc_html( strtoupper( $language ) ) . '</span></p>';
+		echo ('<p><strong>') . esc_html__( 'Language', 'localizepilot' ) . '</strong><br><span class="nt-code-badge">' . esc_html( strtoupper( $language ) ) . '</span></p>';
 		if ( $is_outdated ) {
-			echo nextlang_print('<div class="notice notice-warning inline"><p>') . esc_html__( 'The source content changed after this translation was created.', 'localizepilot' ) . '</p></div>';
+			echo ('<div class="notice notice-warning inline"><p>') . esc_html__( 'The source content changed after this translation was created.', 'localizepilot' ) . '</p></div>';
 		}
-		echo nextlang_print('<p><label for="next_translate_status"><strong>') . esc_html__( 'Status', 'localizepilot' ) . '</strong></label><select id="next_translate_status" name="next_translate_status" style="width:100%;margin-top:6px">';
+		echo ('<p><label for="next_translate_status"><strong>') . esc_html__( 'Status', 'localizepilot' ) . '</strong></label><select id="next_translate_status" name="next_translate_status" style="width:100%;margin-top:6px">';
 		foreach ( $statuses as $value => $label ) {
-			echo nextlang_print('<option value="' . esc_attr( $value ) . '" ' . selected( $status, $value, false ) . '>' . esc_html( $label ) . '</option>');
+			echo ('<option value="' . esc_attr( $value ) . '" ' . selected( $status, $value, false ) . '>' . esc_html( $label ) . '</option>');
 		}
-		echo nextlang_print('</select></p>');
+		echo ('</select></p>');
 
 		if ( $source instanceof \WP_Post && '' !== $language ) {
 			$refresh_url = wp_nonce_url(
@@ -232,18 +236,18 @@ final class Translation_Manager {
 				'next_translate_refresh_' . $translation->ID
 			);
 			$view_url = $this->router->localize_url( get_permalink( $source_id ), $language );
-			echo nextlang_print('<p><a class="button button-secondary" style="width:100%;text-align:center" href="' . esc_url( $view_url ) . '" target="_blank">' . esc_html__( 'View translated page', 'localizepilot' ) . '</a></p>');
-			echo nextlang_print('<p><a class="button" style="width:100%;text-align:center" href="' . esc_url( $refresh_url ) . '" onclick="return confirm(\'' . esc_js( __( 'This will replace the current title and content with a new automatic translation. Continue?', 'localizepilot' ) ) . '\');">' . esc_html__( 'Refresh from API', 'localizepilot' ) . '</a></p>');
+			echo ('<p><a class="button button-secondary" style="width:100%;text-align:center" href="' . esc_url( $view_url ) . '" target="_blank">' . esc_html__( 'View translated page', 'localizepilot' ) . '</a></p>');
+			echo ('<p><a class="button" style="width:100%;text-align:center" href="' . esc_url( $refresh_url ) . '" onclick="return confirm(\'' . esc_js( __( 'This will replace the current title and content with a new automatic translation. Continue?', 'localizepilot' ) ) . '\');">' . esc_html__( 'Refresh from API', 'localizepilot' ) . '</a></p>');
 		}
 
-		echo nextlang_print('<p class="description"><strong>' . esc_html__( 'Page cache', 'localizepilot' ) . '</strong><br><code>' . esc_html( basename( $cache->post_page_path( $source_id, $language ) ) ) . '</code></p>');
-		echo nextlang_print('<p class="description"><strong>' . esc_html__( 'Content snapshot', 'localizepilot' ) . '</strong><br><code>' . esc_html( basename( $cache->translation_snapshot_path( $source_id, $language ) ) ) . '</code></p>');
-		echo nextlang_print('<p class="description">' . esc_html__( 'Choose a translated featured image here. Images inserted inside the Gutenberg content can also be replaced per language.', 'localizepilot' ) . '</p>');
-		echo nextlang_print('</div>');
+		echo ('<p class="description"><strong>' . esc_html__( 'Page cache', 'localizepilot' ) . '</strong><br><code>' . esc_html( basename( $cache->post_page_path( $source_id, $language ) ) ) . '</code></p>');
+		echo ('<p class="description"><strong>' . esc_html__( 'Content snapshot', 'localizepilot' ) . '</strong><br><code>' . esc_html( basename( $cache->translation_snapshot_path( $source_id, $language ) ) ) . '</code></p>');
+		echo ('<p class="description">' . esc_html__( 'Choose a translated featured image here. Images inserted inside the Gutenberg content can also be replaced per language.', 'localizepilot' ) . '</p>');
+		echo ('</div>');
 	}
 
 	public function create_translation_action(): void {
-		$source_id = absint( $_GET['source_id'] ?? 0 );
+		$source_id = absint( wp_unslash( $_GET['source_id'] ?? 0 ) );
 		$language  = sanitize_key( wp_unslash( $_GET['language'] ?? '' ) );
 
 		if ( ! $source_id || ! current_user_can( 'edit_post', $source_id ) ) {
@@ -267,7 +271,7 @@ final class Translation_Manager {
 	}
 
 	public function refresh_translation_action(): void {
-		$translation_id = absint( $_GET['translation_id'] ?? 0 );
+		$translation_id = absint( wp_unslash( $_GET['translation_id'] ?? 0 ) );
 		if ( ! $translation_id || ! current_user_can( 'edit_post', $translation_id ) ) {
 			wp_die( esc_html__( 'You are not allowed to refresh this translation.', 'localizepilot' ) );
 		}
@@ -454,13 +458,20 @@ final class Translation_Manager {
 			return;
 		}
 
-		$cache = new File_Cache( Plugin::instance()->get_settings() );
-		$rendered = do_blocks( $translation->post_content );
-		$rendered = do_shortcode( $rendered );
+		$cache  = new File_Cache( Plugin::instance()->get_settings() );
+		$source = get_post( $source_id );
+
+		// Do not expose drafts, private posts, or shortcode output in a public cache directory.
+		if ( ! $source instanceof \WP_Post || 'publish' !== $source->post_status ) {
+			$cache->delete_translation_snapshot( $source_id, $language );
+			$cache->delete_post_cache( $source_id, $language );
+			return;
+		}
+
 		$cache->write_translation_snapshot(
 			$source_id,
 			$language,
-			$rendered,
+			$translation->post_content,
 			array(
 				'translation_id' => $translation_id,
 				'status'         => (string) get_post_meta( $translation_id, self::META_STATUS, true ),
@@ -609,8 +620,7 @@ final class Translation_Manager {
 			}
 		}
 
-		$rendered = do_blocks( $translation->post_content );
-		$rendered = do_shortcode( $rendered );
+		$rendered = $translation->post_content;
 		if ( class_exists( '\DOMDocument' ) && '' !== trim( $rendered ) ) {
 			$dom = new \DOMDocument( '1.0', 'UTF-8' );
 			$previous = libxml_use_internal_errors( true );
@@ -665,15 +675,19 @@ final class Translation_Manager {
 	public function translation_column_content( string $column, int $post_id ): void {
 		if ( 'nt_source' === $column ) {
 			$source_id = absint( get_post_meta( $post_id, self::META_SOURCE_ID, true ) );
-			echo $source_id ? '<a href="' . esc_url( get_edit_post_link( $source_id, '' ) ) . '">' . esc_html( get_the_title( $source_id ) ) . '</a>' : '—';
+			if ( $source_id ) {
+				echo '<a href="' . esc_url( get_edit_post_link( $source_id, '' ) ) . '">' . esc_html( get_the_title( $source_id ) ) . '</a>';
+			} else {
+				echo esc_html( '—' );
+			}
 		} elseif ( 'nt_language' === $column ) {
 			$language = (string) get_post_meta( $post_id, self::META_LANGUAGE, true );
-			echo nextlang_print('<span class="nt-code-badge">' . esc_html( strtoupper( $language ) ) . '</span>');
+			echo ('<span class="nt-code-badge">' . esc_html( strtoupper( $language ) ) . '</span>');
 		} elseif ( 'nt_status' === $column ) {
 			$status   = (string) get_post_meta( $post_id, self::META_STATUS, true );
 			$statuses = self::statuses();
 			$status   = isset( $statuses[ $status ] ) ? $status : 'automatic';
-			echo nextlang_print('<span class="nt-translation-status nt-status-' . esc_attr( $status ) . '">' . esc_html( $statuses[ $status ] ) . '</span>');
+			echo ('<span class="nt-translation-status nt-status-' . esc_attr( $status ) . '">' . esc_html( $statuses[ $status ] ) . '</span>');
 		}
 	}
 
@@ -698,21 +712,21 @@ final class Translation_Manager {
 		$current_language = sanitize_key( wp_unslash( $_GET['next_translate_language_filter'] ?? '' ) );
 		$languages        = Language_Catalog::all();
 
-		echo nextlang_print('<select name="next_translate_status_filter"><option value="">' . esc_html__( 'All translation statuses', 'localizepilot' ) . '</option>');
+		echo ('<select name="next_translate_status_filter"><option value="">' . esc_html__( 'All translation statuses', 'localizepilot' ) . '</option>');
 		foreach ( self::statuses() as $value => $label ) {
-			echo nextlang_print('<option value="' . esc_attr( $value ) . '" ' . selected( $current_status, $value, false ) . '>' . esc_html( $label ) . '</option>');
+			echo ('<option value="' . esc_attr( $value ) . '" ' . selected( $current_status, $value, false ) . '>' . esc_html( $label ) . '</option>');
 		}
-		echo nextlang_print('</select>');
+		echo ('</select>');
 
-		echo nextlang_print('<select name="next_translate_language_filter"><option value="">' . esc_html__( 'All languages', 'localizepilot' ) . '</option>');
+		echo ('<select name="next_translate_language_filter"><option value="">' . esc_html__( 'All languages', 'localizepilot' ) . '</option>');
 		foreach ( (array) Plugin::instance()->get_settings()['enabled_languages'] as $language ) {
 			$language = sanitize_key( $language );
 			if ( ! isset( $languages[ $language ] ) ) {
 				continue;
 			}
-			echo nextlang_print('<option value="' . esc_attr( $language ) . '" ' . selected( $current_language, $language, false ) . '>' . esc_html( $languages[ $language ]['native'] . ' (' . strtoupper( $language ) . ')' ) . '</option>');
+			echo ('<option value="' . esc_attr( $language ) . '" ' . selected( $current_language, $language, false ) . '>' . esc_html( $languages[ $language ]['native'] . ' (' . strtoupper( $language ) . ')' ) . '</option>');
 		}
-		echo nextlang_print('</select>');
+		echo ('</select>');
 	}
 
 	public function filter_admin_translations( \WP_Query $query ): void {
@@ -742,10 +756,10 @@ final class Translation_Manager {
 
 	public function admin_notices(): void {
 		if ( isset( $_GET['next_translate_created'] ) ) {
-			echo nextlang_print('<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Automatic translation created. You can now correct it with the Gutenberg editor.', 'localizepilot' ) . '</p></div>');
+			echo ('<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Automatic translation created. You can now correct it with the Gutenberg editor.', 'localizepilot' ) . '</p></div>');
 		}
 		if ( isset( $_GET['next_translate_refreshed'] ) ) {
-			echo nextlang_print('<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'The translation was refreshed from the selected API.', 'localizepilot' ) . '</p></div>');
+			echo ('<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'The translation was refreshed from the selected API.', 'localizepilot' ) . '</p></div>');
 		}
 	}
 

@@ -1,6 +1,6 @@
 <?php
 
-namespace NextTranslate;
+namespace LocalizePilot;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -27,7 +27,6 @@ final class Gemini_Client extends AI_Client_Base {
 				),
 			),
 			'generationConfig' => array(
-				'temperature'      => $this->temperature(),
 				'maxOutputTokens'  => $this->max_output_tokens(),
 				'responseMimeType' => 'application/json',
 			),

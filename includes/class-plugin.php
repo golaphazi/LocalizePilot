@@ -1,6 +1,6 @@
 <?php
 
-namespace NextTranslate;
+namespace LocalizePilot;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -22,7 +22,7 @@ final class Plugin {
 
 	public static function defaults(): array {
 		return array(
-			'enabled'                  => 1,
+			'enabled'                  => 0,
 			'source_language'          => 'en',
 			'enabled_languages'        => array( 'de', 'fr', 'es', 'pt', 'ar', 'da' ),
 			'translation_provider'     => 'translatex',
@@ -36,13 +36,13 @@ final class Plugin {
 			'anthropic_api_key'        => '',
 			'anthropic_model'          => 'claude-haiku-4-5',
 			'kimi_api_key'             => '',
-			'kimi_model'               => 'kimi-k2.6',
+			'kimi_model'               => 'kimi-k2.5',
 			'deepseek_api_key'         => '',
 			'deepseek_model'           => 'deepseek-v4-flash',
 			'mistral_api_key'          => '',
 			'mistral_model'            => 'mistral-small-latest',
 			'groq_api_key'             => '',
-			'groq_model'               => 'llama-3.3-70b-versatile',
+			'groq_model'               => 'openai/gpt-oss-120b',
 			'openrouter_api_key'       => '',
 			'openrouter_model'         => 'openai/gpt-4.1-mini',
 			'ai_translation_style'     => 'natural',
@@ -87,29 +87,32 @@ final class Plugin {
 		add_filter( 'rank_math/frontend/canonical', array( $this, 'filter_seo_url' ) );
 		add_filter( 'language_attributes', array( $this, 'filter_language_attributes' ) );
 		add_action( 'admin_notices', array( $this, 'admin_notices' ) );
+		add_action( 'admin_init', array( $this, 'add_privacy_policy_content' ) );
 	}
 
 	/**
 	 * Register the dynamic Gutenberg language-switcher block.
 	 */
 	public function register_language_switcher_block(): void {
-		$block_dir    = NEXT_TRANSLATE_PATH . 'blocks/language-switcher';
+		$block_dir    = LOCALIZEPILOT_PATH . 'blocks/language-switcher';
 		$script_path  = $block_dir . '/index.js';
 		$editor_style = $block_dir . '/editor.css';
 
 		wp_register_script(
 			'localizepilot-language-switcher-block',
-			NEXT_TRANSLATE_URL . 'blocks/language-switcher/index.js',
+			LOCALIZEPILOT_URL . 'blocks/language-switcher/index.js',
 			array( 'wp-blocks', 'wp-element', 'wp-i18n', 'wp-components', 'wp-block-editor' ),
-			is_file( $script_path ) ? (string) filemtime( $script_path ) : NEXT_TRANSLATE_VERSION,
+			is_file( $script_path ) ? (string) filemtime( $script_path ) : LOCALIZEPILOT_VERSION,
 			true
 		);
 
+		wp_set_script_translations( 'localizepilot-language-switcher-block', 'localizepilot' );
+
 		wp_register_style(
 			'localizepilot-language-switcher-block-editor',
-			NEXT_TRANSLATE_URL . 'blocks/language-switcher/editor.css',
+			LOCALIZEPILOT_URL . 'blocks/language-switcher/editor.css',
 			array( 'wp-edit-blocks' ),
-			is_file( $editor_style ) ? (string) filemtime( $editor_style ) : NEXT_TRANSLATE_VERSION
+			is_file( $editor_style ) ? (string) filemtime( $editor_style ) : LOCALIZEPILOT_VERSION
 		);
 
 		$settings       = $this->get_settings();
@@ -264,7 +267,7 @@ final class Plugin {
 		if ( empty( $this->get_settings()['enabled'] ) ) {
 			return;
 		}
-		wp_enqueue_style( 'localizepilot', NEXT_TRANSLATE_URL . 'assets/frontend.css', array(), NEXT_TRANSLATE_VERSION );
+		wp_enqueue_style( 'localizepilot', LOCALIZEPILOT_URL . 'assets/frontend.css', array(), LOCALIZEPILOT_VERSION );
 	}
 
 	public function start_buffer(): void {
@@ -285,16 +288,21 @@ final class Plugin {
 		$processed = $html;
 
 		if ( $current !== $source ) {
+			if ( ! $this->can_translate_output( $html ) ) {
+				$switcher = new Language_Switcher( $this->router, $this->settings );
+				return $switcher->inject( $html );
+			}
+
 			$cache       = new File_Cache( $this->settings );
-			$identity    = remove_query_arg( 'next_translate_refresh', $this->router->language_url( $source ) );
+			$identity    = $this->router->language_url( $source );
 			$fingerprint = $this->cache_fingerprint();
 			$source_hash = hash( 'sha256', $html . '|' . $fingerprint );
 			$post_id     = is_singular( array( 'post', 'page' ) ) ? get_queried_object_id() : 0;
 			$cache_key   = $post_id
 				? $cache->make_post_key( $post_id, $current )
 				: $cache->make_key( $identity, $current, $fingerprint );
-			$force       = isset( $_GET['next_translate_refresh'] ) && current_user_can( 'manage_options' );
-			$cached      = $force ? null : $cache->get( $cache_key, $source_hash );
+			$cacheable   = $this->can_use_page_cache( $html );
+			$cached      = $cacheable ? $cache->get( $cache_key, $source_hash ) : null;
 
 			if ( is_string( $cached ) && '' !== $cached ) {
 				$processed = $cached;
@@ -303,8 +311,8 @@ final class Plugin {
 				$daily_limit   = max( 1, absint( $this->settings['daily_limit'] ?? 10 ) );
 
 				if ( $limit_enabled && ! $this->limiter->can_translate( $daily_limit ) ) {
-					$stale = ! empty( $this->settings['stale_cache_fallback'] ) ? $cache->get_stale( $cache_key ) : null;
-					$processed = is_string( $stale ) ? $stale : $html . "\n<!-- LocalizePilot daily limit reached. -->";
+					$stale = $cacheable && ! empty( $this->settings['stale_cache_fallback'] ) ? $cache->get_stale( $cache_key ) : null;
+					$processed = is_string( $stale ) ? $stale : $html;
 				} else {
 					try {
 						$client     = Client_Factory::make( $this->settings );
@@ -312,26 +320,27 @@ final class Plugin {
 						$translator = new HTML_Translator( $client, $this->router, $this->settings, $protected );
 						$processed  = $translator->translate_document( $html, $current );
 
-						$cache->set(
-							$cache_key,
-							$processed,
-							array(
-								'url'         => $identity,
-								'language'    => $current,
-								'provider'    => $client->provider(),
-								'source_hash' => $source_hash,
-								'post_id'     => $post_id,
-								'cache_file'  => $post_id ? $cache_key . '.html' : '',
-							)
-						);
+						if ( $cacheable ) {
+							$cache->set(
+								$cache_key,
+								$processed,
+								array(
+									'url'         => $identity,
+									'language'    => $current,
+									'provider'    => $client->provider(),
+									'source_hash' => $source_hash,
+									'post_id'     => $post_id,
+									'cache_file'  => $post_id ? $cache_key . '.html' : '',
+								)
+							);
+						}
 
 						if ( $limit_enabled ) {
 							$this->limiter->increment( $daily_limit );
 						}
 					} catch ( \Throwable $exception ) {
-						error_log( '[LocalizePilot] ' . $exception->getMessage() );
-						$stale = ! empty( $this->settings['stale_cache_fallback'] ) ? $cache->get_stale( $cache_key ) : null;
-						$processed = is_string( $stale ) ? $stale : $html . "\n<!-- LocalizePilot error: " . esc_html( $exception->getMessage() ) . " -->";
+						$stale = $cacheable && ! empty( $this->settings['stale_cache_fallback'] ) ? $cache->get_stale( $cache_key ) : null;
+						$processed = is_string( $stale ) ? $stale : $html;
 					}
 				}
 			}
@@ -378,31 +387,49 @@ final class Plugin {
 		return $output;
 	}
 
+	public function add_privacy_policy_content(): void {
+		if ( ! function_exists( 'wp_add_privacy_policy_content' ) ) {
+			return;
+		}
+
+		$content  = '<p>' . esc_html__( 'When a site administrator generates, refreshes, or tests a translation, LocalizePilot sends the selected website text and language settings to the translation provider configured by the administrator.', 'localizepilot' ) . '</p>';
+		$content .= '<p>' . esc_html__( 'The provider may process titles, excerpts, block text, visible page text, supported attributes, model settings, and custom translation instructions under its own terms and privacy policy. LocalizePilot does not send data to a provider until an administrator configures and uses that provider.', 'localizepilot' ) . '</p>';
+		wp_add_privacy_policy_content( 'LocalizePilot', wp_kses_post( $content ) );
+	}
+
 	public function admin_notices(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return;
 		}
 
-		if ( isset( $_GET['next_translate_cache_message'] ) ) {
-			$message = sanitize_text_field( wp_unslash( $_GET['next_translate_cache_message'] ) );
-			echo nextlang_print('<div class="notice notice-success is-dismissible"><p>' . esc_html( $message ) . '</p></div>');
+		if ( isset( $_GET['localizepilot_cache_message'] ) ) {
+			$message = sanitize_text_field( wp_unslash( $_GET['localizepilot_cache_message'] ) );
+			echo ('<div class="notice notice-success is-dismissible"><p>' . esc_html( $message ) . '</p></div>');
 		}
 
 		$options = $this->get_settings();
 		if ( empty( get_option( 'permalink_structure', '' ) ) ) {
-			echo nextlang_print('<div class="notice notice-error"><p>' . wp_kses_post( sprintf( __( 'LocalizePilot language URLs require pretty permalinks. <a href="%s">Open Permalink Settings</a> and click Save Changes.', 'localizepilot' ), esc_url( admin_url( 'options-permalink.php' ) ) ) ) . '</p></div>');
+			/* translators: %s is the URL of the WordPress permalink settings page. */
+			echo ('<div class="notice notice-error"><p>' . wp_kses_post( sprintf( __( 'LocalizePilot language URLs require pretty permalinks. <a href="%s">Open Permalink Settings</a> and click Save Changes.', 'localizepilot' ), esc_url( admin_url( 'options-permalink.php' ) ) ) ) . '</p></div>');
 		}
 
 		$provider = (string) ( $options['translation_provider'] ?? 'translatex' );
 		$key_field = Provider_Catalog::key_field( $provider );
 		$key       = '' !== $key_field ? (string) ( $options[ $key_field ] ?? '' ) : '';
 		if ( ! empty( $options['enabled'] ) && '' === trim( $key ) ) {
-			echo nextlang_print('<div class="notice notice-warning"><p>' . wp_kses_post( sprintf( __( 'LocalizePilot is active, but the selected translation API key is missing. <a href="%s">Open settings</a>.', 'localizepilot' ), esc_url( admin_url( 'admin.php?page=localizepilot' ) ) ) ) . '</p></div>');
+			/* translators: %s is the URL of the LocalizePilot settings page. */
+			echo ('<div class="notice notice-warning"><p>' . wp_kses_post( sprintf( __( 'LocalizePilot is active, but the selected translation API key is missing. <a href="%s">Open settings</a>.', 'localizepilot' ), esc_url( admin_url( 'admin.php?page=localizepilot' ) ) ) ) . '</p></div>');
 		}
 	}
 
 	private function should_process_request(): bool {
 		if ( empty( $this->settings['enabled'] ) || is_admin() || wp_doing_ajax() || wp_doing_cron() || is_feed() || is_robots() || is_trackback() || is_preview() ) {
+			return false;
+		}
+		if ( 'GET' !== strtoupper( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ?? 'GET' ) ) ) ) {
+			return false;
+		}
+		if ( is_user_logged_in() ) {
 			return false;
 		}
 		if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
@@ -411,7 +438,49 @@ final class Plugin {
 		if ( function_exists( 'is_customize_preview' ) && is_customize_preview() ) {
 			return false;
 		}
+		if ( is_singular() && post_password_required() ) {
+			return false;
+		}
+		if ( ( function_exists( 'is_cart' ) && is_cart() ) || ( function_exists( 'is_checkout' ) && is_checkout() ) || ( function_exists( 'is_account_page' ) && is_account_page() ) ) {
+			return false;
+		}
+		foreach ( array_keys( $_COOKIE ) as $cookie_name ) {
+			$cookie_name = strtolower( sanitize_text_field( (string) $cookie_name ) );
+			if ( 0 === strpos( $cookie_name, 'wordpress_logged_in_' ) || 0 === strpos( $cookie_name, 'wp_woocommerce_session_' ) || 'woocommerce_items_in_cart' === $cookie_name || 0 === strpos( $cookie_name, 'comment_author_' ) ) {
+				return false;
+			}
+		}
 		return true;
+	}
+
+	private function can_translate_output( string $html ): bool {
+		if ( defined( 'DONOTCACHEPAGE' ) && DONOTCACHEPAGE ) {
+			return false;
+		}
+
+		if ( preg_match( '/(?:_wpnonce|wp_rest|data-nonce|["\']nonce["\']\s*:|nonce=|type=(?:"|\')password(?:"|\'))/i', $html ) ) {
+			return false;
+		}
+
+		foreach ( headers_list() as $header ) {
+			if ( 0 === stripos( $header, 'Set-Cookie:' ) ) {
+				return false;
+			}
+			if ( 0 === stripos( $header, 'Cache-Control:' ) && preg_match( '/(?:no-cache|no-store|private)/i', $header ) ) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	private function can_use_page_cache( string $html ): bool {
+		if ( empty( $this->settings['cache_enabled'] ) || ! $this->can_translate_output( $html ) ) {
+			return false;
+		}
+
+		$query = (string) wp_parse_url( $this->router->language_url( $this->router->source_language() ), PHP_URL_QUERY );
+		return '' === $query;
 	}
 
 	private function cache_fingerprint(): string {
@@ -424,9 +493,11 @@ final class Plugin {
 					'provider'   => (string) ( $this->settings['translation_provider'] ?? 'translatex' ),
 					'fallback'   => (string) ( $this->settings['fallback_provider'] ?? '' ),
 					'model'      => (string) ( $this->settings[ Provider_Catalog::model_field( (string) ( $this->settings['translation_provider'] ?? 'translatex' ) ) ] ?? '' ),
+					'fallback_model' => (string) ( $this->settings[ Provider_Catalog::model_field( (string) ( $this->settings['fallback_provider'] ?? '' ) ) ] ?? '' ),
 					'ai_style'   => (string) ( $this->settings['ai_translation_style'] ?? 'natural' ),
 					'ai_prompt'  => (string) ( $this->settings['ai_custom_instructions'] ?? '' ),
 					'ai_temp'    => (float) ( $this->settings['ai_temperature'] ?? 0.2 ),
+					'ai_tokens'  => absint( $this->settings['ai_max_output_tokens'] ?? 8192 ),
 					'attributes' => ! empty( $this->settings['translate_attributes'] ),
 					'links'      => ! empty( $this->settings['translate_internal_links'] ),
 					'source'     => (string) ( $this->settings['source_language'] ?? 'en' ),
