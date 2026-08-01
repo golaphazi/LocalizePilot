@@ -4,7 +4,7 @@ Tags: translation, multilingual, gutenberg, localization, media
 Requires at least: 6.2
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.0.0
+Stable tag: 1.0.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -171,6 +171,16 @@ LocalizePilot stores settings and API keys in the WordPress options table, trans
 Using WordPress's Delete action for the plugin runs `uninstall.php` and removes LocalizePilot settings, usage counters, translation records, and generated cache files. Deactivation alone does not delete data.
 
 == Changelog ==
+
+= 1.0.2 =
+* Fixed internal links losing the active language prefix after navigation.
+* Localized links independently from API translation for logged-in previews and cached pages.
+
+= 1.0.1 =
+
+* Fixed automatic header language switcher not appearing while administrators were logged in.
+* Kept translation and full-page caching disabled for logged-in and personalized requests.
+* Cleaned release packaging metadata.
 
 = 1.0.0 =
 

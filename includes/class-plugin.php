@@ -272,9 +272,17 @@ final class Plugin {
 
 	public function start_buffer(): void {
 		$this->settings = $this->get_settings();
-		if ( ! $this->should_process_request() ) {
+
+		/*
+		 * Always buffer eligible frontend HTML when the plugin is enabled.
+		 * Translation and page caching remain disabled for logged-in or
+		 * personalized requests, but the automatic header switcher must still
+		 * be allowed to render for administrators previewing the site.
+		 */
+		if ( ! $this->should_buffer_frontend() ) {
 			return;
 		}
+
 		ob_start( array( $this, 'process_output' ) );
 	}
 
@@ -287,7 +295,12 @@ final class Plugin {
 		$source    = $this->router->source_language();
 		$processed = $html;
 
-		if ( $current !== $source ) {
+		/*
+		 * Only translate and cache anonymous, non-personalized requests.
+		 * Header-switcher injection is performed below for every eligible
+		 * frontend HTML response, including logged-in administrator previews.
+		 */
+		if ( $this->should_process_request() && $current !== $source ) {
 			if ( ! $this->can_translate_output( $html ) ) {
 				$switcher = new Language_Switcher( $this->router, $this->settings );
 				return $switcher->inject( $html );
@@ -346,8 +359,89 @@ final class Plugin {
 			}
 		}
 
+		/*
+		 * URL localization is independent from API translation. This keeps all
+		 * internal frontend links on the active language for logged-in previews,
+		 * Gutenberg-managed translations, and older cached HTML pages.
+		 */
+		if ( $current !== $source && ! empty( $this->settings['translate_internal_links'] ) ) {
+			$processed = $this->localize_output_links( $processed, $current );
+		}
+
 		$switcher = new Language_Switcher( $this->router, $this->settings );
 		return $switcher->inject( $processed );
+	}
+
+	/**
+	 * Localize internal anchor URLs while preserving external, asset, admin,
+	 * language-switcher, and explicitly excluded links.
+	 */
+	private function localize_output_links( string $html, string $language ): string {
+		if ( '' === trim( $html ) || false === stripos( $html, '<a' ) || ! class_exists( '\DOMDocument' ) ) {
+			return $html;
+		}
+
+		$dom      = new \DOMDocument( '1.0', 'UTF-8' );
+		$previous = libxml_use_internal_errors( true );
+		$loaded   = $dom->loadHTML( '<?xml encoding="UTF-8">' . $html, LIBXML_NOWARNING | LIBXML_NOERROR );
+		libxml_clear_errors();
+		libxml_use_internal_errors( $previous );
+
+		if ( ! $loaded ) {
+			return $html;
+		}
+
+		foreach ( iterator_to_array( $dom->childNodes ) as $child ) {
+			if ( XML_PI_NODE === $child->nodeType ) {
+				$dom->removeChild( $child );
+			}
+		}
+
+		$links = $dom->getElementsByTagName( 'a' );
+		foreach ( $links as $link ) {
+			if ( ! $link instanceof \DOMElement || ! $link->hasAttribute( 'href' ) || $this->exclude_link_from_localization( $link ) ) {
+				continue;
+			}
+
+			$link->setAttribute(
+				'href',
+				$this->router->localize_url( $link->getAttribute( 'href' ), $language )
+			);
+		}
+
+		$output = $dom->saveHTML();
+		return is_string( $output ) && '' !== $output ? $output : $html;
+	}
+
+	/**
+	 * Determine whether an anchor belongs to an area that must not be changed.
+	 */
+	private function exclude_link_from_localization( \DOMElement $link ): bool {
+		$current = $link;
+
+		while ( $current instanceof \DOMElement ) {
+			$id = strtolower( $current->getAttribute( 'id' ) );
+			if ( 'wpadminbar' === $id || 0 === strpos( $id, 'localizepilot' ) ) {
+				return true;
+			}
+
+			$classes = ' ' . strtolower( trim( $current->getAttribute( 'class' ) ) ) . ' ';
+			if (
+				false !== strpos( $classes, ' notranslate ' ) ||
+				false !== strpos( $classes, ' next-translate-' ) ||
+				false !== strpos( $classes, ' localizepilot-language-switcher ' )
+			) {
+				return true;
+			}
+
+			if ( 'no' === strtolower( $current->getAttribute( 'translate' ) ) ) {
+				return true;
+			}
+
+			$current = $current->parentNode;
+		}
+
+		return false;
 	}
 
 	public function output_hreflang(): void {
@@ -420,6 +514,32 @@ final class Plugin {
 			/* translators: %s is the URL of the LocalizePilot settings page. */
 			echo ('<div class="notice notice-warning"><p>' . wp_kses_post( sprintf( __( 'LocalizePilot is active, but the selected translation API key is missing. <a href="%s">Open settings</a>.', 'localizepilot' ), esc_url( admin_url( 'admin.php?page=localizepilot' ) ) ) ) . '</p></div>');
 		}
+	}
+
+	/**
+	 * Determine whether the frontend HTML response may be buffered for
+	 * automatic language-switcher injection. This intentionally permits
+	 * logged-in users while keeping translation and caching protections in
+	 * should_process_request().
+	 */
+	private function should_buffer_frontend(): bool {
+		if ( empty( $this->settings['enabled'] ) || is_admin() || wp_doing_ajax() || wp_doing_cron() || is_feed() || is_robots() || is_trackback() || is_preview() ) {
+			return false;
+		}
+
+		if ( 'GET' !== strtoupper( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ?? 'GET' ) ) ) ) {
+			return false;
+		}
+
+		if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
+			return false;
+		}
+
+		if ( function_exists( 'is_customize_preview' ) && is_customize_preview() ) {
+			return false;
+		}
+
+		return true;
 	}
 
 	private function should_process_request(): bool {
