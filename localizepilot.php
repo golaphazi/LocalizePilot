@@ -1,11 +1,11 @@
 <?php
 /**
  * Plugin Name: LocalizePilot - Multilingual Content & Media
- * Plugin URI: https://themedev.net/
+ * Plugin URI: https://github.com/golaphazi/LocalizePilot
  * Description: Multilingual WordPress content with Gutenberg-editable translations, TranslateX, Google, OpenAI, Gemini, Claude, Kimi, DeepSeek, Mistral, Groq, and OpenRouter APIs, language-specific media, a shortcode and Gutenberg language switcher block, same-page URLs, and persistent HTML file caching.
- * Version: 1.5.0
- * Author: ThemeDev
- * Author URI: https://themedev.net/
+ * Version: 1.0.0
+ * Author: Golaphazi
+ * Author URI: https://github.com/golaphazi/
  * Text Domain: localizepilot
  * Domain Path: /languages
  * Requires at least: 6.2
