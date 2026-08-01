@@ -27,10 +27,12 @@ abstract class AI_Client_Base implements Translation_Client_Interface {
 		$key   = trim( (string) ( $this->settings[ $field ] ?? '' ) );
 		if ( '' === $key ) {
 			throw new \RuntimeException(
-				sprintf(
-					/* translators: %s is an API provider name. */
-					__( '%s API key is missing. Add it in LocalizePilot settings.', 'localizepilot' ),
-					Provider_Catalog::label( $this->provider_id )
+				esc_html(
+					sprintf(
+						/* translators: %s is an API provider name. */
+						__( '%s API key is missing. Add it in LocalizePilot settings.', 'localizepilot' ),
+						Provider_Catalog::label( $this->provider_id )
+					)
 				)
 			);
 		}
@@ -43,7 +45,7 @@ abstract class AI_Client_Base implements Translation_Client_Interface {
 		$model  = '' !== $field ? trim( (string) ( $this->settings[ $field ] ?? '' ) ) : '';
 		$model  = '' !== $model ? $model : (string) ( $config['default_model'] ?? '' );
 		if ( '' === $model ) {
-			throw new \RuntimeException( __( 'An AI model name is required.', 'localizepilot' ) );
+			throw new \RuntimeException( esc_html__( 'An AI model name is required.', 'localizepilot' ) );
 		}
 		return $model;
 	}
@@ -70,7 +72,7 @@ abstract class AI_Client_Base implements Translation_Client_Interface {
 		);
 		$instructions = trim( (string) ( $this->settings['ai_custom_instructions'] ?? '' ) );
 
-		$prompt = "You are a professional WordPress localization engine. Translate every input item from {$source} ({$source_code}) to {$target} ({$target_language}).\n";
+		$prompt  = "You are a professional WordPress localization engine. Translate every input item from {$source} ({$source_code}) to {$target} ({$target_language}).\n";
 		$prompt .= ( $style_map[ $style ] ?? $style_map['natural'] ) . "\n";
 		$prompt .= "Preserve the exact number and order of items. Preserve placeholders, variables, shortcodes, URLs, email addresses, HTML entities, product names, brand names, numbers, punctuation, and formatting tokens. Never translate code. Do not explain the result.\n";
 		$prompt .= 'Return valid JSON only, using exactly this structure: {"translations":["translation 1","translation 2"]}.';
@@ -83,7 +85,7 @@ abstract class AI_Client_Base implements Translation_Client_Interface {
 	}
 
 	/**
-	 * @param string[] $texts
+	 * @param string[] $texts Text strings to translate.
 	 */
 	protected function user_prompt( array $texts, string $target_language ): string {
 		return (string) wp_json_encode(
@@ -101,8 +103,8 @@ abstract class AI_Client_Base implements Translation_Client_Interface {
 	 * @return string[]
 	 */
 	protected function parse_translations( string $raw, int $expected_count ): array {
-		$raw = trim( $raw );
-		$raw = preg_replace( '/^```(?:json)?\s*|\s*```$/iu', '', $raw ) ?? $raw;
+		$raw  = trim( $raw );
+		$raw  = preg_replace( '/^```(?:json)?\s*|\s*```$/iu', '', $raw ) ?? $raw;
 		$data = json_decode( $raw, true );
 
 		if ( ! is_array( $data ) ) {
@@ -120,12 +122,14 @@ abstract class AI_Client_Base implements Translation_Client_Interface {
 
 		if ( ! is_array( $translations ) || count( $translations ) !== $expected_count ) {
 			throw new \RuntimeException(
-				sprintf(
-					/* translators: 1: provider name, 2: expected number, 3: received number. */
-					__( '%1$s returned an invalid translation list. Expected %2$d items and received %3$d.', 'localizepilot' ),
-					Provider_Catalog::label( $this->provider_id ),
-					$expected_count,
-					is_array( $translations ) ? count( $translations ) : 0
+				esc_html(
+					sprintf(
+						/* translators: 1: provider name, 2: expected number, 3: received number. */
+						__( '%1$s returned an invalid translation list. Expected %2$d items and received %3$d.', 'localizepilot' ),
+						Provider_Catalog::label( $this->provider_id ),
+						$expected_count,
+						is_array( $translations ) ? count( $translations ) : 0
+					)
 				)
 			);
 		}
@@ -161,7 +165,7 @@ abstract class AI_Client_Base implements Translation_Client_Interface {
 		);
 
 		if ( is_wp_error( $response ) ) {
-			throw new \RuntimeException( $response->get_error_message() );
+			throw new \RuntimeException( esc_html( sanitize_text_field( $response->get_error_message() ) ) );
 		}
 
 		$status = (int) wp_remote_retrieve_response_code( $response );
@@ -171,13 +175,28 @@ abstract class AI_Client_Base implements Translation_Client_Interface {
 		if ( $status < 200 || $status >= 300 ) {
 			$message = $this->error_message( $data, $raw );
 			throw new \RuntimeException(
-				sprintf( '%s HTTP %d: %s', Provider_Catalog::label( $this->provider_id ), $status, $message )
+				esc_html(
+					sprintf(
+						/* translators: 1: provider name, 2: HTTP status code, 3: provider error message. */
+						__( '%1$s HTTP %2$d: %3$s', 'localizepilot' ),
+						Provider_Catalog::label( $this->provider_id ),
+						$status,
+						sanitize_text_field( $message )
+					)
+				)
 			);
 		}
 
 		if ( ! is_array( $data ) ) {
-			/* translators: %s is the selected translation provider name. */
-			throw new \RuntimeException( sprintf( __( '%s returned invalid JSON.', 'localizepilot' ), Provider_Catalog::label( $this->provider_id ) ) );
+			throw new \RuntimeException(
+				esc_html(
+					sprintf(
+						/* translators: %s is the selected translation provider name. */
+						__( '%s returned invalid JSON.', 'localizepilot' ),
+						Provider_Catalog::label( $this->provider_id )
+					)
+				)
+			);
 		}
 		return $data;
 	}

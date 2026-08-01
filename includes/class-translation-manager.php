@@ -11,6 +11,7 @@ final class Translation_Manager {
 	public const META_STATUS     = '_next_translate_status';
 	public const META_SOURCE_HASH = '_next_translate_source_hash';
 	public const META_PROVIDER   = '_next_translate_provider';
+	private const PARENT_MIGRATION_OPTION = 'localizepilot_translation_parent_migrated';
 
 	private Router $router;
 	private Usage_Limiter $limiter;
@@ -25,6 +26,7 @@ final class Translation_Manager {
 
 	public function hooks(): void {
 		add_action( 'init', array( $this, 'register_post_type' ), 5 );
+		add_action( 'init', array( $this, 'migrate_translation_parents' ), 20 );
 		add_action( 'add_meta_boxes_post', array( $this, 'add_source_meta_box' ) );
 		add_action( 'add_meta_boxes_page', array( $this, 'add_source_meta_box' ) );
 		add_action( 'add_meta_boxes_' . self::POST_TYPE, array( $this, 'add_translation_meta_box' ) );
@@ -85,6 +87,54 @@ final class Translation_Manager {
 		);
 
 		$this->register_meta();
+	}
+
+
+	/**
+	 * Migrate legacy translation records to use post_parent for source lookups.
+	 *
+	 * This removes repeated post-meta queries while preserving the legacy source
+	 * ID metadata used by existing installations and REST responses.
+	 */
+	public function migrate_translation_parents(): void {
+		if ( get_option( self::PARENT_MIGRATION_OPTION, false ) ) {
+			return;
+		}
+
+		$translation_ids = get_posts(
+			array(
+				'post_type'              => self::POST_TYPE,
+				'post_status'            => 'any',
+				'posts_per_page'         => -1,
+				'fields'                 => 'ids',
+				'no_found_rows'          => true,
+				'update_post_meta_cache' => false,
+				'update_post_term_cache' => false,
+			)
+		);
+
+		foreach ( $translation_ids as $translation_id ) {
+			$translation_id = absint( $translation_id );
+			$source_id      = absint( get_post_meta( $translation_id, self::META_SOURCE_ID, true ) );
+			$translation    = get_post( $translation_id );
+
+			if ( ! $source_id || ! $translation instanceof \WP_Post || (int) $translation->post_parent === $source_id ) {
+				continue;
+			}
+
+			$this->programmatic_update = true;
+			wp_update_post(
+				wp_slash(
+					array(
+						'ID'          => $translation_id,
+						'post_parent' => $source_id,
+					)
+				)
+			);
+			$this->programmatic_update = false;
+		}
+
+		update_option( self::PARENT_MIGRATION_OPTION, 1, false );
 	}
 
 	private function register_meta(): void {
@@ -294,19 +344,19 @@ final class Translation_Manager {
 		$source         = get_post( $source_id );
 
 		if ( ! $source instanceof \WP_Post || ! in_array( $source->post_type, array( 'post', 'page' ), true ) ) {
-			throw new \RuntimeException( __( 'The source post or page was not found.', 'localizepilot' ) );
+			throw new \RuntimeException( esc_html__( 'The source post or page was not found.', 'localizepilot' ) );
 		}
 		if ( ! Language_Catalog::exists( $language ) || $language === (string) $this->settings['source_language'] ) {
-			throw new \RuntimeException( __( 'The selected target language is invalid.', 'localizepilot' ) );
+			throw new \RuntimeException( esc_html__( 'The selected target language is invalid.', 'localizepilot' ) );
 		}
 		if ( ! in_array( $language, (array) $this->settings['enabled_languages'], true ) ) {
-			throw new \RuntimeException( __( 'Enable this language in LocalizePilot settings first.', 'localizepilot' ) );
+			throw new \RuntimeException( esc_html__( 'Enable this language in LocalizePilot settings first.', 'localizepilot' ) );
 		}
 
 		$limit_enabled = ! empty( $this->settings['daily_limit_enabled'] );
 		$daily_limit   = max( 1, absint( $this->settings['daily_limit'] ?? 10 ) );
 		if ( $limit_enabled && ! $this->limiter->can_translate( $daily_limit ) ) {
-			throw new \RuntimeException( __( 'The LocalizePilot daily automatic translation limit has been reached.', 'localizepilot' ) );
+			throw new \RuntimeException( esc_html__( 'The LocalizePilot daily automatic translation limit has been reached.', 'localizepilot' ) );
 		}
 
 		$client     = Client_Factory::make( $this->settings );
@@ -329,6 +379,7 @@ final class Translation_Manager {
 			'ID'           => $translation_id,
 			'post_type'    => self::POST_TYPE,
 			'post_status'  => 'publish',
+			'post_parent'  => $source_id,
 			'post_title'   => $translated_title,
 			'post_content' => $translated_content,
 			'post_excerpt' => $translated_excerpt,
@@ -340,7 +391,7 @@ final class Translation_Manager {
 		$this->programmatic_update = false;
 
 		if ( is_wp_error( $saved_id ) ) {
-			throw new \RuntimeException( $saved_id->get_error_message() );
+			throw new \RuntimeException( esc_html( sanitize_text_field( $saved_id->get_error_message() ) ) );
 		}
 
 		update_post_meta( $saved_id, self::META_SOURCE_ID, $source_id );
@@ -379,6 +430,19 @@ final class Translation_Manager {
 			$language  = sanitize_key( (string) get_post_meta( $post_id, self::META_LANGUAGE, true ) );
 			if ( ! $source_id || '' === $language ) {
 				return;
+			}
+
+			if ( (int) $post->post_parent !== $source_id ) {
+				$this->programmatic_update = true;
+				wp_update_post(
+					wp_slash(
+						array(
+							'ID'          => $post_id,
+							'post_parent' => $source_id,
+						)
+					)
+				);
+				$this->programmatic_update = false;
 			}
 
 			$statuses = self::statuses();
@@ -426,11 +490,10 @@ final class Translation_Manager {
 			array(
 				'post_type'      => self::POST_TYPE,
 				'post_status'    => array( 'publish', 'draft', 'pending', 'private' ),
+				'post_parent'    => $source->ID,
 				'posts_per_page' => -1,
 				'fields'         => 'ids',
 				'no_found_rows'  => true,
-				'meta_key'       => self::META_SOURCE_ID,
-				'meta_value'     => $source->ID,
 			)
 		);
 
@@ -500,11 +563,10 @@ final class Translation_Manager {
 				array(
 					'post_type'      => self::POST_TYPE,
 					'post_status'    => 'any',
+					'post_parent'    => $post_id,
 					'posts_per_page' => -1,
 					'fields'         => 'ids',
 					'no_found_rows'  => true,
-					'meta_key'       => self::META_SOURCE_ID,
-					'meta_value'     => $post_id,
 				)
 			);
 			foreach ( $translations as $translation_id ) {
@@ -521,29 +583,28 @@ final class Translation_Manager {
 		}
 
 		$post_status = is_admin() ? array( 'publish', 'draft', 'pending', 'private' ) : 'publish';
-		$query = new \WP_Query(
+		$query       = new \WP_Query(
 			array(
 				'post_type'      => self::POST_TYPE,
 				'post_status'    => $post_status,
-				'posts_per_page' => 1,
+				'post_parent'    => $source_id,
+				'posts_per_page' => -1,
 				'no_found_rows'  => true,
 				'orderby'        => 'ID',
 				'order'          => 'DESC',
-				'meta_query'     => array(
-					array(
-						'key'   => self::META_SOURCE_ID,
-						'value' => $source_id,
-					),
-					array(
-						'key'   => self::META_LANGUAGE,
-						'value' => $language,
-					),
-				),
 			)
 		);
-		$translation = $query->have_posts() ? $query->posts[0] : null;
+
+		$translation = null;
+		foreach ( $query->posts as $candidate ) {
+			if ( $candidate instanceof \WP_Post && $language === sanitize_key( (string) get_post_meta( $candidate->ID, self::META_LANGUAGE, true ) ) ) {
+				$translation = $candidate;
+				break;
+			}
+		}
+
 		$this->runtime_cache[ $key ] = $translation;
-		return $translation instanceof \WP_Post ? $translation : null;
+		return $translation;
 	}
 
 	public function current_translation(): ?\WP_Post {
@@ -708,7 +769,9 @@ final class Translation_Manager {
 			return;
 		}
 
-		$current_status   = sanitize_key( wp_unslash( $_GET['next_translate_status_filter'] ?? '' ) );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only list-table filter.
+		$current_status = sanitize_key( wp_unslash( $_GET['next_translate_status_filter'] ?? '' ) );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only list-table filter.
 		$current_language = sanitize_key( wp_unslash( $_GET['next_translate_language_filter'] ?? '' ) );
 		$languages        = Language_Catalog::all();
 
@@ -735,7 +798,9 @@ final class Translation_Manager {
 		}
 
 		$meta_query = array();
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only list-table filter.
 		$status = sanitize_key( wp_unslash( $_GET['next_translate_status_filter'] ?? '' ) );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only list-table filter.
 		$language = sanitize_key( wp_unslash( $_GET['next_translate_language_filter'] ?? '' ) );
 		if ( isset( self::statuses()[ $status ] ) ) {
 			$meta_query[] = array(
@@ -755,9 +820,11 @@ final class Translation_Manager {
 	}
 
 	public function admin_notices(): void {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only success flag from a verified admin-post redirect.
 		if ( isset( $_GET['next_translate_created'] ) ) {
 			echo ('<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Automatic translation created. You can now correct it with the Gutenberg editor.', 'localizepilot' ) . '</p></div>');
 		}
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only success flag from a verified admin-post redirect.
 		if ( isset( $_GET['next_translate_refreshed'] ) ) {
 			echo ('<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'The translation was refreshed from the selected API.', 'localizepilot' ) . '</p></div>');
 		}

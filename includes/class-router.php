@@ -19,7 +19,9 @@ final class Router {
 		$this->detected = true;
 		$this->settings             = Plugin::instance()->get_settings();
 		$this->current_language     = (string) ( $this->settings['source_language'] ?? 'en' );
-		$this->original_request_uri = isset( $_SERVER['REQUEST_URI'] ) ? wp_unslash( $_SERVER['REQUEST_URI'] ) : '/';
+		$this->original_request_uri = isset( $_SERVER['REQUEST_URI'] )
+			? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) )
+			: '/';
 		$this->base_path            = (string) wp_parse_url( home_url( '/' ), PHP_URL_PATH );
 		$this->base_path            = '/' . trim( $this->base_path, '/' );
 

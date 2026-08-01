@@ -94,15 +94,13 @@ final class Plugin {
 	 * Register the dynamic Gutenberg language-switcher block.
 	 */
 	public function register_language_switcher_block(): void {
-		$block_dir    = LOCALIZEPILOT_PATH . 'blocks/language-switcher';
-		$script_path  = $block_dir . '/index.js';
-		$editor_style = $block_dir . '/editor.css';
+		$block_dir = LOCALIZEPILOT_PATH . 'blocks/language-switcher';
 
 		wp_register_script(
 			'localizepilot-language-switcher-block',
 			LOCALIZEPILOT_URL . 'blocks/language-switcher/index.js',
 			array( 'wp-blocks', 'wp-element', 'wp-i18n', 'wp-components', 'wp-block-editor' ),
-			is_file( $script_path ) ? (string) filemtime( $script_path ) : LOCALIZEPILOT_VERSION,
+			LOCALIZEPILOT_VERSION,
 			true
 		);
 
@@ -112,7 +110,7 @@ final class Plugin {
 			'localizepilot-language-switcher-block-editor',
 			LOCALIZEPILOT_URL . 'blocks/language-switcher/editor.css',
 			array( 'wp-edit-blocks' ),
-			is_file( $editor_style ) ? (string) filemtime( $editor_style ) : LOCALIZEPILOT_VERSION
+			LOCALIZEPILOT_VERSION
 		);
 
 		$settings       = $this->get_settings();
@@ -495,7 +493,9 @@ final class Plugin {
 			return;
 		}
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only message added by a verified admin-post redirect.
 		if ( isset( $_GET['localizepilot_cache_message'] ) ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only message added by a verified admin-post redirect.
 			$message = sanitize_text_field( wp_unslash( $_GET['localizepilot_cache_message'] ) );
 			echo ('<div class="notice notice-success is-dismissible"><p>' . esc_html( $message ) . '</p></div>');
 		}

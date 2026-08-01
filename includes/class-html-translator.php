@@ -24,7 +24,7 @@ final class HTML_Translator {
 
 	public function translate_document( string $html, string $target_language ): string {
 		if ( ! class_exists( '\DOMDocument' ) ) {
-			throw new \RuntimeException( __( 'The PHP DOM extension is required by LocalizePilot.', 'localizepilot' ) );
+			throw new \RuntimeException( esc_html__( 'The PHP DOM extension is required by LocalizePilot.', 'localizepilot' ) );
 		}
 
 		$dom = new \DOMDocument( '1.0', 'UTF-8' );
@@ -34,7 +34,7 @@ final class HTML_Translator {
 		libxml_use_internal_errors( $previous );
 
 		if ( ! $loaded ) {
-			throw new \RuntimeException( __( 'LocalizePilot could not parse the page HTML.', 'localizepilot' ) );
+			throw new \RuntimeException( esc_html__( 'LocalizePilot could not parse the page HTML.', 'localizepilot' ) );
 		}
 
 		foreach ( iterator_to_array( $dom->childNodes ) as $child ) {

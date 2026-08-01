@@ -163,6 +163,7 @@ final class Settings {
 		$stats      = $cache->stats();
 		$provider   = (string) ( $options['translation_provider'] ?? 'translatex' );
 		$tabs       = $this->tabs();
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only tab navigation parameter.
 		$active_tab = sanitize_key( wp_unslash( $_GET['tab'] ?? 'dashboard' ) );
 		$active_tab = isset( $tabs[ $active_tab ] ) ? $active_tab : 'dashboard';
 		?>
@@ -177,7 +178,13 @@ final class Settings {
 			</nav>
 
 
-			<?php if ( ! empty( $_GET['localizepilot_cache_message'] ) ) : ?><div class="notice notice-success is-dismissible"><p><?php echo esc_html( sanitize_text_field( wp_unslash( $_GET['localizepilot_cache_message'] ) ) ); ?></p></div><?php endif; ?>
+			<?php
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only message added by a verified admin-post redirect.
+			$cache_message = sanitize_text_field( wp_unslash( $_GET['localizepilot_cache_message'] ?? '' ) );
+			if ( '' !== $cache_message ) :
+				?>
+				<div class="notice notice-success is-dismissible"><p><?php echo esc_html( $cache_message ); ?></p></div>
+			<?php endif; ?>
 
 			<div class="nt-tab-panel">
 				<?php
@@ -297,7 +304,9 @@ final class Settings {
 	}
 
 	private function render_cache_tab( array $options, File_Cache $cache, array $stats ): void {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only cache history pagination parameter.
 		$cache_page = max( 1, absint( wp_unslash( $_GET['cache_page'] ?? 1 ) ) );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only cache history filter parameter.
 		$cache_type = sanitize_key( wp_unslash( $_GET['cache_type'] ?? 'all' ) );
 		$cache_type = in_array( $cache_type, array( 'all', 'page', 'snapshot' ), true ) ? $cache_type : 'all';
 		$history    = $cache->history( $cache_page, 15, $cache_type );
@@ -394,7 +403,8 @@ final class Settings {
 
 		$settings['ai_translation_style']   = sanitize_key( wp_unslash( $_POST['style'] ?? $settings['ai_translation_style'] ?? 'natural' ) );
 		$settings['ai_custom_instructions'] = sanitize_textarea_field( wp_unslash( $_POST['instructions'] ?? $settings['ai_custom_instructions'] ?? '' ) );
-		$settings['ai_temperature']         = max( 0, min( 1, (float) wp_unslash( $_POST['temperature'] ?? $settings['ai_temperature'] ?? 0.2 ) ) );
+		$temperature                        = sanitize_text_field( wp_unslash( $_POST['temperature'] ?? $settings['ai_temperature'] ?? '0.2' ) );
+		$settings['ai_temperature']         = max( 0, min( 1, (float) $temperature ) );
 		$settings['ai_max_output_tokens']   = min( 32000, max( 512, absint( wp_unslash( $_POST['max_tokens'] ?? $settings['ai_max_output_tokens'] ?? 8192 ) ) ) );
 
 		try {
@@ -403,6 +413,7 @@ final class Settings {
 			wp_send_json_success(
 				array(
 					'message' => sprintf(
+						/* translators: 1: translation provider name, 2: translated test response. */
 						__( '%1$s connected: %2$s', 'localizepilot' ),
 						Provider_Catalog::label( $provider ),
 						$result
@@ -410,7 +421,7 @@ final class Settings {
 				)
 			);
 		} catch ( \Throwable $exception ) {
-			wp_send_json_error( array( 'message' => $exception->getMessage() ) );
+			wp_send_json_error( array( 'message' => sanitize_text_field( $exception->getMessage() ) ) );
 		}
 	}
 

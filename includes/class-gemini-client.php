@@ -42,7 +42,7 @@ final class Gemini_Client extends AI_Client_Base {
 			}
 		}
 		if ( '' === trim( $text ) ) {
-			throw new \RuntimeException( __( 'Google Gemini returned an empty response.', 'localizepilot' ) );
+			throw new \RuntimeException( esc_html__( 'Google Gemini returned an empty response.', 'localizepilot' ) );
 		}
 		return $this->parse_translations( $text, count( $texts ) );
 	}

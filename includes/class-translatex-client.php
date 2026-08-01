@@ -12,7 +12,7 @@ final class TranslateX_Client implements Translation_Client_Interface {
 	}
 
 	/**
-	 * @param string[] $texts
+	 * @param string[] $texts Text strings to translate.
 	 * @return string[]
 	 */
 	public function translate_batch( array $texts, string $target_language ): array {
@@ -23,7 +23,7 @@ final class TranslateX_Client implements Translation_Client_Interface {
 
 		$api_key = trim( (string) ( $this->settings['translatex_api_key'] ?? '' ) );
 		if ( '' === $api_key ) {
-			throw new \RuntimeException( __( 'TranslateX API key is missing. Add it in LocalizePilot settings.', 'localizepilot' ) );
+			throw new \RuntimeException( esc_html__( 'TranslateX API key is missing. Add it in LocalizePilot settings.', 'localizepilot' ) );
 		}
 
 		$endpoint = add_query_arg(
@@ -54,7 +54,7 @@ final class TranslateX_Client implements Translation_Client_Interface {
 		);
 
 		if ( is_wp_error( $response ) ) {
-			throw new \RuntimeException( $response->get_error_message() );
+			throw new \RuntimeException( esc_html( sanitize_text_field( $response->get_error_message() ) ) );
 		}
 
 		$status = (int) wp_remote_retrieve_response_code( $response );
@@ -66,11 +66,20 @@ final class TranslateX_Client implements Translation_Client_Interface {
 			if ( is_array( $message ) ) {
 				$message = wp_json_encode( $message );
 			}
-			throw new \RuntimeException( sprintf( 'TranslateX HTTP %d: %s', $status, (string) $message ) );
+			throw new \RuntimeException(
+				esc_html(
+					sprintf(
+						/* translators: 1: HTTP status code, 2: provider error message. */
+						__( 'TranslateX HTTP %1$d: %2$s', 'localizepilot' ),
+						$status,
+						sanitize_text_field( (string) $message )
+					)
+				)
+			);
 		}
 
 		if ( ! is_array( $data ) || ! isset( $data['translation'] ) ) {
-			throw new \RuntimeException( __( 'TranslateX returned an invalid response.', 'localizepilot' ) );
+			throw new \RuntimeException( esc_html__( 'TranslateX returned an invalid response.', 'localizepilot' ) );
 		}
 
 		$translations = $data['translation'];
@@ -79,7 +88,7 @@ final class TranslateX_Client implements Translation_Client_Interface {
 		}
 
 		if ( ! is_array( $translations ) || count( $translations ) !== count( $texts ) ) {
-			throw new \RuntimeException( __( 'TranslateX returned an unexpected number of translations.', 'localizepilot' ) );
+			throw new \RuntimeException( esc_html__( 'TranslateX returned an unexpected number of translations.', 'localizepilot' ) );
 		}
 
 		return array_values( array_map( 'strval', $translations ) );

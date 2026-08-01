@@ -17,20 +17,23 @@ final class Fallback_Client implements Translation_Client_Interface {
 
 	public function translate_batch( array $texts, string $target_language ): array {
 		try {
-			$result = $this->primary->translate_batch( $texts, $target_language );
+			$result              = $this->primary->translate_batch( $texts, $target_language );
 			$this->last_provider = $this->primary->provider();
 			return $result;
 		} catch ( \Throwable $primary_error ) {
 			try {
-				$result = $this->fallback->translate_batch( $texts, $target_language );
+				$result              = $this->fallback->translate_batch( $texts, $target_language );
 				$this->last_provider = $this->fallback->provider();
 				return $result;
 			} catch ( \Throwable $fallback_error ) {
 				throw new \RuntimeException(
-					sprintf(
-						__( 'Primary provider failed: %1$s Fallback provider failed: %2$s', 'localizepilot' ),
-						$primary_error->getMessage(),
-						$fallback_error->getMessage()
+					esc_html(
+						sprintf(
+							/* translators: 1: primary provider error message, 2: fallback provider error message. */
+							__( 'Primary provider failed: %1$s Fallback provider failed: %2$s', 'localizepilot' ),
+							sanitize_text_field( $primary_error->getMessage() ),
+							sanitize_text_field( $fallback_error->getMessage() )
+						)
 					)
 				);
 			}

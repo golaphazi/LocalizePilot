@@ -1,6 +1,6 @@
 {
   "$schema": "https://schemas.wp.org/trunk/block.json",
-  "apiVersion": 1,
+  "apiVersion": 3,
   "name": "localizepilot/language-switcher",
   "version": "1.0.0",
   "title": "Language Switcher",

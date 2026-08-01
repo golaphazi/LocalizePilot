@@ -18,7 +18,7 @@ final class OpenAI_Compatible_Client extends AI_Client_Base {
 		$config   = Provider_Catalog::get( $this->provider_id );
 		$endpoint = (string) ( $config['endpoint'] ?? '' );
 		if ( '' === $endpoint ) {
-			throw new \RuntimeException( __( 'The selected AI provider endpoint is missing.', 'localizepilot' ) );
+			throw new \RuntimeException( esc_html__( 'The selected AI provider endpoint is missing.', 'localizepilot' ) );
 		}
 
 		$headers = array( 'Authorization' => 'Bearer ' . $this->api_key() );
@@ -62,8 +62,15 @@ final class OpenAI_Compatible_Client extends AI_Client_Base {
 			$content = implode( '', $parts );
 		}
 		if ( ! is_string( $content ) || '' === trim( $content ) ) {
-			/* translators: %s is the selected AI provider name. */
-			throw new \RuntimeException( sprintf( __( '%s returned an empty response.', 'localizepilot' ), Provider_Catalog::label( $this->provider_id ) ) );
+			throw new \RuntimeException(
+				esc_html(
+					sprintf(
+						/* translators: %s is the selected AI provider name. */
+						__( '%s returned an empty response.', 'localizepilot' ),
+						Provider_Catalog::label( $this->provider_id )
+					)
+				)
+			);
 		}
 		return $this->parse_translations( $content, count( $texts ) );
 	}
