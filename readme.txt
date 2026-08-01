@@ -4,7 +4,7 @@ Tags: translation, multilingual, gutenberg, localization, media
 Requires at least: 6.2
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.0.2
+Stable tag: 1.0.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -90,9 +90,11 @@ Yes. Each post and page translation is stored as a Gutenberg-editable WordPress 
 
 No. Corrections are stored in the WordPress database. HTML files are generated snapshots and rendered-page caches.
 
-= Does the plugin translate logged-in or private account pages? =
+= Does the plugin translate pages for logged-in visitors? =
 
-No. To reduce the risk of sending personalized or sensitive output to an external service, full-page translation is skipped for logged-in visitors, password-protected content, non-GET requests, and common WooCommerce cart, checkout, and account pages.
+Yes. Normal frontend posts, pages, archives, menus, headers, and footers can be translated for both logged-in and logged-out visitors. Logged-in responses are translated in memory and are not saved to the shared full-page HTML cache. The WordPress admin bar is excluded from translation.
+
+For privacy and security, password-protected content, non-GET requests, and common WooCommerce cart, checkout, and account pages remain excluded from automatic full-page API translation.
 
 = Are automatic translations guaranteed to be accurate? =
 
@@ -100,7 +102,7 @@ No. Machine and AI translations can contain errors. Review important legal, medi
 
 == External services ==
 
-LocalizePilot uses only the provider selected and configured by a WordPress administrator. When a translation is generated, tested, refreshed, or required for a public page, the plugin may send titles, excerpts, block text, visible page text, supported attributes, source and target language codes, model settings, and custom translation instructions to that provider. The configured API key is sent only to the selected provider.
+LocalizePilot uses only the provider selected and configured by a WordPress administrator. When a translation is generated, tested, refreshed, or required for a frontend page, including a normal page viewed by a logged-in visitor, the plugin may send titles, excerpts, block text, visible page text, supported attributes, source and target language codes, model settings, and custom translation instructions to that provider. The configured API key is sent only to the selected provider.
 
 Each provider controls its own billing, retention, model training, quotas, regional availability, terms, and privacy practices. Review the selected provider's policies before sending personal or sensitive content.
 
@@ -171,6 +173,11 @@ LocalizePilot stores settings and API keys in the WordPress options table, trans
 Using WordPress's Delete action for the plugin runs `uninstall.php` and removes LocalizePilot settings, usage counters, translation records, and generated cache files. Deactivation alone does not delete data.
 
 == Changelog ==
+
+= 1.0.3 =
+* Enabled translation for logged-in and logged-out visitors on normal frontend pages.
+* Kept shared rendered-page caching disabled for logged-in and personalized responses.
+* Kept the WordPress admin bar and sensitive WooCommerce account, cart, checkout, and password-protected screens excluded.
 
 = 1.0.2 =
 * Fixed internal links losing the active language prefix after navigation.

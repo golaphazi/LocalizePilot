@@ -274,10 +274,9 @@ final class Plugin {
 		$this->settings = $this->get_settings();
 
 		/*
-		 * Always buffer eligible frontend HTML when the plugin is enabled.
-		 * Translation and page caching remain disabled for logged-in or
-		 * personalized requests, but the automatic header switcher must still
-		 * be allowed to render for administrators previewing the site.
+		 * Buffer eligible frontend HTML when the plugin is enabled. Translation
+		 * is available to logged-in and logged-out visitors. Shared full-page
+		 * caching remains disabled for logged-in or personalized requests.
 		 */
 		if ( ! $this->should_buffer_frontend() ) {
 			return;
@@ -296,9 +295,9 @@ final class Plugin {
 		$processed = $html;
 
 		/*
-		 * Only translate and cache anonymous, non-personalized requests.
-		 * Header-switcher injection is performed below for every eligible
-		 * frontend HTML response, including logged-in administrator previews.
+		 * Translate normal frontend requests for logged-in and logged-out users.
+		 * The cache decision is handled separately, so personalized responses are
+		 * translated in memory and are never written to the shared page cache.
 		 */
 		if ( $this->should_process_request() && $current !== $source ) {
 			if ( ! $this->can_translate_output( $html ) ) {
@@ -487,7 +486,7 @@ final class Plugin {
 		}
 
 		$content  = '<p>' . esc_html__( 'When a site administrator generates, refreshes, or tests a translation, LocalizePilot sends the selected website text and language settings to the translation provider configured by the administrator.', 'localizepilot' ) . '</p>';
-		$content .= '<p>' . esc_html__( 'The provider may process titles, excerpts, block text, visible page text, supported attributes, model settings, and custom translation instructions under its own terms and privacy policy. LocalizePilot does not send data to a provider until an administrator configures and uses that provider.', 'localizepilot' ) . '</p>';
+		$content .= '<p>' . esc_html__( 'The provider may process titles, excerpts, block text, visible page text, supported attributes, model settings, and custom translation instructions under its own terms and privacy policy. This can include normal frontend pages viewed by logged-in visitors. Logged-in responses are not written to the shared page cache. LocalizePilot does not send data to a provider until an administrator configures and uses that provider.', 'localizepilot' ) . '</p>';
 		wp_add_privacy_policy_content( 'LocalizePilot', wp_kses_post( $content ) );
 	}
 
@@ -518,9 +517,7 @@ final class Plugin {
 
 	/**
 	 * Determine whether the frontend HTML response may be buffered for
-	 * automatic language-switcher injection. This intentionally permits
-	 * logged-in users while keeping translation and caching protections in
-	 * should_process_request().
+	 * translation, link localization, and automatic switcher injection.
 	 */
 	private function should_buffer_frontend(): bool {
 		if ( empty( $this->settings['enabled'] ) || is_admin() || wp_doing_ajax() || wp_doing_cron() || is_feed() || is_robots() || is_trackback() || is_preview() ) {
@@ -549,9 +546,6 @@ final class Plugin {
 		if ( 'GET' !== strtoupper( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ?? 'GET' ) ) ) ) {
 			return false;
 		}
-		if ( is_user_logged_in() ) {
-			return false;
-		}
 		if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
 			return false;
 		}
@@ -561,24 +555,37 @@ final class Plugin {
 		if ( is_singular() && post_password_required() ) {
 			return false;
 		}
+
+		/*
+		 * These screens can contain customer, order, payment, or session data.
+		 * They remain excluded from automatic full-page API translation.
+		 */
 		if ( ( function_exists( 'is_cart' ) && is_cart() ) || ( function_exists( 'is_checkout' ) && is_checkout() ) || ( function_exists( 'is_account_page' ) && is_account_page() ) ) {
 			return false;
 		}
-		foreach ( array_keys( $_COOKIE ) as $cookie_name ) {
-			$cookie_name = strtolower( sanitize_text_field( (string) $cookie_name ) );
-			if ( 0 === strpos( $cookie_name, 'wordpress_logged_in_' ) || 0 === strpos( $cookie_name, 'wp_woocommerce_session_' ) || 'woocommerce_items_in_cart' === $cookie_name || 0 === strpos( $cookie_name, 'comment_author_' ) ) {
-				return false;
-			}
-		}
+
 		return true;
 	}
 
 	private function can_translate_output( string $html ): bool {
+		/*
+		 * Password forms may contain sensitive content. Nonce values and admin-bar
+		 * markup do not block translation because HTML_Translator excludes scripts,
+		 * unsupported attributes, and the #wpadminbar subtree.
+		 */
+		return ! preg_match( '/type\s*=\s*(?:"|\')password(?:"|\')/i', $html );
+	}
+
+	private function can_use_page_cache( string $html ): bool {
+		if ( empty( $this->settings['cache_enabled'] ) || is_user_logged_in() || ! $this->can_translate_output( $html ) ) {
+			return false;
+		}
+
 		if ( defined( 'DONOTCACHEPAGE' ) && DONOTCACHEPAGE ) {
 			return false;
 		}
 
-		if ( preg_match( '/(?:_wpnonce|wp_rest|data-nonce|["\']nonce["\']\s*:|nonce=|type=(?:"|\')password(?:"|\'))/i', $html ) ) {
+		if ( preg_match( '/(?:_wpnonce|wp_rest|data-nonce|["\']nonce["\']\s*:|nonce=)/i', $html ) ) {
 			return false;
 		}
 
@@ -591,12 +598,11 @@ final class Plugin {
 			}
 		}
 
-		return true;
-	}
-
-	private function can_use_page_cache( string $html ): bool {
-		if ( empty( $this->settings['cache_enabled'] ) || ! $this->can_translate_output( $html ) ) {
-			return false;
+		foreach ( array_keys( $_COOKIE ) as $cookie_name ) {
+			$cookie_name = strtolower( sanitize_text_field( (string) $cookie_name ) );
+			if ( 0 === strpos( $cookie_name, 'wordpress_logged_in_' ) || 0 === strpos( $cookie_name, 'wp_woocommerce_session_' ) || 'woocommerce_items_in_cart' === $cookie_name || 0 === strpos( $cookie_name, 'comment_author_' ) ) {
+				return false;
+			}
 		}
 
 		$query = (string) wp_parse_url( $this->router->language_url( $this->router->source_language() ), PHP_URL_QUERY );
