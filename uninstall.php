@@ -1,46 +1,75 @@
 <?php
+/**
+ * LocalizePilot uninstall handler.
+ *
+ * Removes plugin settings, translation records, and generated cache files.
+ *
+ * @package LocalizePilot
+ */
 
 defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 
+/*
+ * Delete plugin settings.
+ *
+ * The next_translate_* option names are retained for backward compatibility
+ * with earlier plugin versions.
+ */
 delete_option( 'next_translate_settings' );
 delete_option( 'next_translate_cache_version' );
 delete_option( 'next_translate_daily_usage' );
 
+/*
+ * Delete stored translations.
+ */
 $translation_ids = get_posts(
 	array(
-		'post_type'      => 'next_translation',
-		'post_status'    => 'any',
-		'posts_per_page' => -1,
-		'fields'         => 'ids',
-		'no_found_rows'  => true,
+		'post_type'              => 'next_translation',
+		'post_status'            => 'any',
+		'posts_per_page'         => -1,
+		'fields'                 => 'ids',
+		'no_found_rows'          => true,
+		'suppress_filters'       => true,
+		'update_post_meta_cache' => false,
+		'update_post_term_cache' => false,
 	)
 );
 
 foreach ( $translation_ids as $translation_id ) {
-	wp_delete_post( $translation_id, true );
+	wp_delete_post( absint( $translation_id ), true );
 }
 
-$cache_directory = trailingslashit( WP_CONTENT_DIR ) . 'cache/localizepilot';
+/*
+ * Initialize the WordPress Filesystem API.
+ */
+require_once ABSPATH . 'wp-admin/includes/file.php';
 
-if ( is_dir( $cache_directory ) ) {
-	$iterator = new RecursiveIteratorIterator(
-		new RecursiveDirectoryIterator( $cache_directory, FilesystemIterator::SKIP_DOTS ),
-		RecursiveIteratorIterator::CHILD_FIRST
+global $wp_filesystem;
+
+if ( WP_Filesystem() && $wp_filesystem ) {
+	$cache_directory = trailingslashit( WP_CONTENT_DIR ) . 'cache/localizepilot';
+
+	/*
+	 * Safety check to ensure only the LocalizePilot cache directory is removed.
+	 */
+	$normalized_cache_directory = wp_normalize_path(
+		untrailingslashit( $cache_directory )
 	);
 
-	foreach ( $iterator as $item ) {
-		$path = $item->getPathname();
+	$expected_cache_directory = wp_normalize_path(
+		untrailingslashit(
+			trailingslashit( WP_CONTENT_DIR ) . 'cache/localizepilot'
+		)
+	);
 
-		if ( $item->isDir() ) {
-			if ( is_dir( $path ) ) {
-				rmdir( $path );
-			}
-		} elseif ( is_file( $path ) ) {
-			wp_delete_file( $path );
-		}
-	}
-
-	if ( is_dir( $cache_directory ) ) {
-		rmdir( $cache_directory );
+	if (
+		$normalized_cache_directory === $expected_cache_directory &&
+		$wp_filesystem->is_dir( $cache_directory )
+	) {
+		$wp_filesystem->delete(
+			$cache_directory,
+			true,
+			'd'
+		);
 	}
 }

@@ -10,15 +10,24 @@ final class File_Cache {
 	private string $page_directory;
 	private string $group = 'localizepilot_html';
 
+	/**
+	 * WordPress filesystem instance.
+	 *
+	 * @var \WP_Filesystem_Base|null
+	 */
+	private $filesystem = null;
+
+
 	public function __construct( array $settings ) {
 		$this->settings = $settings;
-		$new_directory = trailingslashit( WP_CONTENT_DIR ) . 'cache/localizepilot';
+		$new_directory  = trailingslashit( WP_CONTENT_DIR ) . 'cache/localizepilot';
 
 		$this->directory      = $new_directory;
 		$this->page_directory = trailingslashit( $this->directory ) . 'pages';
 	}
 
 	public function directory(): string {
+		$this->filesystem();
 		return $this->directory;
 	}
 
@@ -27,7 +36,12 @@ final class File_Cache {
 	}
 
 	public function is_writable(): bool {
-		return $this->ensure_directory() && is_writable( $this->directory ) && is_writable( $this->page_directory );
+		$filesystem = $this->filesystem();
+
+		return null !== $filesystem
+			&& $this->ensure_directory()
+			&& $filesystem->is_writable( $this->directory )
+			&& $filesystem->is_writable( $this->page_directory );
 	}
 
 	public function make_key( string $identity, string $language, string $fingerprint ): string {
@@ -39,11 +53,13 @@ final class File_Cache {
 	}
 
 	public function post_page_path( int $post_id, string $language ): string {
+		$this->filesystem();
 		$paths = $this->paths( $this->make_post_key( $post_id, $language ) );
 		return $paths['html'];
 	}
 
 	public function translation_snapshot_path( int $post_id, string $language ): string {
+		$this->filesystem();
 		return trailingslashit( $this->directory ) . $this->make_post_key( $post_id, $language ) . '.html';
 	}
 
@@ -52,10 +68,10 @@ final class File_Cache {
 			return false;
 		}
 
-		$key = $this->make_post_key( $post_id, $language );
-		$path = trailingslashit( $this->directory ) . $key . '.html';
+		$key       = $this->make_post_key( $post_id, $language );
+		$path      = trailingslashit( $this->directory ) . $key . '.html';
 		$meta_path = trailingslashit( $this->directory ) . $key . '.json';
-		$metadata = wp_parse_args(
+		$metadata  = wp_parse_args(
 			$metadata,
 			array(
 				'post_id'    => $post_id,
@@ -68,19 +84,31 @@ final class File_Cache {
 		if ( ! $this->atomic_write( $path, $html ) ) {
 			return false;
 		}
-		$this->atomic_write( $meta_path, (string) wp_json_encode( $metadata, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) );
+
+		$this->atomic_write(
+			$meta_path,
+			(string) wp_json_encode( $metadata, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE )
+		);
+
 		return true;
 	}
 
 	public function delete_translation_snapshot( int $post_id, string $language ): bool {
-		$key = $this->make_post_key( $post_id, $language );
+		$filesystem = $this->filesystem();
+		if ( null === $filesystem ) {
+			return false;
+		}
+
+		$key       = $this->make_post_key( $post_id, $language );
 		$directory = trailingslashit( $this->directory );
-		$deleted = false;
+		$deleted   = false;
+
 		foreach ( array( $directory . $key . '.html', $directory . $key . '.json' ) as $file ) {
-			if ( is_file( $file ) ) {
-				$deleted = unlink( $file ) || $deleted;
+			if ( $filesystem->is_file( $file ) ) {
+				$deleted = $filesystem->delete( $file, false, 'f' ) || $deleted;
 			}
 		}
+
 		return $deleted;
 	}
 
@@ -93,8 +121,11 @@ final class File_Cache {
 		if ( '' !== sanitize_key( $language ) ) {
 			$keys[] = $this->make_post_key( $post_id, $language );
 		} else {
-			foreach ( glob( trailingslashit( $this->page_directory ) . absint( $post_id ) . '_*.html' ) ?: array() as $file ) {
-				$keys[] = basename( $file, '.html' );
+			$prefix = absint( $post_id ) . '_';
+			foreach ( $this->list_files( $this->page_directory, 'html' ) as $file ) {
+				if ( 0 === strpos( $file['name'], $prefix ) ) {
+					$keys[] = substr( $file['name'], 0, -5 );
+				}
 			}
 		}
 
@@ -104,6 +135,7 @@ final class File_Cache {
 				$count++;
 			}
 		}
+
 		return $count;
 	}
 
@@ -125,13 +157,18 @@ final class File_Cache {
 			}
 		}
 
-		$paths = $this->paths( $key );
-		if ( ! is_file( $paths['html'] ) ) {
+		$filesystem = $this->filesystem();
+		if ( null === $filesystem ) {
 			return null;
 		}
 
-		$modified = filemtime( $paths['html'] );
-		if ( false === $modified || ( time() - $modified ) >= $ttl ) {
+		$paths = $this->paths( $key );
+		if ( ! $filesystem->is_file( $paths['html'] ) ) {
+			return null;
+		}
+
+		$modified = $filesystem->mtime( $paths['html'] );
+		if ( false === $modified || ( time() - (int) $modified ) >= $ttl ) {
 			return null;
 		}
 
@@ -155,10 +192,16 @@ final class File_Cache {
 	}
 
 	public function get_stale( string $key ): ?string {
-		$paths = $this->paths( $key );
-		if ( ! is_file( $paths['html'] ) ) {
+		$filesystem = $this->filesystem();
+		if ( null === $filesystem ) {
 			return null;
 		}
+
+		$paths = $this->paths( $key );
+		if ( ! $filesystem->is_file( $paths['html'] ) ) {
+			return null;
+		}
+
 		$html = $this->read_file( $paths['html'] );
 		return is_string( $html ) && '' !== $html ? $html : null;
 	}
@@ -190,7 +233,10 @@ final class File_Cache {
 			return false;
 		}
 
-		$this->atomic_write( $paths['meta'], (string) wp_json_encode( $meta, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) );
+		$this->atomic_write(
+			$paths['meta'],
+			(string) wp_json_encode( $meta, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE )
+		);
 
 		if ( ! empty( $this->settings['object_cache_enabled'] ) ) {
 			wp_cache_set( $key, array( 'html' => $html, 'source_hash' => (string) ( $meta['source_hash'] ?? '' ) ), $this->group, $ttl );
@@ -200,12 +246,15 @@ final class File_Cache {
 	}
 
 	public function delete( string $key ): bool {
-		$paths   = $this->paths( $key );
-		$deleted = false;
+		$filesystem = $this->filesystem();
+		$paths      = $this->paths( $key );
+		$deleted    = false;
 
-		foreach ( $paths as $path ) {
-			if ( is_file( $path ) ) {
-				$deleted = unlink( $path ) || $deleted;
+		if ( null !== $filesystem ) {
+			foreach ( $paths as $path ) {
+				if ( $filesystem->is_file( $path ) ) {
+					$deleted = $filesystem->delete( $path, false, 'f' ) || $deleted;
+				}
 			}
 		}
 
@@ -214,29 +263,28 @@ final class File_Cache {
 	}
 
 	public function clear_all(): int {
-		if ( ! is_dir( $this->directory ) ) {
+		$filesystem = $this->filesystem();
+		if ( null === $filesystem || ! $filesystem->is_dir( $this->directory ) ) {
 			return 0;
 		}
 
 		$count = 0;
 		$keys  = array();
-		foreach ( glob( trailingslashit( $this->page_directory ) . '*.html' ) ?: array() as $html_file ) {
-			$keys[] = basename( $html_file, '.html' );
-		}
 
-		foreach ( array( 'pages/' ) as $relative_directory ) {
-			foreach ( array( '*.html', '*.json', '*.tmp', '*.tmp.*' ) as $pattern ) {
-				foreach ( glob( trailingslashit( $this->directory ) . $relative_directory . $pattern ) ?: array() as $file ) {
-					if ( is_file( $file ) && unlink( $file ) ) {
-						$count++;
-					}
-				}
+		foreach ( $this->list_files( $this->page_directory ) as $file ) {
+			if ( 'html' === $file['extension'] ) {
+				$keys[] = substr( $file['name'], 0, -5 );
+			}
+
+			if ( $filesystem->delete( $file['path'], false, 'f' ) ) {
+				$count++;
 			}
 		}
 
 		foreach ( array_unique( $keys ) as $key ) {
 			wp_cache_delete( $key, $this->group );
 		}
+
 		if ( function_exists( 'wp_cache_flush_group' ) ) {
 			wp_cache_flush_group( $this->group );
 		}
@@ -245,19 +293,21 @@ final class File_Cache {
 	}
 
 	public function clear_expired(): int {
-		if ( ! is_dir( $this->directory ) ) {
+		$filesystem = $this->filesystem();
+		if ( null === $filesystem || ! $filesystem->is_dir( $this->directory ) ) {
 			return 0;
 		}
 
 		$ttl   = max( HOUR_IN_SECONDS, absint( $this->settings['cache_hours'] ?? 24 ) * HOUR_IN_SECONDS );
 		$count = 0;
 
-		foreach ( glob( trailingslashit( $this->page_directory ) . '*.html' ) ?: array() as $html_file ) {
-			$modified = filemtime( $html_file );
-			if ( false !== $modified && ( time() - $modified ) < $ttl ) {
+		foreach ( $this->list_files( $this->page_directory, 'html' ) as $file ) {
+			$modified = $this->file_modified_time( $file );
+			if ( 0 < $modified && ( time() - $modified ) < $ttl ) {
 				continue;
 			}
-			$key = basename( $html_file, '.html' );
+
+			$key = substr( $file['name'], 0, -5 );
 			if ( $this->delete( $key ) ) {
 				$count++;
 			}
@@ -266,24 +316,23 @@ final class File_Cache {
 		return $count;
 	}
 
-
 	public function clear_snapshots(): int {
-		if ( ! is_dir( $this->directory ) ) {
+		$filesystem = $this->filesystem();
+		if ( null === $filesystem || ! $filesystem->is_dir( $this->directory ) ) {
 			return 0;
 		}
 
 		$count = 0;
-		foreach ( array( '*.html', '*.json' ) as $pattern ) {
-			foreach ( glob( trailingslashit( $this->directory ) . $pattern ) ?: array() as $file ) {
-				$name = basename( $file );
-				if ( ! preg_match( '/^\d+_[a-z0-9-]+\.(html|json)$/i', $name ) ) {
-					continue;
-				}
-				if ( is_file( $file ) && unlink( $file ) ) {
-					$count++;
-				}
+		foreach ( $this->list_files( $this->directory ) as $file ) {
+			if ( ! preg_match( '/^\d+_[a-z0-9-]+\.(html|json)$/i', $file['name'] ) ) {
+				continue;
+			}
+
+			if ( $filesystem->delete( $file['path'], false, 'f' ) ) {
+				$count++;
 			}
 		}
+
 		return $count;
 	}
 
@@ -298,13 +347,19 @@ final class File_Cache {
 			return $this->delete( $key );
 		}
 
+		$filesystem = $this->filesystem();
+		if ( null === $filesystem ) {
+			return false;
+		}
+
 		$deleted = false;
 		foreach ( array( '.html', '.json' ) as $extension ) {
 			$path = trailingslashit( $this->directory ) . $key . $extension;
-			if ( is_file( $path ) ) {
-				$deleted = unlink( $path ) || $deleted;
+			if ( $filesystem->is_file( $path ) ) {
+				$deleted = $filesystem->delete( $path, false, 'f' ) || $deleted;
 			}
 		}
+
 		return $deleted;
 	}
 
@@ -319,10 +374,10 @@ final class File_Cache {
 		$ttl      = max( HOUR_IN_SECONDS, absint( $this->settings['cache_hours'] ?? 24 ) * HOUR_IN_SECONDS );
 
 		if ( 'snapshot' !== $type ) {
-			foreach ( glob( trailingslashit( $this->page_directory ) . '*.html' ) ?: array() as $html_file ) {
-				$modified = filemtime( $html_file );
-				$size     = filesize( $html_file );
-				$key      = basename( $html_file, '.html' );
+			foreach ( $this->list_files( $this->page_directory, 'html' ) as $html_file ) {
+				$modified = $this->file_modified_time( $html_file );
+				$size     = $this->file_size( $html_file );
+				$key      = substr( $html_file['name'], 0, -5 );
 				$meta     = $this->read_metadata( trailingslashit( $this->page_directory ) . $key . '.json' );
 				$items[]  = array(
 					'key'      => $key,
@@ -331,21 +386,22 @@ final class File_Cache {
 					'language' => (string) ( $meta['language'] ?? $this->language_from_key( $key ) ),
 					'provider' => (string) ( $meta['provider'] ?? '' ),
 					'status'   => '',
-					'modified' => false === $modified ? 0 : (int) $modified,
-					'bytes'    => false === $size ? 0 : (int) $size,
-					'expired'  => false === $modified || ( time() - $modified ) >= $ttl,
+					'modified' => $modified,
+					'bytes'    => $size,
+					'expired'  => 0 === $modified || ( time() - $modified ) >= $ttl,
 				);
 			}
 		}
 
 		if ( 'page' !== $type ) {
-			foreach ( glob( trailingslashit( $this->directory ) . '*.html' ) ?: array() as $html_file ) {
-				$key = basename( $html_file, '.html' );
+			foreach ( $this->list_files( $this->directory, 'html' ) as $html_file ) {
+				$key = substr( $html_file['name'], 0, -5 );
 				if ( ! preg_match( '/^\d+_[a-z0-9-]+$/i', $key ) ) {
 					continue;
 				}
-				$modified = filemtime( $html_file );
-				$size     = filesize( $html_file );
+
+				$modified = $this->file_modified_time( $html_file );
+				$size     = $this->file_size( $html_file );
 				$meta     = $this->read_metadata( trailingslashit( $this->directory ) . $key . '.json' );
 				$post_id  = absint( $meta['post_id'] ?? strtok( $key, '_' ) );
 				$items[]  = array(
@@ -355,8 +411,8 @@ final class File_Cache {
 					'language' => (string) ( $meta['language'] ?? $this->language_from_key( $key ) ),
 					'provider' => '',
 					'status'   => (string) ( $meta['status'] ?? '' ),
-					'modified' => false === $modified ? 0 : (int) $modified,
-					'bytes'    => false === $size ? 0 : (int) $size,
+					'modified' => $modified,
+					'bytes'    => $size,
 					'expired'  => false,
 				);
 			}
@@ -386,31 +442,32 @@ final class File_Cache {
 	 */
 	public function stats(): array {
 		$stats = array(
-			'count'    => 0,
-			'expired'  => 0,
-			'snapshots'=> 0,
-			'size'     => 0,
-			'path'     => $this->directory,
-			'writable' => $this->is_writable(),
-			'recent'   => array(),
+			'count'     => 0,
+			'expired'   => 0,
+			'snapshots' => 0,
+			'size'      => 0,
+			'path'      => $this->directory,
+			'writable'  => $this->is_writable(),
+			'recent'    => array(),
 		);
 
-		if ( ! is_dir( $this->directory ) ) {
+		$filesystem = $this->filesystem();
+		if ( null === $filesystem || ! $filesystem->is_dir( $this->directory ) ) {
 			return $stats;
 		}
 
 		$ttl   = max( HOUR_IN_SECONDS, absint( $this->settings['cache_hours'] ?? 24 ) * HOUR_IN_SECONDS );
 		$items = array();
 
-		foreach ( glob( trailingslashit( $this->page_directory ) . '*.html' ) ?: array() as $html_file ) {
-			$modified = filemtime( $html_file );
-			$size     = filesize( $html_file );
-			$key      = basename( $html_file, '.html' );
+		foreach ( $this->list_files( $this->page_directory, 'html' ) as $html_file ) {
+			$modified = $this->file_modified_time( $html_file );
+			$size     = $this->file_size( $html_file );
+			$key      = substr( $html_file['name'], 0, -5 );
 			$meta     = $this->read_metadata( trailingslashit( $this->page_directory ) . $key . '.json' );
-			$expired  = false === $modified || ( time() - $modified ) >= $ttl;
+			$expired  = 0 === $modified || ( time() - $modified ) >= $ttl;
 
 			$stats['count']++;
-			$stats['size'] += false === $size ? 0 : (int) $size;
+			$stats['size'] += $size;
 			if ( $expired ) {
 				$stats['expired']++;
 			}
@@ -420,8 +477,8 @@ final class File_Cache {
 				'url'      => (string) ( $meta['url'] ?? '' ),
 				'language' => (string) ( $meta['language'] ?? '' ),
 				'provider' => (string) ( $meta['provider'] ?? '' ),
-				'modified' => false === $modified ? 0 : (int) $modified,
-				'bytes'    => false === $size ? 0 : (int) $size,
+				'modified' => $modified,
+				'bytes'    => $size,
 				'expired'  => $expired,
 			);
 		}
@@ -433,13 +490,13 @@ final class File_Cache {
 			}
 		);
 
-		foreach ( glob( trailingslashit( $this->directory ) . '*.html' ) ?: array() as $snapshot_file ) {
-			if ( ! preg_match( '/^\d+_[a-z0-9-]+\.html$/i', basename( $snapshot_file ) ) ) {
+		foreach ( $this->list_files( $this->directory, 'html' ) as $snapshot_file ) {
+			if ( ! preg_match( '/^\d+_[a-z0-9-]+\.html$/i', $snapshot_file['name'] ) ) {
 				continue;
 			}
+
 			$stats['snapshots']++;
-			$snapshot_size = filesize( $snapshot_file );
-			$stats['size'] += false === $snapshot_size ? 0 : (int) $snapshot_size;
+			$stats['size'] += $this->file_size( $snapshot_file );
 		}
 
 		$stats['recent'] = array_slice( $items, 0, 20 );
@@ -447,8 +504,9 @@ final class File_Cache {
 	}
 
 	private function paths( string $key ): array {
-		$key = preg_replace( '/[^a-z0-9_-]/i', '', $key ) ?: hash( 'sha256', $key );
+		$key  = preg_replace( '/[^a-z0-9_-]/i', '', $key ) ?: hash( 'sha256', $key );
 		$base = trailingslashit( $this->page_directory ) . $key;
+
 		return array(
 			'html' => $base . '.html',
 			'meta' => $base . '.json',
@@ -456,30 +514,42 @@ final class File_Cache {
 	}
 
 	private function ensure_directory(): bool {
-		if ( ! is_dir( $this->directory ) && ! wp_mkdir_p( $this->directory ) ) {
+		$filesystem = $this->filesystem();
+		if ( null === $filesystem ) {
 			return false;
 		}
-		if ( ! is_dir( $this->page_directory ) && ! wp_mkdir_p( $this->page_directory ) ) {
+
+		if ( ! $filesystem->is_dir( $this->directory ) && ! $this->make_directory( $this->directory ) ) {
+			return false;
+		}
+
+		if ( ! $filesystem->is_dir( $this->page_directory ) && ! $this->make_directory( $this->page_directory ) ) {
 			return false;
 		}
 
 		$this->ensure_protection_files();
-		return is_dir( $this->directory ) && is_dir( $this->page_directory );
+
+		return $filesystem->is_dir( $this->directory ) && $filesystem->is_dir( $this->page_directory );
 	}
 
 	private function ensure_protection_files(): void {
+		$filesystem = $this->filesystem();
+		if ( null === $filesystem ) {
+			return;
+		}
+
 		$index = trailingslashit( $this->directory ) . 'index.php';
-		if ( ! is_file( $index ) ) {
+		if ( ! $filesystem->is_file( $index ) ) {
 			$this->atomic_write( $index, "<?php\n// Silence is golden.\n" );
 		}
 
 		$htaccess = trailingslashit( $this->directory ) . '.htaccess';
-		if ( ! is_file( $htaccess ) ) {
+		if ( ! $filesystem->is_file( $htaccess ) ) {
 			$this->atomic_write( $htaccess, "<IfModule mod_authz_core.c>\nRequire all denied\n</IfModule>\n<IfModule !mod_authz_core.c>\nDeny from all\n</IfModule>\n" );
 		}
 
 		$web_config = trailingslashit( $this->directory ) . 'web.config';
-		if ( ! is_file( $web_config ) ) {
+		if ( ! $filesystem->is_file( $web_config ) ) {
 			$this->atomic_write( $web_config, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<configuration><system.webServer><security><authorization><remove users=\"*\" roles=\"\" verbs=\"\"/><add accessType=\"Deny\" users=\"*\"/></authorization></security></system.webServer></configuration>\n" );
 		}
 	}
@@ -489,75 +559,176 @@ final class File_Cache {
 		if ( null === $raw ) {
 			return array();
 		}
+
 		$data = json_decode( $raw, true );
 		return is_array( $data ) ? $data : array();
 	}
 
 	private function read_file( string $path ): ?string {
-		if ( ! is_file( $path ) || ! is_readable( $path ) ) {
+		$filesystem = $this->filesystem();
+		if ( null === $filesystem || ! $filesystem->is_file( $path ) || ! $filesystem->is_readable( $path ) ) {
 			return null;
 		}
 
-		$handle = fopen( $path, 'rb' );
-		if ( false === $handle ) {
-			return null;
-		}
-
-		$contents = '';
-		while ( ! feof( $handle ) ) {
-			$chunk = fread( $handle, 1048576 );
-			if ( false === $chunk ) {
-				fclose( $handle );
-				return null;
-			}
-			$contents .= $chunk;
-		}
-		fclose( $handle );
-		return $contents;
+		$contents = $filesystem->get_contents( $path );
+		return false === $contents ? null : (string) $contents;
 	}
 
 	private function atomic_write( string $path, string $content ): bool {
+		$filesystem = $this->filesystem();
+		if ( null === $filesystem ) {
+			return false;
+		}
+
 		$temporary = $path . '.' . wp_generate_password( 8, false, false ) . '.tmp';
-		$handle    = fopen( $temporary, 'wb' );
-		if ( false === $handle ) {
+		$chmod     = defined( 'FS_CHMOD_FILE' ) ? FS_CHMOD_FILE : 0644;
+
+		if ( ! $filesystem->put_contents( $temporary, $content, $chmod ) ) {
 			return false;
 		}
 
-		$locked  = flock( $handle, LOCK_EX );
-		$length  = strlen( $content );
-		$written = 0;
+		if ( $filesystem->move( $temporary, $path, true ) ) {
+			return true;
+		}
 
-		if ( ! $locked ) {
-			fclose( $handle );
-			unlink( $temporary );
+		// Some transports cannot atomically move across locations. Fall back to
+		// a direct Filesystem API write while still avoiding native PHP functions.
+		$written = $filesystem->put_contents( $path, $content, $chmod );
+		$filesystem->delete( $temporary, false, 'f' );
+
+		return $written;
+	}
+
+	/**
+	 * Initialize and return the WordPress Filesystem API instance.
+	 *
+	 * @return \WP_Filesystem_Base|null
+	 */
+	private function filesystem() {
+		if ( is_object( $this->filesystem ) ) {
+			return $this->filesystem;
+		}
+
+		if ( ! function_exists( 'WP_Filesystem' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+		}
+
+		global $wp_filesystem;
+
+		if ( ! is_object( $wp_filesystem ) && ! \WP_Filesystem() ) {
+			return null;
+		}
+
+		if ( ! is_object( $wp_filesystem ) ) {
+			return null;
+		}
+
+		$this->filesystem = $wp_filesystem;
+
+		$content_directory = $this->filesystem->wp_content_dir();
+		if ( is_string( $content_directory ) && '' !== $content_directory ) {
+			$this->directory      = trailingslashit( $content_directory ) . 'cache/localizepilot';
+			$this->page_directory = trailingslashit( $this->directory ) . 'pages';
+		}
+
+		return $this->filesystem;
+	}
+
+	private function make_directory( string $directory ): bool {
+		$filesystem = $this->filesystem();
+		if ( null === $filesystem ) {
 			return false;
 		}
 
-		while ( $written < $length ) {
-			$bytes = fwrite( $handle, substr( $content, $written ) );
-			if ( false === $bytes || 0 === $bytes ) {
-				flock( $handle, LOCK_UN );
-				fclose( $handle );
-				unlink( $temporary );
-				return false;
+		if ( $filesystem->is_dir( $directory ) ) {
+			return true;
+		}
+
+		$parent = dirname( untrailingslashit( $directory ) );
+		if ( $parent !== $directory && ! $filesystem->is_dir( $parent ) && ! $this->make_directory( $parent ) ) {
+			return false;
+		}
+
+		$chmod = defined( 'FS_CHMOD_DIR' ) ? FS_CHMOD_DIR : 0755;
+		return $filesystem->mkdir( $directory, $chmod ) || $filesystem->is_dir( $directory );
+	}
+
+	/**
+	 * Return regular files from a directory using WP_Filesystem::dirlist().
+	 *
+	 * @return array<int,array{name:string,path:string,extension:string,data:array<string,mixed>}>
+	 */
+	private function list_files( string $directory, string $extension = '' ): array {
+		$filesystem = $this->filesystem();
+		if ( null === $filesystem || ! $filesystem->is_dir( $directory ) ) {
+			return array();
+		}
+
+		$directory_list = $filesystem->dirlist( $directory, true, false );
+		if ( ! is_array( $directory_list ) ) {
+			return array();
+		}
+
+		$extension = strtolower( ltrim( $extension, '.' ) );
+		$files     = array();
+
+		foreach ( $directory_list as $name => $data ) {
+			$name = (string) $name;
+			$data = is_array( $data ) ? $data : array();
+			$path = trailingslashit( $directory ) . $name;
+			$type = (string) ( $data['type'] ?? '' );
+
+			if ( 'f' !== $type && ! $filesystem->is_file( $path ) ) {
+				continue;
 			}
-			$written += $bytes;
+
+			$file_extension = strtolower( (string) pathinfo( $name, PATHINFO_EXTENSION ) );
+			if ( '' !== $extension && $file_extension !== $extension ) {
+				continue;
+			}
+
+			$files[] = array(
+				'name'      => $name,
+				'path'      => $path,
+				'extension' => $file_extension,
+				'data'      => $data,
+			);
 		}
 
-		fflush( $handle );
-		flock( $handle, LOCK_UN );
-		fclose( $handle );
+		return $files;
+	}
 
-		if ( '\\' === DIRECTORY_SEPARATOR && is_file( $path ) && ! unlink( $path ) ) {
-			unlink( $temporary );
-			return false;
+	/**
+	 * @param array{name:string,path:string,extension:string,data:array<string,mixed>} $file File data.
+	 */
+	private function file_modified_time( array $file ): int {
+		if ( isset( $file['data']['lastmodunix'] ) && is_numeric( $file['data']['lastmodunix'] ) ) {
+			return (int) $file['data']['lastmodunix'];
 		}
 
-		if ( ! rename( $temporary, $path ) ) {
-			unlink( $temporary );
-			return false;
+		$filesystem = $this->filesystem();
+		if ( null === $filesystem ) {
+			return 0;
 		}
 
-		return true;
+		$modified = $filesystem->mtime( $file['path'] );
+		return false === $modified ? 0 : (int) $modified;
+	}
+
+	/**
+	 * @param array{name:string,path:string,extension:string,data:array<string,mixed>} $file File data.
+	 */
+	private function file_size( array $file ): int {
+		if ( isset( $file['data']['size'] ) && is_numeric( $file['data']['size'] ) ) {
+			return max( 0, (int) $file['data']['size'] );
+		}
+
+		$filesystem = $this->filesystem();
+		if ( null === $filesystem ) {
+			return 0;
+		}
+
+		$size = $filesystem->size( $file['path'] );
+		return false === $size ? 0 : max( 0, (int) $size );
 	}
 }
