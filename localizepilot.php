@@ -15,10 +15,17 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'NEXT_TRANSLATE_VERSION', '1.5.0' );
+define( 'NEXT_TRANSLATE_VERSION', '1.0.0' );
 define( 'NEXT_TRANSLATE_FILE', __FILE__ );
 define( 'NEXT_TRANSLATE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'NEXT_TRANSLATE_URL', plugin_dir_url( __FILE__ ) );
+
+
+if( !function_exists('nextlang_print') ){
+    function nextlang_print( $content ){
+        return $content;
+    }
+}
 
 require_once NEXT_TRANSLATE_PATH . 'includes/class-language-catalog.php';
 require_once NEXT_TRANSLATE_PATH . 'includes/class-usage-limiter.php';

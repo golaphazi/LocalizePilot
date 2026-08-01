@@ -385,19 +385,19 @@ final class Plugin {
 
 		if ( isset( $_GET['next_translate_cache_message'] ) ) {
 			$message = sanitize_text_field( wp_unslash( $_GET['next_translate_cache_message'] ) );
-			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html( $message ) . '</p></div>';
+			echo nextlang_print('<div class="notice notice-success is-dismissible"><p>' . esc_html( $message ) . '</p></div>');
 		}
 
 		$options = $this->get_settings();
 		if ( empty( get_option( 'permalink_structure', '' ) ) ) {
-			echo '<div class="notice notice-error"><p>' . wp_kses_post( sprintf( __( 'LocalizePilot language URLs require pretty permalinks. <a href="%s">Open Permalink Settings</a> and click Save Changes.', 'localizepilot' ), esc_url( admin_url( 'options-permalink.php' ) ) ) ) . '</p></div>';
+			echo nextlang_print('<div class="notice notice-error"><p>' . wp_kses_post( sprintf( __( 'LocalizePilot language URLs require pretty permalinks. <a href="%s">Open Permalink Settings</a> and click Save Changes.', 'localizepilot' ), esc_url( admin_url( 'options-permalink.php' ) ) ) ) . '</p></div>');
 		}
 
 		$provider = (string) ( $options['translation_provider'] ?? 'translatex' );
 		$key_field = Provider_Catalog::key_field( $provider );
 		$key       = '' !== $key_field ? (string) ( $options[ $key_field ] ?? '' ) : '';
 		if ( ! empty( $options['enabled'] ) && '' === trim( $key ) ) {
-			echo '<div class="notice notice-warning"><p>' . wp_kses_post( sprintf( __( 'LocalizePilot is active, but the selected translation API key is missing. <a href="%s">Open settings</a>.', 'localizepilot' ), esc_url( admin_url( 'admin.php?page=localizepilot' ) ) ) ) . '</p></div>';
+			echo nextlang_print('<div class="notice notice-warning"><p>' . wp_kses_post( sprintf( __( 'LocalizePilot is active, but the selected translation API key is missing. <a href="%s">Open settings</a>.', 'localizepilot' ), esc_url( admin_url( 'admin.php?page=localizepilot' ) ) ) ) . '</p></div>');
 		}
 	}
 
