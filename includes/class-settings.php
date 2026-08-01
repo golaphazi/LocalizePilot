@@ -51,12 +51,33 @@ final class Settings {
 		$changed  = false;
 
 		if ( 'dashboard' === $tab ) {
-			$output['enabled']              = empty( $input['enabled'] ) ? 0 : 1;
-			$output['translation_provider'] = in_array( $input['translation_provider'] ?? '', array( 'translatex', 'google' ), true ) ? sanitize_key( $input['translation_provider'] ) : 'translatex';
-			$output['translatex_api_key']   = $this->sanitize_secret( $input, $old, 'translatex_api_key', 'clear_translatex_api_key' );
-			$output['google_api_key']       = $this->sanitize_secret( $input, $old, 'google_api_key', 'clear_google_api_key' );
-			$output['daily_limit_enabled']  = empty( $input['daily_limit_enabled'] ) ? 0 : 1;
-			$output['daily_limit']          = min( 10000, max( 1, absint( $input['daily_limit'] ?? 10 ) ) );
+			$output['enabled'] = empty( $input['enabled'] ) ? 0 : 1;
+
+			$provider = sanitize_key( (string) ( $input['translation_provider'] ?? 'translatex' ) );
+			$output['translation_provider'] = Provider_Catalog::exists( $provider ) ? $provider : 'translatex';
+
+			$fallback = sanitize_key( (string) ( $input['fallback_provider'] ?? '' ) );
+			$output['fallback_provider'] = Provider_Catalog::exists( $fallback ) && $fallback !== $output['translation_provider'] ? $fallback : '';
+
+			foreach ( Provider_Catalog::all() as $provider_id => $config ) {
+				$key_field = (string) ( $config['key_field'] ?? '' );
+				if ( '' !== $key_field ) {
+					$output[ $key_field ] = $this->sanitize_secret( $input, $old, $key_field, 'clear_' . $key_field );
+				}
+				$model_field = (string) ( $config['model_field'] ?? '' );
+				if ( '' !== $model_field ) {
+					$model = sanitize_text_field( (string) ( $input[ $model_field ] ?? $old[ $model_field ] ?? $config['default_model'] ?? '' ) );
+					$output[ $model_field ] = '' !== trim( $model ) ? $model : (string) ( $config['default_model'] ?? '' );
+				}
+			}
+
+			$style = sanitize_key( (string) ( $input['ai_translation_style'] ?? 'natural' ) );
+			$output['ai_translation_style']   = in_array( $style, array( 'faithful', 'natural', 'marketing', 'formal' ), true ) ? $style : 'natural';
+			$output['ai_custom_instructions'] = sanitize_textarea_field( (string) ( $input['ai_custom_instructions'] ?? '' ) );
+			$output['ai_temperature']         = max( 0, min( 1, (float) ( $input['ai_temperature'] ?? 0.2 ) ) );
+			$output['ai_max_output_tokens']   = min( 32000, max( 512, absint( $input['ai_max_output_tokens'] ?? 8192 ) ) );
+			$output['daily_limit_enabled']    = empty( $input['daily_limit_enabled'] ) ? 0 : 1;
+			$output['daily_limit']            = min( 10000, max( 1, absint( $input['daily_limit'] ?? 10 ) ) );
 			$changed = true;
 		} elseif ( 'languages' === $tab ) {
 			$languages = array_map( 'sanitize_key', (array) ( $input['enabled_languages'] ?? array() ) );
@@ -77,7 +98,7 @@ final class Settings {
 		} elseif ( 'switcher' === $tab ) {
 			$output['header_switcher']  = empty( $input['header_switcher'] ) ? 0 : 1;
 			$output['menu_style']       = in_array( $input['menu_style'] ?? '', array( 'dropdown', 'inline' ), true ) ? sanitize_key( $input['menu_style'] ) : 'dropdown';
-			$output['menu_position']    = in_array( $input['menu_position'] ?? '', array( 'start', 'end' ), true ) ? sanitize_key( $input['menu_position'] ) : 'end';
+			$output['menu_position']    = in_array( $input['menu_position'] ?? '', array( 'start', 'center', 'end' ), true ) ? sanitize_key( $input['menu_position'] ) : 'end';
 			$output['language_label']   = in_array( $input['language_label'] ?? '', array( 'native', 'english', 'code' ), true ) ? sanitize_key( $input['language_label'] ) : 'native';
 			$changed = true;
 		}
@@ -124,6 +145,7 @@ final class Settings {
 				'test'    => __( 'Test connection', 'localizepilot' ),
 				'show'    => __( 'Show', 'localizepilot' ),
 				'hide'    => __( 'Hide', 'localizepilot' ),
+				'copied'  => __( 'Copied!', 'localizepilot' ),
 			)
 		);
 	}
@@ -147,7 +169,7 @@ final class Settings {
 		<div class="wrap next-translate-admin localizepilot-admin">
 			<header class="nt-admin-hero">
 				<div class="nt-brand-lockup"><span class="nt-brand-icon">LP</span><div><span class="nt-eyebrow"><?php esc_html_e( 'Multilingual Content & Media', 'localizepilot' ); ?></span><h1><?php esc_html_e( 'LocalizePilot', 'localizepilot' ); ?></h1><p><?php esc_html_e( 'Translate, review, edit, cache, and personalize every WordPress language experience.', 'localizepilot' ); ?></p></div></div>
-				<div class="nt-hero-statuses"><span class="nt-pill <?php echo empty( $options['enabled'] ) ? 'is-off' : 'is-on'; ?>"><i></i><?php echo empty( $options['enabled'] ) ? esc_html__( 'Translation off', 'localizepilot' ) : esc_html__( 'Translation active', 'localizepilot' ); ?></span><span class="nt-pill"><strong><?php echo esc_html( 'google' === $provider ? 'Google' : 'TranslateX' ); ?></strong></span></div>
+				<div class="nt-hero-statuses"><span class="nt-pill <?php echo empty( $options['enabled'] ) ? 'is-off' : 'is-on'; ?>"><i></i><?php echo empty( $options['enabled'] ) ? esc_html__( 'Translation off', 'localizepilot' ) : esc_html__( 'Translation active', 'localizepilot' ); ?></span><span class="nt-pill"><strong><?php echo esc_html( Provider_Catalog::label( $provider ) ); ?></strong></span></div>
 			</header>
 
 			<?php settings_errors(); ?>
@@ -200,15 +222,62 @@ final class Settings {
 	}
 
 	private function render_dashboard_tab( array $options, array $languages, array $usage, int $limit, array $stats, string $provider ): void {
+		$providers = Provider_Catalog::all();
 		$this->form_start( 'dashboard' ); ?>
-		<div class="nt-stat-grid"><div class="nt-stat"><span><?php esc_html_e( 'Rendered cache', 'localizepilot' ); ?></span><strong><?php echo esc_html( (string) $stats['count'] ); ?></strong><small><?php echo esc_html( sprintf( __( '%d expired', 'localizepilot' ), $stats['expired'] ) ); ?></small></div><div class="nt-stat"><span><?php esc_html_e( 'Translation snapshots', 'localizepilot' ); ?></span><strong><?php echo esc_html( (string) ( $stats['snapshots'] ?? 0 ) ); ?></strong><small><?php esc_html_e( 'Gutenberg-generated HTML', 'localizepilot' ); ?></small></div><div class="nt-stat"><span><?php esc_html_e( 'Daily API use', 'localizepilot' ); ?></span><strong><?php echo esc_html( (string) $usage['count'] ); ?><em>/<?php echo esc_html( (string) $limit ); ?></em></strong><small><?php echo empty( $options['daily_limit_enabled'] ) ? esc_html__( 'Limit disabled', 'localizepilot' ) : esc_html( sprintf( __( '%d remaining', 'localizepilot' ), max( 0, $limit - $usage['count'] ) ) ); ?></small></div><div class="nt-stat"><span><?php esc_html_e( 'Languages', 'localizepilot' ); ?></span><strong><?php echo esc_html( (string) ( count( (array) $options['enabled_languages'] ) + 1 ) ); ?></strong><small><?php esc_html_e( 'Including English', 'localizepilot' ); ?></small></div></div>
-		<div class="nt-dashboard-grid">
-			<section class="nt-card"><div class="nt-card-head"><div><span class="nt-section-kicker"><?php esc_html_e( 'System', 'localizepilot' ); ?></span><h2><?php esc_html_e( 'Translation overview', 'localizepilot' ); ?></h2><p><?php esc_html_e( 'Control the main translation service and monitor current usage.', 'localizepilot' ); ?></p></div></div><label class="nt-toggle-row"><span><strong><?php esc_html_e( 'Enable LocalizePilot', 'localizepilot' ); ?></strong><small><?php esc_html_e( 'Enable language URLs and frontend translation.', 'localizepilot' ); ?></small></span><input type="checkbox" name="<?php echo esc_attr( Plugin::OPTION ); ?>[enabled]" value="1" <?php checked( ! empty( $options['enabled'] ) ); ?>><i></i></label><div class="nt-quick-links"><a href="<?php echo esc_url( admin_url( 'edit.php?post_type=' . Translation_Manager::POST_TYPE ) ); ?>"><span class="dashicons dashicons-edit-page"></span><strong><?php esc_html_e( 'Manage translations', 'localizepilot' ); ?></strong><small><?php esc_html_e( 'Edit Gutenberg language versions', 'localizepilot' ); ?></small></a><a href="<?php echo esc_url( add_query_arg( array( 'page' => 'localizepilot', 'tab' => 'cache' ), admin_url( 'admin.php' ) ) ); ?>"><span class="dashicons dashicons-database"></span><strong><?php esc_html_e( 'Open cache history', 'localizepilot' ); ?></strong><small><?php esc_html_e( 'Review and remove HTML cache', 'localizepilot' ); ?></small></a></div></section>
-			<section class="nt-card"><div class="nt-card-head"><div><span class="nt-section-kicker"><?php esc_html_e( 'API connection', 'localizepilot' ); ?></span><h2><?php esc_html_e( 'Translation provider', 'localizepilot' ); ?></h2><p><?php esc_html_e( 'Choose TranslateX or Google Cloud Translation.', 'localizepilot' ); ?></p></div></div><div class="nt-provider-grid"><label class="nt-provider-card"><input type="radio" name="<?php echo esc_attr( Plugin::OPTION ); ?>[translation_provider]" value="translatex" <?php checked( 'translatex', $provider ); ?>><span class="nt-provider-mark">TX</span><span><strong>TranslateX</strong><small><?php esc_html_e( 'Text batch translation API', 'localizepilot' ); ?></small></span><i></i></label><label class="nt-provider-card"><input type="radio" name="<?php echo esc_attr( Plugin::OPTION ); ?>[translation_provider]" value="google" <?php checked( 'google', $provider ); ?>><span class="nt-provider-mark">G</span><span><strong><?php esc_html_e( 'Google Translation', 'localizepilot' ); ?></strong><small><?php esc_html_e( 'Cloud Translation Basic v2', 'localizepilot' ); ?></small></span><i></i></label></div>
-			<div class="nt-provider-panel" data-provider="translatex"><div class="nt-field"><label><?php esc_html_e( 'TranslateX API key', 'localizepilot' ); ?></label><div class="nt-input-action"><input type="password" name="<?php echo esc_attr( Plugin::OPTION ); ?>[translatex_api_key]" value="" placeholder="<?php echo empty( $options['translatex_api_key'] ) ? esc_attr__( 'Paste TranslateX API key', 'localizepilot' ) : esc_attr__( 'Saved key · leave blank to keep it', 'localizepilot' ); ?>" autocomplete="new-password"><button type="button" class="button nt-reveal-key"><?php esc_html_e( 'Show', 'localizepilot' ); ?></button></div><label class="nt-mini-check"><input type="checkbox" name="<?php echo esc_attr( Plugin::OPTION ); ?>[clear_translatex_api_key]" value="1"> <?php esc_html_e( 'Remove saved key', 'localizepilot' ); ?></label></div></div>
-			<div class="nt-provider-panel" data-provider="google"><div class="nt-field"><label><?php esc_html_e( 'Google Translation API key', 'localizepilot' ); ?></label><div class="nt-input-action"><input type="password" name="<?php echo esc_attr( Plugin::OPTION ); ?>[google_api_key]" value="" placeholder="<?php echo empty( $options['google_api_key'] ) ? esc_attr__( 'Paste Google API key', 'localizepilot' ) : esc_attr__( 'Saved key · leave blank to keep it', 'localizepilot' ); ?>" autocomplete="new-password"><button type="button" class="button nt-reveal-key"><?php esc_html_e( 'Show', 'localizepilot' ); ?></button></div><label class="nt-mini-check"><input type="checkbox" name="<?php echo esc_attr( Plugin::OPTION ); ?>[clear_google_api_key]" value="1"> <?php esc_html_e( 'Remove saved key', 'localizepilot' ); ?></label></div></div>
-			<div class="nt-api-actions"><button type="button" class="button button-secondary" id="next-translate-test-api"><?php esc_html_e( 'Test connection', 'localizepilot' ); ?></button><select id="next-translate-test-language"><?php foreach ( $languages as $code => $language ) : if ( 'en' !== $code ) : ?><option value="<?php echo esc_attr( $code ); ?>"><?php echo esc_html( $language['name'] ); ?></option><?php endif; endforeach; ?></select><span id="next-translate-test-result"></span></div><div class="nt-field-row"><label class="nt-toggle-row"><span><strong><?php esc_html_e( 'Daily API limit', 'localizepilot' ); ?></strong><small><?php esc_html_e( 'Restrict new automatic translations each day.', 'localizepilot' ); ?></small></span><input type="checkbox" name="<?php echo esc_attr( Plugin::OPTION ); ?>[daily_limit_enabled]" value="1" <?php checked( ! empty( $options['daily_limit_enabled'] ) ); ?>><i></i></label><div class="nt-field"><label><?php esc_html_e( 'Translations per day', 'localizepilot' ); ?></label><input type="number" min="1" max="10000" name="<?php echo esc_attr( Plugin::OPTION ); ?>[daily_limit]" value="<?php echo esc_attr( (string) $limit ); ?>"></div></div></section>
+		<div class="nt-stat-grid">
+			<div class="nt-stat"><span><?php esc_html_e( 'Rendered cache', 'localizepilot' ); ?></span><strong><?php echo esc_html( (string) $stats['count'] ); ?></strong><small><?php echo esc_html( sprintf( __( '%d expired', 'localizepilot' ), $stats['expired'] ) ); ?></small></div>
+			<div class="nt-stat"><span><?php esc_html_e( 'Translation snapshots', 'localizepilot' ); ?></span><strong><?php echo esc_html( (string) ( $stats['snapshots'] ?? 0 ) ); ?></strong><small><?php esc_html_e( 'Gutenberg-generated HTML', 'localizepilot' ); ?></small></div>
+			<div class="nt-stat"><span><?php esc_html_e( 'Daily API use', 'localizepilot' ); ?></span><strong><?php echo esc_html( (string) $usage['count'] ); ?><em>/<?php echo esc_html( (string) $limit ); ?></em></strong><small><?php echo empty( $options['daily_limit_enabled'] ) ? esc_html__( 'Limit disabled', 'localizepilot' ) : esc_html( sprintf( __( '%d remaining', 'localizepilot' ), max( 0, $limit - $usage['count'] ) ) ); ?></small></div>
+			<div class="nt-stat"><span><?php esc_html_e( 'Languages', 'localizepilot' ); ?></span><strong><?php echo esc_html( (string) ( count( (array) $options['enabled_languages'] ) + 1 ) ); ?></strong><small><?php esc_html_e( 'Including English', 'localizepilot' ); ?></small></div>
 		</div>
+
+		<div class="nt-dashboard-grid">
+			<section class="nt-card">
+				<div class="nt-card-head"><div><span class="nt-section-kicker"><?php esc_html_e( 'System', 'localizepilot' ); ?></span><h2><?php esc_html_e( 'Translation overview', 'localizepilot' ); ?></h2><p><?php esc_html_e( 'Enable multilingual URLs and manage translated Gutenberg content.', 'localizepilot' ); ?></p></div></div>
+				<label class="nt-toggle-row"><span><strong><?php esc_html_e( 'Enable LocalizePilot', 'localizepilot' ); ?></strong><small><?php esc_html_e( 'Enable language URLs and frontend translation.', 'localizepilot' ); ?></small></span><input type="checkbox" name="<?php echo esc_attr( Plugin::OPTION ); ?>[enabled]" value="1" <?php checked( ! empty( $options['enabled'] ) ); ?>><i></i></label>
+				<div class="nt-quick-links"><a href="<?php echo esc_url( admin_url( 'edit.php?post_type=' . Translation_Manager::POST_TYPE ) ); ?>"><span class="dashicons dashicons-edit-page"></span><strong><?php esc_html_e( 'Manage translations', 'localizepilot' ); ?></strong><small><?php esc_html_e( 'Edit Gutenberg language versions', 'localizepilot' ); ?></small></a><a href="<?php echo esc_url( add_query_arg( array( 'page' => 'localizepilot', 'tab' => 'cache' ), admin_url( 'admin.php' ) ) ); ?>"><span class="dashicons dashicons-database"></span><strong><?php esc_html_e( 'Open cache history', 'localizepilot' ); ?></strong><small><?php esc_html_e( 'Review and remove HTML cache', 'localizepilot' ); ?></small></a></div>
+			</section>
+
+			<section class="nt-card">
+				<div class="nt-card-head"><div><span class="nt-section-kicker"><?php esc_html_e( 'Reliability', 'localizepilot' ); ?></span><h2><?php esc_html_e( 'Limits and fallback', 'localizepilot' ); ?></h2><p><?php esc_html_e( 'Control API usage and optionally retry with another provider.', 'localizepilot' ); ?></p></div></div>
+				<label class="nt-toggle-row"><span><strong><?php esc_html_e( 'Daily API limit', 'localizepilot' ); ?></strong><small><?php esc_html_e( 'Restrict new automatic translations each day.', 'localizepilot' ); ?></small></span><input type="checkbox" name="<?php echo esc_attr( Plugin::OPTION ); ?>[daily_limit_enabled]" value="1" <?php checked( ! empty( $options['daily_limit_enabled'] ) ); ?>><i></i></label>
+				<div class="nt-field-row"><div class="nt-field"><label><?php esc_html_e( 'Fallback provider', 'localizepilot' ); ?></label><select name="<?php echo esc_attr( Plugin::OPTION ); ?>[fallback_provider]"><option value=""><?php esc_html_e( 'No fallback', 'localizepilot' ); ?></option><?php foreach ( $providers as $provider_id => $config ) : if ( $provider_id === $provider ) { continue; } ?><option value="<?php echo esc_attr( $provider_id ); ?>" <?php selected( (string) ( $options['fallback_provider'] ?? '' ), $provider_id ); ?>><?php echo esc_html( (string) $config['label'] ); ?></option><?php endforeach; ?></select><small><?php esc_html_e( 'Used only when the primary provider returns an error.', 'localizepilot' ); ?></small></div><div class="nt-field"><label><?php esc_html_e( 'Translations per day', 'localizepilot' ); ?></label><input type="number" min="1" max="10000" name="<?php echo esc_attr( Plugin::OPTION ); ?>[daily_limit]" value="<?php echo esc_attr( (string) $limit ); ?>"></div></div>
+			</section>
+		</div>
+
+		<section class="nt-card nt-card-full nt-provider-section">
+			<div class="nt-card-head"><div><span class="nt-section-kicker"><?php esc_html_e( 'API connection', 'localizepilot' ); ?></span><h2><?php esc_html_e( 'Choose a translation or AI provider', 'localizepilot' ); ?></h2><p><?php esc_html_e( 'Use a dedicated translation API or an AI model for context-aware localization.', 'localizepilot' ); ?></p></div><span class="nt-count-badge"><?php echo esc_html( (string) count( $providers ) ); ?> <?php esc_html_e( 'providers', 'localizepilot' ); ?></span></div>
+			<div class="nt-provider-grid nt-provider-grid-many">
+				<?php foreach ( $providers as $provider_id => $config ) : ?>
+					<label class="nt-provider-card"><input type="radio" name="<?php echo esc_attr( Plugin::OPTION ); ?>[translation_provider]" value="<?php echo esc_attr( $provider_id ); ?>" <?php checked( $provider, $provider_id ); ?>><span class="nt-provider-mark"><?php echo esc_html( (string) $config['mark'] ); ?></span><span><strong><?php echo esc_html( (string) $config['label'] ); ?></strong><small><?php echo esc_html( (string) $config['description'] ); ?></small></span><i></i></label>
+				<?php endforeach; ?>
+			</div>
+
+			<?php foreach ( $providers as $provider_id => $config ) :
+				$key_field   = (string) ( $config['key_field'] ?? '' );
+				$model_field = (string) ( $config['model_field'] ?? '' );
+			?>
+				<div class="nt-provider-panel" data-provider="<?php echo esc_attr( $provider_id ); ?>">
+					<div class="nt-provider-panel-grid">
+						<div class="nt-field"><label><?php echo esc_html( sprintf( __( '%s API key', 'localizepilot' ), (string) $config['label'] ) ); ?></label><div class="nt-input-action"><input type="password" name="<?php echo esc_attr( Plugin::OPTION ); ?>[<?php echo esc_attr( $key_field ); ?>]" value="" placeholder="<?php echo empty( $options[ $key_field ] ) ? esc_attr__( 'Paste API key', 'localizepilot' ) : esc_attr__( 'Saved key · leave blank to keep it', 'localizepilot' ); ?>" autocomplete="new-password"><button type="button" class="button nt-reveal-key"><?php esc_html_e( 'Show', 'localizepilot' ); ?></button></div><label class="nt-mini-check"><input type="checkbox" name="<?php echo esc_attr( Plugin::OPTION ); ?>[clear_<?php echo esc_attr( $key_field ); ?>]" value="1"> <?php esc_html_e( 'Remove saved key', 'localizepilot' ); ?></label></div>
+						<?php if ( '' !== $model_field ) : ?><div class="nt-field"><label><?php esc_html_e( 'Model name', 'localizepilot' ); ?></label><input type="text" class="nt-provider-model" name="<?php echo esc_attr( Plugin::OPTION ); ?>[<?php echo esc_attr( $model_field ); ?>]" value="<?php echo esc_attr( (string) ( $options[ $model_field ] ?? $config['default_model'] ?? '' ) ); ?>" placeholder="<?php echo esc_attr( (string) ( $config['default_model'] ?? '' ) ); ?>"><small><?php esc_html_e( 'Enter a model ID supported by your provider account.', 'localizepilot' ); ?></small></div><?php endif; ?>
+					</div>
+				</div>
+			<?php endforeach; ?>
+
+			<div class="nt-api-actions"><button type="button" class="button button-secondary" id="next-translate-test-api"><?php esc_html_e( 'Test selected provider', 'localizepilot' ); ?></button><select id="next-translate-test-language"><?php foreach ( $languages as $code => $language ) : if ( 'en' !== $code ) : ?><option value="<?php echo esc_attr( $code ); ?>"><?php echo esc_html( $language['name'] ); ?></option><?php endif; endforeach; ?></select><span id="next-translate-test-result"></span></div>
+		</section>
+
+		<section class="nt-card nt-card-full nt-ai-options-card">
+			<div class="nt-card-head"><div><span class="nt-section-kicker"><?php esc_html_e( 'AI localization', 'localizepilot' ); ?></span><h2><?php esc_html_e( 'AI translation behavior', 'localizepilot' ); ?></h2><p><?php esc_html_e( 'These controls are used by OpenAI, Gemini, Claude, Kimi, DeepSeek, Mistral, Groq, and OpenRouter.', 'localizepilot' ); ?></p></div></div>
+			<div class="nt-ai-option-grid">
+				<div class="nt-field"><label><?php esc_html_e( 'Translation style', 'localizepilot' ); ?></label><select id="localizepilot-ai-style" name="<?php echo esc_attr( Plugin::OPTION ); ?>[ai_translation_style]"><option value="faithful" <?php selected( (string) $options['ai_translation_style'], 'faithful' ); ?>><?php esc_html_e( 'Faithful', 'localizepilot' ); ?></option><option value="natural" <?php selected( (string) $options['ai_translation_style'], 'natural' ); ?>><?php esc_html_e( 'Natural', 'localizepilot' ); ?></option><option value="marketing" <?php selected( (string) $options['ai_translation_style'], 'marketing' ); ?>><?php esc_html_e( 'Marketing', 'localizepilot' ); ?></option><option value="formal" <?php selected( (string) $options['ai_translation_style'], 'formal' ); ?>><?php esc_html_e( 'Formal', 'localizepilot' ); ?></option></select></div>
+				<div class="nt-field"><label><?php esc_html_e( 'Temperature', 'localizepilot' ); ?></label><input id="localizepilot-ai-temperature" type="number" min="0" max="1" step="0.1" name="<?php echo esc_attr( Plugin::OPTION ); ?>[ai_temperature]" value="<?php echo esc_attr( (string) $options['ai_temperature'] ); ?>"><small><?php esc_html_e( 'Lower values produce more consistent translations.', 'localizepilot' ); ?></small></div>
+				<div class="nt-field"><label><?php esc_html_e( 'Maximum output tokens', 'localizepilot' ); ?></label><input id="localizepilot-ai-max-tokens" type="number" min="512" max="32000" step="128" name="<?php echo esc_attr( Plugin::OPTION ); ?>[ai_max_output_tokens]" value="<?php echo esc_attr( (string) $options['ai_max_output_tokens'] ); ?>"></div>
+			</div>
+			<div class="nt-field"><label><?php esc_html_e( 'Custom translation instructions', 'localizepilot' ); ?></label><textarea id="localizepilot-ai-instructions" name="<?php echo esc_attr( Plugin::OPTION ); ?>[ai_custom_instructions]" rows="5" placeholder="<?php esc_attr_e( 'Example: Keep product names in English. Use informal Spanish. Never translate NextCRM.', 'localizepilot' ); ?>"><?php echo esc_textarea( (string) $options['ai_custom_instructions'] ); ?></textarea><small><?php esc_html_e( 'Applied to every AI translation request. Do not include secrets here.', 'localizepilot' ); ?></small></div>
+		</section>
+
 		<?php $this->form_end( __( 'Save dashboard & API', 'localizepilot' ) ); ?>
 		<?php
 	}
@@ -242,8 +311,43 @@ final class Settings {
 
 	private function render_switcher_tab( array $options ): void {
 		$this->form_start( 'switcher' ); ?>
-		<div class="nt-two-column"><section class="nt-card"><div class="nt-card-head"><div><span class="nt-section-kicker"><?php esc_html_e( 'Header menu', 'localizepilot' ); ?></span><h2><?php esc_html_e( 'Language switcher', 'localizepilot' ); ?></h2><p><?php esc_html_e( 'Add the current-page language menu automatically to the site header.', 'localizepilot' ); ?></p></div></div><label class="nt-toggle-row"><span><strong><?php esc_html_e( 'Add switcher to header', 'localizepilot' ); ?></strong><small><?php esc_html_e( 'No shortcode or theme editing required.', 'localizepilot' ); ?></small></span><input type="checkbox" name="<?php echo esc_attr( Plugin::OPTION ); ?>[header_switcher]" value="1" <?php checked( ! empty( $options['header_switcher'] ) ); ?>><i></i></label><div class="nt-field"><label><?php esc_html_e( 'Menu style', 'localizepilot' ); ?></label><select name="<?php echo esc_attr( Plugin::OPTION ); ?>[menu_style]"><option value="dropdown" <?php selected( 'dropdown', $options['menu_style'] ); ?>><?php esc_html_e( 'Dropdown', 'localizepilot' ); ?></option><option value="inline" <?php selected( 'inline', $options['menu_style'] ); ?>><?php esc_html_e( 'Inline links', 'localizepilot' ); ?></option></select></div><div class="nt-field"><label><?php esc_html_e( 'Position', 'localizepilot' ); ?></label><select name="<?php echo esc_attr( Plugin::OPTION ); ?>[menu_position]"><option value="end" <?php selected( 'end', $options['menu_position'] ); ?>><?php esc_html_e( 'End of header', 'localizepilot' ); ?></option><option value="start" <?php selected( 'start', $options['menu_position'] ); ?>><?php esc_html_e( 'Start of header', 'localizepilot' ); ?></option></select></div><div class="nt-field"><label><?php esc_html_e( 'Language labels', 'localizepilot' ); ?></label><select name="<?php echo esc_attr( Plugin::OPTION ); ?>[language_label]"><option value="native" <?php selected( 'native', $options['language_label'] ); ?>><?php esc_html_e( 'Native names', 'localizepilot' ); ?></option><option value="english" <?php selected( 'english', $options['language_label'] ); ?>><?php esc_html_e( 'English names', 'localizepilot' ); ?></option><option value="code" <?php selected( 'code', $options['language_label'] ); ?>><?php esc_html_e( 'Language codes', 'localizepilot' ); ?></option></select></div></section><section class="nt-card nt-preview-card"><span class="nt-section-kicker"><?php esc_html_e( 'Preview', 'localizepilot' ); ?></span><h2><?php esc_html_e( 'Header switcher preview', 'localizepilot' ); ?></h2><div class="nt-switcher-preview"><span>English</span><i></i><div><b>Deutsch</b><b>Français</b><b>Español</b><b>العربية</b></div></div><p><?php esc_html_e( 'The final style inherits your theme typography and can be customized with CSS.', 'localizepilot' ); ?></p></section></div>
-		<?php $this->form_end( __( 'Save switcher settings', 'localizepilot' ) );
+		<div class="nt-two-column">
+			<section class="nt-card">
+				<div class="nt-card-head"><div><span class="nt-section-kicker"><?php esc_html_e( 'Global design', 'localizepilot' ); ?></span><h2><?php esc_html_e( 'Language switcher', 'localizepilot' ); ?></h2><p><?php esc_html_e( 'Set the default appearance used by the automatic header menu, shortcode, and Gutenberg block.', 'localizepilot' ); ?></p></div></div>
+				<label class="nt-toggle-row"><span><strong><?php esc_html_e( 'Add switcher to header', 'localizepilot' ); ?></strong><small><?php esc_html_e( 'Disable this when you place the switcher with a shortcode or block.', 'localizepilot' ); ?></small></span><input type="checkbox" name="<?php echo esc_attr( Plugin::OPTION ); ?>[header_switcher]" value="1" <?php checked( ! empty( $options['header_switcher'] ) ); ?>><i></i></label>
+				<div class="nt-field"><label><?php esc_html_e( 'Default layout', 'localizepilot' ); ?></label><select name="<?php echo esc_attr( Plugin::OPTION ); ?>[menu_style]"><option value="dropdown" <?php selected( 'dropdown', $options['menu_style'] ); ?>><?php esc_html_e( 'Dropdown', 'localizepilot' ); ?></option><option value="inline" <?php selected( 'inline', $options['menu_style'] ); ?>><?php esc_html_e( 'Inline links', 'localizepilot' ); ?></option></select></div>
+				<div class="nt-field"><label><?php esc_html_e( 'Default alignment', 'localizepilot' ); ?></label><select name="<?php echo esc_attr( Plugin::OPTION ); ?>[menu_position]"><option value="start" <?php selected( 'start', $options['menu_position'] ); ?>><?php esc_html_e( 'Start', 'localizepilot' ); ?></option><option value="center" <?php selected( 'center', $options['menu_position'] ); ?>><?php esc_html_e( 'Center', 'localizepilot' ); ?></option><option value="end" <?php selected( 'end', $options['menu_position'] ); ?>><?php esc_html_e( 'End', 'localizepilot' ); ?></option></select></div>
+				<div class="nt-field"><label><?php esc_html_e( 'Language labels', 'localizepilot' ); ?></label><select name="<?php echo esc_attr( Plugin::OPTION ); ?>[language_label]"><option value="native" <?php selected( 'native', $options['language_label'] ); ?>><?php esc_html_e( 'Native names', 'localizepilot' ); ?></option><option value="english" <?php selected( 'english', $options['language_label'] ); ?>><?php esc_html_e( 'English names', 'localizepilot' ); ?></option><option value="code" <?php selected( 'code', $options['language_label'] ); ?>><?php esc_html_e( 'Language codes', 'localizepilot' ); ?></option></select></div>
+			</section>
+			<section class="nt-card nt-preview-card">
+				<span class="nt-section-kicker"><?php esc_html_e( 'Preview', 'localizepilot' ); ?></span><h2><?php esc_html_e( 'Switcher preview', 'localizepilot' ); ?></h2>
+				<div class="nt-switcher-preview"><span>English</span><i></i><div><b>Deutsch</b><b>Français</b><b>Español</b><b>العربية</b></div></div>
+				<p><?php esc_html_e( 'Shortcode and block settings can override these defaults for an individual placement.', 'localizepilot' ); ?></p>
+			</section>
+		</div>
+		<?php $this->form_end( __( 'Save switcher settings', 'localizepilot' ) ); ?>
+
+		<div class="nt-switcher-tools">
+			<section class="nt-card nt-shortcode-card">
+				<div class="nt-card-head"><div><span class="nt-section-kicker"><?php esc_html_e( 'Shortcode', 'localizepilot' ); ?></span><h2><?php esc_html_e( 'Place it anywhere', 'localizepilot' ); ?></h2><p><?php esc_html_e( 'Paste the shortcode into posts, pages, widgets, templates, or supported page builders.', 'localizepilot' ); ?></p></div><span class="dashicons dashicons-shortcode"></span></div>
+				<div class="nt-code-copy"><code id="localizepilot-shortcode-basic">[localizepilot_switcher]</code><button type="button" class="button nt-copy-code" data-copy-target="localizepilot-shortcode-basic"><?php esc_html_e( 'Copy', 'localizepilot' ); ?></button></div>
+				<h3><?php esc_html_e( 'Example with overrides', 'localizepilot' ); ?></h3>
+				<div class="nt-code-copy"><code id="localizepilot-shortcode-example">[localizepilot_switcher style="inline" labels="native" alignment="center"]</code><button type="button" class="button nt-copy-code" data-copy-target="localizepilot-shortcode-example"><?php esc_html_e( 'Copy', 'localizepilot' ); ?></button></div>
+				<div class="nt-shortcode-attributes">
+					<div><code>style</code><span><?php esc_html_e( 'inherit, dropdown, inline', 'localizepilot' ); ?></span></div>
+					<div><code>labels</code><span><?php esc_html_e( 'inherit, native, english, code', 'localizepilot' ); ?></span></div>
+					<div><code>alignment</code><span><?php esc_html_e( 'inherit, start, center, end', 'localizepilot' ); ?></span></div>
+					<div><code>class</code><span><?php esc_html_e( 'Optional custom CSS class', 'localizepilot' ); ?></span></div>
+				</div>
+			</section>
+
+			<section class="nt-card nt-block-card">
+				<div class="nt-card-head"><div><span class="nt-section-kicker"><?php esc_html_e( 'Gutenberg block', 'localizepilot' ); ?></span><h2><?php esc_html_e( 'LocalizePilot Language Switcher', 'localizepilot' ); ?></h2><p><?php esc_html_e( 'Add the native dynamic block from the WordPress block inserter.', 'localizepilot' ); ?></p></div><span class="dashicons dashicons-block-default"></span></div>
+				<ol class="nt-steps"><li><span>1</span><p><?php esc_html_e( 'Open a post, page, template, header, or navigation area in the block editor.', 'localizepilot' ); ?></p></li><li><span>2</span><p><?php esc_html_e( 'Search for “LocalizePilot Language Switcher”.', 'localizepilot' ); ?></p></li><li><span>3</span><p><?php esc_html_e( 'Choose layout, label format, and alignment from the block sidebar.', 'localizepilot' ); ?></p></li></ol>
+				<div class="nt-block-feature-list"><span><i class="dashicons dashicons-update"></i><?php esc_html_e( 'Dynamic current-page URLs', 'localizepilot' ); ?></span><span><i class="dashicons dashicons-admin-site-alt3"></i><?php esc_html_e( 'Uses enabled languages', 'localizepilot' ); ?></span><span><i class="dashicons dashicons-admin-customizer"></i><?php esc_html_e( 'Per-block overrides', 'localizepilot' ); ?></span></div>
+			</section>
+		</div>
+		<?php
 	}
 
 	private function render_cache_table( array $history, int $cache_page, string $cache_type ): void {
@@ -265,15 +369,49 @@ final class Settings {
 
 	public function test_api(): void {
 		check_ajax_referer( 'next_translate_test_api', 'nonce' );
-		if ( ! current_user_can( 'manage_options' ) ) { wp_send_json_error( array( 'message' => __( 'Permission denied.', 'localizepilot' ) ), 403 ); }
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Permission denied.', 'localizepilot' ) ), 403 );
+		}
+
 		$language = sanitize_key( wp_unslash( $_POST['language'] ?? 'es' ) );
 		$provider = sanitize_key( wp_unslash( $_POST['provider'] ?? 'translatex' ) );
-		$key      = sanitize_text_field( wp_unslash( $_POST['api_key'] ?? '' ) );
+		$provider = Provider_Catalog::exists( $provider ) ? $provider : 'translatex';
 		$settings = Plugin::instance()->get_settings();
-		$provider = in_array( $provider, array( 'translatex', 'google' ), true ) ? $provider : 'translatex';
 		$settings['translation_provider'] = $provider;
-		if ( '' !== $key ) { $settings[ 'google' === $provider ? 'google_api_key' : 'translatex_api_key' ] = $key; }
-		try { $client = Client_Factory::make( $settings ); $result = $client->test( Language_Catalog::exists( $language ) ? $language : 'es' ); wp_send_json_success( array( 'message' => sprintf( __( '%1$s connected: %2$s', 'localizepilot' ), 'google' === $provider ? 'Google' : 'TranslateX', $result ) ) ); } catch ( \Throwable $exception ) { wp_send_json_error( array( 'message' => $exception->getMessage() ) ); }
+		$settings['fallback_provider']    = '';
+
+		$key       = sanitize_text_field( wp_unslash( $_POST['api_key'] ?? '' ) );
+		$key_field = Provider_Catalog::key_field( $provider );
+		if ( '' !== $key && '' !== $key_field ) {
+			$settings[ $key_field ] = $key;
+		}
+
+		$model       = sanitize_text_field( wp_unslash( $_POST['model'] ?? '' ) );
+		$model_field = Provider_Catalog::model_field( $provider );
+		if ( '' !== $model && '' !== $model_field ) {
+			$settings[ $model_field ] = $model;
+		}
+
+		$settings['ai_translation_style']   = sanitize_key( wp_unslash( $_POST['style'] ?? $settings['ai_translation_style'] ?? 'natural' ) );
+		$settings['ai_custom_instructions'] = sanitize_textarea_field( wp_unslash( $_POST['instructions'] ?? $settings['ai_custom_instructions'] ?? '' ) );
+		$settings['ai_temperature']         = max( 0, min( 1, (float) ( $_POST['temperature'] ?? $settings['ai_temperature'] ?? 0.2 ) ) );
+		$settings['ai_max_output_tokens']   = min( 32000, max( 512, absint( $_POST['max_tokens'] ?? $settings['ai_max_output_tokens'] ?? 8192 ) ) );
+
+		try {
+			$client = Client_Factory::make( $settings, false );
+			$result = $client->test( Language_Catalog::exists( $language ) ? $language : 'es' );
+			wp_send_json_success(
+				array(
+					'message' => sprintf(
+						__( '%1$s connected: %2$s', 'localizepilot' ),
+						Provider_Catalog::label( $provider ),
+						$result
+					),
+				)
+			);
+		} catch ( \Throwable $exception ) {
+			wp_send_json_error( array( 'message' => $exception->getMessage() ) );
+		}
 	}
 
 	public function cache_action(): void {

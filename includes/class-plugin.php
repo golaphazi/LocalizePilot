@@ -26,8 +26,29 @@ final class Plugin {
 			'source_language'          => 'en',
 			'enabled_languages'        => array( 'de', 'fr', 'es', 'pt', 'ar', 'da' ),
 			'translation_provider'     => 'translatex',
+			'fallback_provider'        => '',
 			'translatex_api_key'       => '',
 			'google_api_key'           => '',
+			'openai_api_key'           => '',
+			'openai_model'             => 'gpt-4.1-mini',
+			'gemini_api_key'           => '',
+			'gemini_model'             => 'gemini-3.6-flash',
+			'anthropic_api_key'        => '',
+			'anthropic_model'          => 'claude-haiku-4-5',
+			'kimi_api_key'             => '',
+			'kimi_model'               => 'kimi-k2.6',
+			'deepseek_api_key'         => '',
+			'deepseek_model'           => 'deepseek-v4-flash',
+			'mistral_api_key'          => '',
+			'mistral_model'            => 'mistral-small-latest',
+			'groq_api_key'             => '',
+			'groq_model'               => 'llama-3.3-70b-versatile',
+			'openrouter_api_key'       => '',
+			'openrouter_model'         => 'openai/gpt-4.1-mini',
+			'ai_translation_style'     => 'natural',
+			'ai_custom_instructions'   => '',
+			'ai_temperature'           => 0.2,
+			'ai_max_output_tokens'     => 8192,
 			'daily_limit_enabled'      => 1,
 			'daily_limit'              => 10,
 			'cache_enabled'            => 1,
@@ -54,6 +75,8 @@ final class Plugin {
 		add_filter( 'do_parse_request', array( $this->router, 'before_parse_request' ), 0, 3 );
 		( new Settings( $this->limiter ) )->hooks();
 
+		add_shortcode( 'localizepilot_switcher', array( $this, 'language_switcher_shortcode' ) );
+		add_action( 'init', array( $this, 'register_language_switcher_block' ) );
 		add_action( 'template_redirect', array( $this, 'start_buffer' ), 0 );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_frontend_assets' ) );
 		add_action( 'wp_head', array( $this, 'output_hreflang' ), 2 );
@@ -64,6 +87,140 @@ final class Plugin {
 		add_filter( 'rank_math/frontend/canonical', array( $this, 'filter_seo_url' ) );
 		add_filter( 'language_attributes', array( $this, 'filter_language_attributes' ) );
 		add_action( 'admin_notices', array( $this, 'admin_notices' ) );
+	}
+
+	/**
+	 * Register the dynamic Gutenberg language-switcher block.
+	 */
+	public function register_language_switcher_block(): void {
+		$block_dir    = NEXT_TRANSLATE_PATH . 'blocks/language-switcher';
+		$script_path  = $block_dir . '/index.js';
+		$editor_style = $block_dir . '/editor.css';
+
+		wp_register_script(
+			'localizepilot-language-switcher-block',
+			NEXT_TRANSLATE_URL . 'blocks/language-switcher/index.js',
+			array( 'wp-blocks', 'wp-element', 'wp-i18n', 'wp-components', 'wp-block-editor' ),
+			is_file( $script_path ) ? (string) filemtime( $script_path ) : NEXT_TRANSLATE_VERSION,
+			true
+		);
+
+		wp_register_style(
+			'localizepilot-language-switcher-block-editor',
+			NEXT_TRANSLATE_URL . 'blocks/language-switcher/editor.css',
+			array( 'wp-edit-blocks' ),
+			is_file( $editor_style ) ? (string) filemtime( $editor_style ) : NEXT_TRANSLATE_VERSION
+		);
+
+		$settings       = $this->get_settings();
+		$enabled_codes  = array_values(
+			array_unique(
+				array_merge(
+					array( (string) ( $settings['source_language'] ?? 'en' ) ),
+					(array) ( $settings['enabled_languages'] ?? array() )
+				)
+			)
+		);
+		$languages = array();
+		foreach ( $enabled_codes as $code ) {
+			$code = strtolower( (string) $code );
+			if ( ! Language_Catalog::exists( $code ) ) {
+				continue;
+			}
+			$languages[] = array(
+				'code'    => $code,
+				'native'  => Language_Catalog::label( $code, 'native' ),
+				'english' => Language_Catalog::label( $code, 'english' ),
+			);
+		}
+
+		wp_localize_script(
+			'localizepilot-language-switcher-block',
+			'LocalizePilotSwitcherBlock',
+			array(
+				'languages' => $languages,
+				'defaults'  => array(
+					'style'     => (string) ( $settings['menu_style'] ?? 'dropdown' ),
+					'labels'    => (string) ( $settings['language_label'] ?? 'native' ),
+					'alignment' => (string) ( $settings['menu_position'] ?? 'end' ),
+				),
+			)
+		);
+
+		register_block_type(
+			$block_dir,
+			array(
+				'render_callback' => array( $this, 'render_language_switcher_block' ),
+			)
+		);
+	}
+
+	/**
+	 * Render [localizepilot_switcher].
+	 *
+	 * @param array<string,mixed>|string $attributes Shortcode attributes.
+	 */
+	public function language_switcher_shortcode( $attributes = array() ): string {
+		$attributes = shortcode_atts(
+			array(
+				'style'     => 'inherit',
+				'labels'    => 'inherit',
+				'alignment' => 'inherit',
+				'class'     => '',
+			),
+			is_array( $attributes ) ? $attributes : array(),
+			'localizepilot_switcher'
+		);
+
+		return $this->render_language_switcher( $attributes );
+	}
+
+	/**
+	 * Render the dynamic Gutenberg block.
+	 *
+	 * @param array<string,mixed> $attributes Block attributes.
+	 */
+	public function render_language_switcher_block( array $attributes, string $content = '', $block = null ): string {
+		$switcher = $this->render_language_switcher(
+			array(
+				'style'     => (string) ( $attributes['style'] ?? 'inherit' ),
+				'labels'    => (string) ( $attributes['labels'] ?? 'inherit' ),
+				'alignment' => (string) ( $attributes['alignment'] ?? 'inherit' ),
+				'class'     => (string) ( $attributes['className'] ?? '' ),
+			)
+		);
+
+		if ( '' === $switcher ) {
+			return '';
+		}
+
+		$wrapper_attributes = get_block_wrapper_attributes(
+			array( 'class' => 'localizepilot-switcher-block' )
+		);
+
+		return '<div ' . $wrapper_attributes . '>' . $switcher . '</div>';
+	}
+
+	/**
+	 * Shared shortcode and block renderer.
+	 *
+	 * @param array<string,mixed> $attributes Render overrides.
+	 */
+	private function render_language_switcher( array $attributes = array() ): string {
+		$settings = $this->get_settings();
+		if ( empty( $settings['enabled'] ) ) {
+			return '';
+		}
+
+		$switcher = new Language_Switcher( $this->router, $settings );
+		return $switcher->render(
+			array(
+				'style'     => sanitize_key( (string) ( $attributes['style'] ?? 'inherit' ) ),
+				'labels'    => sanitize_key( (string) ( $attributes['labels'] ?? 'inherit' ) ),
+				'alignment' => sanitize_key( (string) ( $attributes['alignment'] ?? 'inherit' ) ),
+				'class'     => sanitize_text_field( (string) ( $attributes['class'] ?? '' ) ),
+			)
+		);
 	}
 
 	public static function activate(): void {
@@ -237,7 +394,8 @@ final class Plugin {
 		}
 
 		$provider = (string) ( $options['translation_provider'] ?? 'translatex' );
-		$key      = 'google' === $provider ? (string) ( $options['google_api_key'] ?? '' ) : (string) ( $options['translatex_api_key'] ?? '' );
+		$key_field = Provider_Catalog::key_field( $provider );
+		$key       = '' !== $key_field ? (string) ( $options[ $key_field ] ?? '' ) : '';
 		if ( ! empty( $options['enabled'] ) && '' === trim( $key ) ) {
 			echo '<div class="notice notice-warning"><p>' . wp_kses_post( sprintf( __( 'LocalizePilot is active, but the selected translation API key is missing. <a href="%s">Open settings</a>.', 'localizepilot' ), esc_url( admin_url( 'admin.php?page=localizepilot' ) ) ) ) . '</p></div>';
 		}
@@ -264,6 +422,11 @@ final class Plugin {
 				array(
 					'version'    => $version,
 					'provider'   => (string) ( $this->settings['translation_provider'] ?? 'translatex' ),
+					'fallback'   => (string) ( $this->settings['fallback_provider'] ?? '' ),
+					'model'      => (string) ( $this->settings[ Provider_Catalog::model_field( (string) ( $this->settings['translation_provider'] ?? 'translatex' ) ) ] ?? '' ),
+					'ai_style'   => (string) ( $this->settings['ai_translation_style'] ?? 'natural' ),
+					'ai_prompt'  => (string) ( $this->settings['ai_custom_instructions'] ?? '' ),
+					'ai_temp'    => (float) ( $this->settings['ai_temperature'] ?? 0.2 ),
 					'attributes' => ! empty( $this->settings['translate_attributes'] ),
 					'links'      => ! empty( $this->settings['translate_internal_links'] ),
 					'source'     => (string) ( $this->settings['source_language'] ?? 'en' ),
