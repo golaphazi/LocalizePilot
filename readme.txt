@@ -1,10 +1,10 @@
 === LocalizePilot - Multilingual Content & Media ===
-Contributors: themedev
+Contributors: golammostafa95
 Tags: translation, multilingual, gutenberg, ai translation, media
 Requires at least: 6.2
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.5.0
+Stable tag: 1.0.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -126,10 +126,6 @@ If the primary provider returns an error, LocalizePilot can retry the same trans
 
 No. Machine and AI translations can contain errors. Review important legal, medical, financial, product, and marketing content before publishing.
 
-= Does LocalizePilot send analytics to ThemeDev? =
-
-No. LocalizePilot does not send plugin analytics or telemetry to ThemeDev.
-
 == External services ==
 
 LocalizePilot sends website text to the provider selected by a WordPress administrator only when a translation must be generated, tested, or refreshed. Requests may include titles, excerpts, block text, visible page text, supported HTML attributes, source and target language codes, model settings, and custom translation instructions. API keys are sent only to the selected provider.
@@ -197,7 +193,7 @@ Each provider controls its own billing, retention, model-training, privacy, quot
 
 == Changelog ==
 
-= 1.5.0 =
+= 1.0.0 =
 
 * Added the `[localizepilot_switcher]` shortcode.
 * Added shortcode overrides for layout, labels, alignment, and custom CSS classes.
@@ -206,9 +202,6 @@ Each provider controls its own billing, retention, model-training, privacy, quot
 * Added shortcode documentation, copy buttons, and Gutenberg instructions to the Language Switcher tab.
 * Prevented automatic header injection when a shortcode or block switcher already exists on the page.
 * Added center alignment support and unique accessible switcher IDs.
-
-= 1.4.0 =
-
 * Added OpenAI, Google Gemini, Anthropic Claude, Kimi, DeepSeek, Mistral AI, Groq, and OpenRouter providers.
 * Added editable model IDs for every AI provider.
 * Added faithful, natural, marketing, and formal AI translation styles.
@@ -218,22 +211,13 @@ Each provider controls its own billing, retention, model-training, privacy, quot
 * Added provider-aware API connection testing.
 * Added provider and AI settings to rendered-cache invalidation.
 * Expanded WordPress.org external-service disclosures.
-
-= 1.3.0 =
-
 * Rebranded the plugin as LocalizePilot - Multilingual Content & Media.
 * Added a modern full-width tabbed administration dashboard.
 * Added paginated cache history with rendered-page and Gutenberg-snapshot filters.
-
-= 1.2.0 =
-
 * Added Gutenberg-editable translation records and translation statuses.
 * Added language-specific media and translated content snapshots.
-
-= 1.1.0 =
-
 * Added persistent HTML file caching and Google Cloud Translation.
 
-= 1.0.1 =
+
 
 * Improved language URL request detection.
