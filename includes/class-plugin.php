@@ -10,6 +10,7 @@ final class Plugin {
 	private static ?Plugin $instance = null;
 	private Router $router;
 	private Usage_Limiter $limiter;
+	private Analytics $analytics;
 	private Translation_Manager $translations;
 	private array $settings = array();
 
@@ -62,18 +63,22 @@ final class Plugin {
 			'language_label'           => 'native',
 			'translate_attributes'     => 1,
 			'translate_internal_links' => 1,
+			'analytics_enabled'         => 0,
+			'analytics_retention_days'  => 365,
 		);
 	}
 
 	public function boot(): void {
 		$this->limiter      = new Usage_Limiter();
 		$this->router       = new Router();
+		$this->analytics    = new Analytics( $this->router );
 		$this->translations = new Translation_Manager( $this->router, $this->limiter );
 		$this->settings     = $this->get_settings();
 
 		$this->translations->hooks();
+		$this->analytics->hooks();
 		add_filter( 'do_parse_request', array( $this->router, 'before_parse_request' ), 0, 3 );
-		( new Settings( $this->limiter ) )->hooks();
+		( new Settings( $this->limiter, $this->analytics ) )->hooks();
 
 		add_shortcode( 'localizepilot_switcher', array( $this, 'language_switcher_shortcode' ) );
 		add_action( 'init', array( $this, 'register_language_switcher_block' ) );
@@ -232,12 +237,15 @@ final class Plugin {
 			add_option( self::CACHE_VERSION_OPTION, 1, '', false );
 		}
 
+		Analytics::activate();
+
 		$cache = new File_Cache( self::defaults() );
 		$cache->is_writable();
 		flush_rewrite_rules( false );
 	}
 
 	public static function deactivate(): void {
+		Analytics::deactivate();
 		flush_rewrite_rules( false );
 	}
 
@@ -485,6 +493,7 @@ final class Plugin {
 
 		$content  = '<p>' . esc_html__( 'When a site administrator generates, refreshes, or tests a translation, LocalizePilot sends the selected website text and language settings to the translation provider configured by the administrator.', 'localizepilot' ) . '</p>';
 		$content .= '<p>' . esc_html__( 'The provider may process titles, excerpts, block text, visible page text, supported attributes, model settings, and custom translation instructions under its own terms and privacy policy. This can include normal frontend pages viewed by logged-in visitors. Logged-in responses are not written to the shared page cache. LocalizePilot does not send data to a provider until an administrator configures and uses that provider.', 'localizepilot' ) . '</p>';
+		$content .= '<p>' . esc_html__( 'When first-party language analytics is enabled, LocalizePilot stores the language, normalized page URL, visit time, and a one-way visitor identifier in the WordPress database. Anonymous visitors receive a random LocalizePilot cookie. Raw IP addresses and user-agent strings are not stored. Repeated visits are stored as separate page-view events, while unique visitor reports count the same identifier once per language page.', 'localizepilot' ) . '</p>';
 		wp_add_privacy_policy_content( 'LocalizePilot', wp_kses_post( $content ) );
 	}
 
@@ -536,6 +545,10 @@ final class Plugin {
 			return false;
 		}
 
+		if ( function_exists( 'is_embed' ) && is_embed() ) {
+			return false;
+		}
+
 		return true;
 	}
 
@@ -550,6 +563,9 @@ final class Plugin {
 			return false;
 		}
 		if ( function_exists( 'is_customize_preview' ) && is_customize_preview() ) {
+			return false;
+		}
+		if ( function_exists( 'is_embed' ) && is_embed() ) {
 			return false;
 		}
 		if ( is_singular() && post_password_required() ) {
@@ -591,6 +607,9 @@ final class Plugin {
 
 		foreach ( headers_list() as $header ) {
 			if ( 0 === stripos( $header, 'Set-Cookie:' ) ) {
+				if ( false !== stripos( $header, 'localizepilot_visitor_id=' ) ) {
+					continue;
+				}
 				return false;
 			}
 			if ( 0 === stripos( $header, 'Cache-Control:' ) && preg_match( '/(?:no-cache|no-store|private)/i', $header ) ) {

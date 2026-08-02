@@ -6,9 +6,11 @@ defined( 'ABSPATH' ) || exit;
 
 final class Settings {
 	private Usage_Limiter $limiter;
+	private Analytics $analytics;
 
-	public function __construct( Usage_Limiter $limiter ) {
-		$this->limiter = $limiter;
+	public function __construct( Usage_Limiter $limiter, Analytics $analytics ) {
+		$this->limiter   = $limiter;
+		$this->analytics = $analytics;
 	}
 
 	public function hooks(): void {
@@ -17,6 +19,7 @@ final class Settings {
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 		add_action( 'wp_ajax_next_translate_test_api', array( $this, 'test_api' ) );
 		add_action( 'admin_post_next_translate_cache_action', array( $this, 'cache_action' ) );
+		add_action( 'admin_post_localizepilot_analytics_action', array( $this, 'analytics_action' ) );
 	}
 
 	public function add_menu(): void {
@@ -95,6 +98,9 @@ final class Settings {
 			$output['object_cache_enabled'] = empty( $input['object_cache_enabled'] ) ? 0 : 1;
 			$output['cache_hours']          = min( 8760, max( 1, absint( $input['cache_hours'] ?? 24 ) ) );
 			$changed = true;
+		} elseif ( 'analytics' === $tab ) {
+			$output['analytics_enabled']        = empty( $input['analytics_enabled'] ) ? 0 : 1;
+			$output['analytics_retention_days'] = min( 3650, max( 7, absint( $input['analytics_retention_days'] ?? 365 ) ) );
 		} elseif ( 'switcher' === $tab ) {
 			$output['header_switcher']  = empty( $input['header_switcher'] ) ? 0 : 1;
 			$output['menu_style']       = in_array( $input['menu_style'] ?? '', array( 'dropdown', 'inline' ), true ) ? sanitize_key( $input['menu_style'] ) : 'dropdown';
@@ -186,6 +192,14 @@ final class Settings {
 				<div class="notice notice-success is-dismissible"><p><?php echo esc_html( $cache_message ); ?></p></div>
 			<?php endif; ?>
 
+			<?php
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only message added by a verified admin-post redirect.
+			$analytics_message = sanitize_text_field( wp_unslash( $_GET['localizepilot_analytics_message'] ?? '' ) );
+			if ( '' !== $analytics_message ) :
+				?>
+				<div class="notice notice-success is-dismissible"><p><?php echo esc_html( $analytics_message ); ?></p></div>
+			<?php endif; ?>
+
 			<div class="nt-tab-panel">
 				<?php
 				if ( 'dashboard' === $active_tab ) {
@@ -194,6 +208,8 @@ final class Settings {
 					$this->render_languages_tab( $options, $languages );
 				} elseif ( 'translation' === $active_tab ) {
 					$this->render_translation_tab( $options );
+				} elseif ( 'analytics' === $active_tab ) {
+					$this->render_analytics_tab( $options );
 				} elseif ( 'cache' === $active_tab ) {
 					$this->render_cache_tab( $options, $cache, $stats );
 				} else {
@@ -210,6 +226,7 @@ final class Settings {
 			'dashboard'   => array( 'label' => __( 'Dashboard & API', 'localizepilot' ), 'icon' => 'dashicons-dashboard' ),
 			'languages'   => array( 'label' => __( 'Languages', 'localizepilot' ), 'icon' => 'dashicons-translation' ),
 			'translation' => array( 'label' => __( 'Translation', 'localizepilot' ), 'icon' => 'dashicons-edit-page' ),
+			'analytics'   => array( 'label' => __( 'Analytics', 'localizepilot' ), 'icon' => 'dashicons-chart-area' ),
 			'cache'       => array( 'label' => __( 'Cache Management', 'localizepilot' ), 'icon' => 'dashicons-database' ),
 			'switcher'    => array( 'label' => __( 'Language Switcher', 'localizepilot' ), 'icon' => 'dashicons-menu-alt3' ),
 		);
@@ -303,13 +320,291 @@ final class Settings {
 		<?php $this->form_end( __( 'Save translation settings', 'localizepilot' ) );
 	}
 
+	private function render_analytics_tab( array $options ): void {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only analytics filter.
+		$language = sanitize_key( wp_unslash( $_GET['analytics_language'] ?? 'all' ) );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only analytics filter.
+		$date_from = sanitize_text_field( wp_unslash( $_GET['analytics_date_from'] ?? '' ) );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only analytics filter.
+		$date_to = sanitize_text_field( wp_unslash( $_GET['analytics_date_to'] ?? '' ) );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only analytics filter.
+		$url_search = sanitize_text_field( wp_unslash( $_GET['analytics_url'] ?? '' ) );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only analytics pagination.
+		$analytics_page = max( 1, absint( wp_unslash( $_GET['analytics_page'] ?? 1 ) ) );
+
+		$report = $this->analytics->report(
+			array(
+				'language'  => $language,
+				'date_from' => $date_from,
+				'date_to'   => $date_to,
+				'url'       => $url_search,
+				'page'      => $analytics_page,
+			)
+		);
+
+		$filters = (array) $report['filters'];
+		$summary = (array) $report['summary'];
+		$languages = array_values(
+			array_unique(
+				array_merge(
+					array( (string) ( $options['source_language'] ?? 'en' ) ),
+					(array) ( $options['enabled_languages'] ?? array() )
+				)
+			)
+		);
+
+		$this->form_start( 'analytics' );
+		?>
+		<div class="nt-two-column nt-analytics-settings">
+			<section class="nt-card">
+				<div class="nt-card-head">
+					<div>
+						<span class="nt-section-kicker"><?php esc_html_e( 'First-party reporting', 'localizepilot' ); ?></span>
+						<h2><?php esc_html_e( 'Language page analytics', 'localizepilot' ); ?></h2>
+						<p><?php esc_html_e( 'Store page-view events locally and report unique visitors for each language page.', 'localizepilot' ); ?></p>
+					</div>
+				</div>
+				<label class="nt-toggle-row">
+					<span>
+						<strong><?php esc_html_e( 'Enable visitor analytics', 'localizepilot' ); ?></strong>
+						<small><?php esc_html_e( 'No raw IP address or user-agent value is stored.', 'localizepilot' ); ?></small>
+					</span>
+					<input type="checkbox" name="<?php echo esc_attr( Plugin::OPTION ); ?>[analytics_enabled]" value="1" <?php checked( ! empty( $options['analytics_enabled'] ) ); ?>>
+					<i></i>
+				</label>
+				<div class="nt-field">
+					<label for="localizepilot-analytics-retention"><?php esc_html_e( 'Data retention', 'localizepilot' ); ?></label>
+					<div class="nt-number">
+						<input id="localizepilot-analytics-retention" type="number" min="7" max="3650" name="<?php echo esc_attr( Plugin::OPTION ); ?>[analytics_retention_days]" value="<?php echo esc_attr( (string) ( $options['analytics_retention_days'] ?? 365 ) ); ?>">
+						<span><?php esc_html_e( 'days', 'localizepilot' ); ?></span>
+					</div>
+				</div>
+			</section>
+			<section class="nt-card nt-analytics-explainer">
+				<span class="nt-section-kicker"><?php esc_html_e( 'Counting method', 'localizepilot' ); ?></span>
+				<h2><?php esc_html_e( 'Unique visitors and repeat views', 'localizepilot' ); ?></h2>
+				<p><?php esc_html_e( 'The same visitor is counted once for each language page. Every repeat visit is still stored as a separate page-view event.', 'localizepilot' ); ?></p>
+				<div class="nt-analytics-formula">
+					<div><strong><?php esc_html_e( 'Visitors', 'localizepilot' ); ?></strong><span><?php esc_html_e( 'Distinct visitor identifiers per page and language', 'localizepilot' ); ?></span></div>
+					<div><strong><?php esc_html_e( 'Views', 'localizepilot' ); ?></strong><span><?php esc_html_e( 'Every recorded visit, including repeat visits', 'localizepilot' ); ?></span></div>
+				</div>
+			</section>
+		</div>
+		<?php
+		$this->form_end( __( 'Save analytics settings', 'localizepilot' ) );
+		?>
+
+		<section class="nt-card nt-analytics-report-card">
+			<div class="nt-card-head">
+				<div>
+					<span class="nt-section-kicker"><?php esc_html_e( 'Reports', 'localizepilot' ); ?></span>
+					<h2><?php esc_html_e( 'Visitor activity by language page', 'localizepilot' ); ?></h2>
+					<p><?php esc_html_e( 'Filter the graph and page report by language, date range, or a specific URL.', 'localizepilot' ); ?></p>
+				</div>
+				<?php $this->analytics_action_form(); ?>
+			</div>
+
+			<form method="get" action="<?php echo esc_url( admin_url( 'admin.php' ) ); ?>" class="nt-analytics-filters">
+				<input type="hidden" name="page" value="localizepilot">
+				<input type="hidden" name="tab" value="analytics">
+				<div class="nt-field">
+					<label for="localizepilot-analytics-language"><?php esc_html_e( 'Language', 'localizepilot' ); ?></label>
+					<select id="localizepilot-analytics-language" name="analytics_language">
+						<option value="all" <?php selected( 'all', $filters['language'] ); ?>><?php esc_html_e( 'All languages', 'localizepilot' ); ?></option>
+						<?php foreach ( $languages as $language_code ) : ?>
+							<?php if ( ! Language_Catalog::exists( $language_code ) ) { continue; } ?>
+							<option value="<?php echo esc_attr( $language_code ); ?>" <?php selected( $language_code, $filters['language'] ); ?>><?php echo esc_html( Language_Catalog::label( $language_code, 'native' ) . ' (' . strtoupper( $language_code ) . ')' ); ?></option>
+						<?php endforeach; ?>
+					</select>
+				</div>
+				<div class="nt-field">
+					<label for="localizepilot-analytics-from"><?php esc_html_e( 'From', 'localizepilot' ); ?></label>
+					<input id="localizepilot-analytics-from" type="date" name="analytics_date_from" value="<?php echo esc_attr( (string) $filters['date_from'] ); ?>">
+				</div>
+				<div class="nt-field">
+					<label for="localizepilot-analytics-to"><?php esc_html_e( 'To', 'localizepilot' ); ?></label>
+					<input id="localizepilot-analytics-to" type="date" name="analytics_date_to" value="<?php echo esc_attr( (string) $filters['date_to'] ); ?>">
+				</div>
+				<div class="nt-field nt-analytics-url-filter">
+					<label for="localizepilot-analytics-url"><?php esc_html_e( 'Specific URL', 'localizepilot' ); ?></label>
+					<input id="localizepilot-analytics-url" type="search" name="analytics_url" value="<?php echo esc_attr( (string) $filters['url'] ); ?>" placeholder="<?php esc_attr_e( 'Search part of a page URL', 'localizepilot' ); ?>">
+				</div>
+				<div class="nt-analytics-filter-actions">
+					<button type="submit" class="button button-primary"><?php esc_html_e( 'Apply filters', 'localizepilot' ); ?></button>
+					<a class="button" href="<?php echo esc_url( add_query_arg( array( 'page' => 'localizepilot', 'tab' => 'analytics' ), admin_url( 'admin.php' ) ) ); ?>"><?php esc_html_e( 'Reset', 'localizepilot' ); ?></a>
+				</div>
+			</form>
+
+			<div class="nt-stat-grid nt-analytics-summary">
+				<div class="nt-stat"><span><?php esc_html_e( 'Unique visitors', 'localizepilot' ); ?></span><strong><?php echo esc_html( number_format_i18n( absint( $summary['visitors'] ?? 0 ) ) ); ?></strong><small><?php esc_html_e( 'Distinct identifiers in this report', 'localizepilot' ); ?></small></div>
+				<div class="nt-stat"><span><?php esc_html_e( 'Page views', 'localizepilot' ); ?></span><strong><?php echo esc_html( number_format_i18n( absint( $summary['views'] ?? 0 ) ) ); ?></strong><small><?php esc_html_e( 'Includes repeat visits', 'localizepilot' ); ?></small></div>
+				<div class="nt-stat"><span><?php esc_html_e( 'Language pages', 'localizepilot' ); ?></span><strong><?php echo esc_html( number_format_i18n( absint( $summary['pages'] ?? 0 ) ) ); ?></strong><small><?php esc_html_e( 'Unique URL and language combinations', 'localizepilot' ); ?></small></div>
+				<div class="nt-stat"><span><?php esc_html_e( 'Languages viewed', 'localizepilot' ); ?></span><strong><?php echo esc_html( number_format_i18n( absint( $summary['languages'] ?? 0 ) ) ); ?></strong><small><?php esc_html_e( 'Languages with recorded activity', 'localizepilot' ); ?></small></div>
+			</div>
+
+			<?php $this->render_analytics_chart( (array) $report['daily'] ); ?>
+			<?php $this->render_analytics_table( $report ); ?>
+		</section>
+		<?php
+	}
+
+	/**
+	 * @param array<int,array{date:string,views:int,visitors:int}> $daily Daily report rows.
+	 */
+	private function render_analytics_chart( array $daily ): void {
+		$width   = 960;
+		$height  = 320;
+		$left    = 54;
+		$right   = 22;
+		$top     = 24;
+		$bottom  = 48;
+		$plot_w  = $width - $left - $right;
+		$plot_h  = $height - $top - $bottom;
+		$maximum = 1;
+
+		foreach ( $daily as $row ) {
+			$maximum = max( $maximum, absint( $row['views'] ?? 0 ), absint( $row['visitors'] ?? 0 ) );
+		}
+
+		$count          = count( $daily );
+		$views_points   = array();
+		$visitor_points = array();
+		$point_data     = array();
+
+		foreach ( $daily as $index => $row ) {
+			$x = $left + ( $count > 1 ? ( $index * $plot_w / ( $count - 1 ) ) : $plot_w / 2 );
+			$views_y = $top + $plot_h - ( absint( $row['views'] ?? 0 ) / $maximum * $plot_h );
+			$visitors_y = $top + $plot_h - ( absint( $row['visitors'] ?? 0 ) / $maximum * $plot_h );
+			$views_points[]   = number_format( $x, 2, '.', '' ) . ',' . number_format( $views_y, 2, '.', '' );
+			$visitor_points[] = number_format( $x, 2, '.', '' ) . ',' . number_format( $visitors_y, 2, '.', '' );
+			$point_data[] = array(
+				'x'          => $x,
+				'views_y'    => $views_y,
+				'visitors_y' => $visitors_y,
+				'date'       => (string) ( $row['date'] ?? '' ),
+				'views'      => absint( $row['views'] ?? 0 ),
+				'visitors'   => absint( $row['visitors'] ?? 0 ),
+			);
+		}
+		?>
+		<div class="nt-analytics-chart-card">
+			<div class="nt-analytics-chart-head">
+				<div><strong><?php esc_html_e( 'Visitors and page views over time', 'localizepilot' ); ?></strong><span><?php esc_html_e( 'Daily activity for the selected filters', 'localizepilot' ); ?></span></div>
+				<div class="nt-chart-legend"><span class="is-visitors"><i></i><?php esc_html_e( 'Unique visitors', 'localizepilot' ); ?></span><span class="is-views"><i></i><?php esc_html_e( 'Page views', 'localizepilot' ); ?></span></div>
+			</div>
+			<div class="nt-analytics-chart-scroll">
+				<svg class="nt-analytics-chart" viewBox="0 0 <?php echo esc_attr( (string) $width ); ?> <?php echo esc_attr( (string) $height ); ?>" role="img" aria-label="<?php esc_attr_e( 'Daily visitor and page-view graph', 'localizepilot' ); ?>">
+					<?php for ( $grid = 0; $grid <= 4; $grid++ ) : ?>
+						<?php $grid_y = $top + ( $grid * $plot_h / 4 ); $grid_value = (int) round( $maximum * ( 1 - $grid / 4 ) ); ?>
+						<line class="nt-chart-grid" x1="<?php echo esc_attr( (string) $left ); ?>" y1="<?php echo esc_attr( number_format( $grid_y, 2, '.', '' ) ); ?>" x2="<?php echo esc_attr( (string) ( $width - $right ) ); ?>" y2="<?php echo esc_attr( number_format( $grid_y, 2, '.', '' ) ); ?>"></line>
+						<text class="nt-chart-axis-label" x="<?php echo esc_attr( (string) ( $left - 10 ) ); ?>" y="<?php echo esc_attr( number_format( $grid_y + 4, 2, '.', '' ) ); ?>" text-anchor="end"><?php echo esc_html( number_format_i18n( $grid_value ) ); ?></text>
+					<?php endfor; ?>
+					<?php if ( ! empty( $views_points ) ) : ?>
+						<polyline class="nt-chart-line nt-chart-views" points="<?php echo esc_attr( implode( ' ', $views_points ) ); ?>"></polyline>
+						<polyline class="nt-chart-line nt-chart-visitors" points="<?php echo esc_attr( implode( ' ', $visitor_points ) ); ?>"></polyline>
+						<?php foreach ( $point_data as $index => $point ) : ?>
+							<circle class="nt-chart-point nt-chart-point-views" cx="<?php echo esc_attr( number_format( $point['x'], 2, '.', '' ) ); ?>" cy="<?php echo esc_attr( number_format( $point['views_y'], 2, '.', '' ) ); ?>" r="3"><title><?php echo esc_html( $point['date'] . ': ' . $point['views'] . ' ' . __( 'views', 'localizepilot' ) ); ?></title></circle>
+							<circle class="nt-chart-point nt-chart-point-visitors" cx="<?php echo esc_attr( number_format( $point['x'], 2, '.', '' ) ); ?>" cy="<?php echo esc_attr( number_format( $point['visitors_y'], 2, '.', '' ) ); ?>" r="3"><title><?php echo esc_html( $point['date'] . ': ' . $point['visitors'] . ' ' . __( 'visitors', 'localizepilot' ) ); ?></title></circle>
+							<?php if ( 0 === $index || $index === $count - 1 || 0 === $index % max( 1, (int) ceil( $count / 6 ) ) ) : ?>
+								<text class="nt-chart-date-label" x="<?php echo esc_attr( number_format( $point['x'], 2, '.', '' ) ); ?>" y="<?php echo esc_attr( (string) ( $height - 17 ) ); ?>" text-anchor="middle"><?php echo esc_html( wp_date( 'M j', strtotime( $point['date'] ) ) ); ?></text>
+							<?php endif; ?>
+						<?php endforeach; ?>
+					<?php endif; ?>
+				</svg>
+			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * @param array<string,mixed> $report Analytics report.
+	 */
+	private function render_analytics_table( array $report ): void {
+		$items = (array) ( $report['items'] ?? array() );
+		?>
+		<div class="nt-analytics-table-head">
+			<div><strong><?php esc_html_e( 'Language page report', 'localizepilot' ); ?></strong><span><?php /* translators: %d: Number of language pages. */ echo esc_html( sprintf( __( '%d matching language pages', 'localizepilot' ), absint( $report['total'] ?? 0 ) ) ); ?></span></div>
+		</div>
+		<?php if ( empty( $items ) ) : ?>
+			<div class="nt-empty-state"><span class="dashicons dashicons-chart-area"></span><h3><?php esc_html_e( 'No visitor data found', 'localizepilot' ); ?></h3><p><?php esc_html_e( 'Enable analytics and open language pages, or change the current filters.', 'localizepilot' ); ?></p></div>
+			<?php return; ?>
+		<?php endif; ?>
+		<div class="nt-table-wrap">
+			<table class="nt-cache-table nt-analytics-table">
+				<thead><tr><th><?php esc_html_e( 'Page URL', 'localizepilot' ); ?></th><th><?php esc_html_e( 'Language', 'localizepilot' ); ?></th><th><?php esc_html_e( 'Unique visitors', 'localizepilot' ); ?></th><th><?php esc_html_e( 'Page views', 'localizepilot' ); ?></th><th><?php esc_html_e( 'Last visit', 'localizepilot' ); ?></th></tr></thead>
+				<tbody>
+				<?php foreach ( $items as $item ) : ?>
+					<tr>
+						<td><strong><?php echo esc_html( Analytics::display_url( (string) ( $item['page_url'] ?? '' ) ) ); ?></strong></td>
+						<td><span class="nt-code-badge"><?php echo esc_html( strtoupper( sanitize_key( (string) ( $item['language'] ?? '' ) ) ) ); ?></span></td>
+						<td><strong><?php echo esc_html( number_format_i18n( absint( $item['visitors'] ?? 0 ) ) ); ?></strong></td>
+						<td><?php echo esc_html( number_format_i18n( absint( $item['views'] ?? 0 ) ) ); ?></td>
+						<td><?php echo ! empty( $item['last_visit'] ) ? esc_html( mysql2date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), (string) $item['last_visit'] ) ) : esc_html( '—' ); ?></td>
+					</tr>
+				<?php endforeach; ?>
+				</tbody>
+			</table>
+		</div>
+		<?php
+		$total_pages = max( 1, absint( $report['pages'] ?? 1 ) );
+		if ( $total_pages <= 1 ) {
+			return;
+		}
+
+		$filters = (array) ( $report['filters'] ?? array() );
+		$placeholder = 999999999;
+		$base = add_query_arg(
+			array(
+				'page'                => 'localizepilot',
+				'tab'                 => 'analytics',
+				'analytics_language'  => (string) ( $filters['language'] ?? 'all' ),
+				'analytics_date_from' => (string) ( $filters['date_from'] ?? '' ),
+				'analytics_date_to'   => (string) ( $filters['date_to'] ?? '' ),
+				'analytics_url'       => (string) ( $filters['url'] ?? '' ),
+				'analytics_page'      => $placeholder,
+			),
+			admin_url( 'admin.php' )
+		);
+		$base = str_replace( (string) $placeholder, '%#%', esc_url_raw( $base ) );
+		$pagination = paginate_links(
+			array(
+				'base'      => $base,
+				'format'    => '',
+				'current'   => max( 1, absint( $report['page'] ?? 1 ) ),
+				'total'     => $total_pages,
+				'type'      => 'list',
+				'prev_text' => esc_html__( 'Previous', 'localizepilot' ),
+				'next_text' => esc_html__( 'Next', 'localizepilot' ),
+			)
+		);
+		if ( $pagination ) {
+			echo '<nav class="nt-pagination" aria-label="' . esc_attr__( 'Analytics report pagination', 'localizepilot' ) . '">' . wp_kses_post( $pagination ) . '</nav>';
+		}
+	}
+
+	private function analytics_action_form(): void {
+		$url = wp_nonce_url(
+			add_query_arg(
+				array(
+					'action'           => 'localizepilot_analytics_action',
+					'analytics_action' => 'clear_all',
+				),
+				admin_url( 'admin-post.php' )
+			),
+			'localizepilot_analytics_action'
+		);
+		$confirm = "return window.confirm('" . esc_js( __( 'Delete all LocalizePilot visitor analytics data?', 'localizepilot' ) ) . "');";
+		echo '<a class="button button-secondary nt-danger" href="' . esc_url( $url ) . '" onclick="' . esc_attr( $confirm ) . '">' . esc_html__( 'Clear analytics data', 'localizepilot' ) . '</a>';
+	}
+
 	private function render_cache_tab( array $options, File_Cache $cache, array $stats ): void {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only cache history pagination parameter.
 		$cache_page = max( 1, absint( wp_unslash( $_GET['cache_page'] ?? 1 ) ) );
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only cache history filter parameter.
 		$cache_type = sanitize_key( wp_unslash( $_GET['cache_type'] ?? 'all' ) );
 		$cache_type = in_array( $cache_type, array( 'all', 'page', 'snapshot' ), true ) ? $cache_type : 'all';
-		$history    = $cache->history( $cache_page, 15, $cache_type );
+		$history          = $cache->history( $cache_page, 15, $cache_type );
+		$history['items'] = $this->analytics->attach_counts( (array) $history['items'] );
 		$this->form_start( 'cache' ); ?>
 		<div class="nt-cache-summary"><div><span><?php esc_html_e( 'Rendered pages', 'localizepilot' ); ?></span><strong><?php echo esc_html( (string) $stats['count'] ); ?></strong></div><div><span><?php esc_html_e( 'Snapshots', 'localizepilot' ); ?></span><strong><?php echo esc_html( (string) ( $stats['snapshots'] ?? 0 ) ); ?></strong></div><div><span><?php esc_html_e( 'Total size', 'localizepilot' ); ?></span><strong><?php echo esc_html( size_format( (int) $stats['size'], 2 ) ); ?></strong></div><div><span><?php esc_html_e( 'Directory', 'localizepilot' ); ?></span><strong class="<?php echo esc_attr( $stats['writable'] ? 'is-good' : 'is-bad' ); ?>"><?php echo $stats['writable'] ? esc_html__( 'Writable', 'localizepilot' ) : esc_html__( 'Not writable', 'localizepilot' ); ?></strong></div></div>
 		<section class="nt-card"><div class="nt-card-head"><div><span class="nt-section-kicker"><?php esc_html_e( 'Cache configuration', 'localizepilot' ); ?></span><h2><?php esc_html_e( 'HTML and object cache', 'localizepilot' ); ?></h2><p><?php esc_html_e( 'Translated pages are saved as files under wp-content/cache/localizepilot.', 'localizepilot' ); ?></p></div></div><div class="nt-option-grid"><label class="nt-toggle-row"><span><strong><?php esc_html_e( 'HTML file cache', 'localizepilot' ); ?></strong><small><?php esc_html_e( 'Save translated output as persistent HTML files.', 'localizepilot' ); ?></small></span><input type="checkbox" name="<?php echo esc_attr( Plugin::OPTION ); ?>[cache_enabled]" value="1" <?php checked( ! empty( $options['cache_enabled'] ) ); ?>><i></i></label><label class="nt-toggle-row"><span><strong><?php esc_html_e( 'WordPress object cache', 'localizepilot' ); ?></strong><small><?php esc_html_e( 'Use wp_cache_get and wp_cache_set as a fast first layer.', 'localizepilot' ); ?></small></span><input type="checkbox" name="<?php echo esc_attr( Plugin::OPTION ); ?>[object_cache_enabled]" value="1" <?php checked( ! empty( $options['object_cache_enabled'] ) ); ?>><i></i></label></div><div class="nt-field nt-cache-duration"><label><?php esc_html_e( 'Cache lifetime', 'localizepilot' ); ?></label><div class="nt-number"><input type="number" min="1" max="8760" name="<?php echo esc_attr( Plugin::OPTION ); ?>[cache_hours]" value="<?php echo esc_attr( (string) $options['cache_hours'] ); ?>"><span><?php esc_html_e( 'hours', 'localizepilot' ); ?></span></div></div><div class="nt-cache-path"><span><?php esc_html_e( 'Cache directory', 'localizepilot' ); ?></span><code><?php echo esc_html( $stats['path'] ); ?></code></div></section>
@@ -395,6 +690,7 @@ final class Settings {
 						<th><?php esc_html_e( 'Cache entry', 'localizepilot' ); ?></th>
 						<th><?php esc_html_e( 'Type', 'localizepilot' ); ?></th>
 						<th><?php esc_html_e( 'Language', 'localizepilot' ); ?></th>
+						<th><?php esc_html_e( 'Visitors', 'localizepilot' ); ?></th>
 						<th><?php esc_html_e( 'Provider / status', 'localizepilot' ); ?></th>
 						<th><?php esc_html_e( 'Updated', 'localizepilot' ); ?></th>
 						<th><?php esc_html_e( 'Size', 'localizepilot' ); ?></th>
@@ -441,10 +737,13 @@ final class Settings {
 							? absint( $item['bytes'] )
 							: 0;
 
+						$item_visitors = absint( $item['visitors'] ?? 0 );
+						$item_views    = absint( $item['views'] ?? 0 );
+
 						$is_expired    = ! empty( $item['expired'] );
 
 						$display_name = '' !== $item_url
-							? $item_url
+							? Analytics::display_url( $item_url )
 							: $item_key . '.html';
 
 						$provider_status = $item_provider;
@@ -492,6 +791,19 @@ final class Settings {
 								<span class="nt-code-badge">
 									<?php echo esc_html( strtoupper( $item_language ) ); ?>
 								</span>
+							</td>
+
+							<td class="nt-cache-visitors">
+								<strong><?php echo esc_html( number_format_i18n( $item_visitors ) ); ?></strong>
+								<small>
+									<?php
+									printf(
+										/* translators: %s: Number of page views. */
+										esc_html__( '%s views', 'localizepilot' ),
+										esc_html( number_format_i18n( $item_views ) )
+									);
+									?>
+								</small>
 							</td>
 
 							<td>
@@ -682,6 +994,34 @@ final class Settings {
 			$message = $deleted ? __( 'Cache entry deleted.', 'localizepilot' ) : __( 'Cache entry was not found.', 'localizepilot' );
 		}
 		wp_safe_redirect( add_query_arg( array( 'page' => 'localizepilot', 'tab' => 'cache', 'cache_page' => $cache_page, 'cache_type' => $filter_type, 'localizepilot_cache_message' => $message ), admin_url( 'admin.php' ) ) );
+		exit;
+	}
+
+	public function analytics_action(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Permission denied.', 'localizepilot' ) );
+		}
+
+		check_admin_referer( 'localizepilot_analytics_action' );
+		$action  = sanitize_key( wp_unslash( $_GET['analytics_action'] ?? '' ) );
+		$message = __( 'No analytics action was performed.', 'localizepilot' );
+
+		if ( 'clear_all' === $action ) {
+			$deleted = $this->analytics->clear_all();
+			/* translators: %d: Number of deleted analytics events. */
+			$message = sprintf( __( 'Deleted %d analytics events.', 'localizepilot' ), $deleted );
+		}
+
+		wp_safe_redirect(
+			add_query_arg(
+				array(
+					'page'                              => 'localizepilot',
+					'tab'                               => 'analytics',
+					'localizepilot_analytics_message' => $message,
+				),
+				admin_url( 'admin.php' )
+			)
+		);
 		exit;
 	}
 }

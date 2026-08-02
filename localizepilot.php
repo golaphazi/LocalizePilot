@@ -2,7 +2,7 @@
 /**
  * Plugin Name: LocalizePilot – Multilingual Content & Media
  * Description: Create multilingual WordPress content, edit translations in Gutenberg, localize media, add language switchers, and cache translated HTML.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: Golaphazi
  * Author URI: https://github.com/golaphazi/
  * Text Domain: localizepilot
@@ -14,7 +14,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'LOCALIZEPILOT_VERSION', '1.0.0' );
+define( 'LOCALIZEPILOT_VERSION', '1.0.1' );
 define( 'LOCALIZEPILOT_FILE', __FILE__ );
 define( 'LOCALIZEPILOT_PATH', plugin_dir_path( __FILE__ ) );
 define( 'LOCALIZEPILOT_URL', plugin_dir_url( __FILE__ ) );
@@ -33,6 +33,7 @@ require_once LOCALIZEPILOT_PATH . 'includes/class-fallback-client.php';
 require_once LOCALIZEPILOT_PATH . 'includes/class-translatex-client.php';
 require_once LOCALIZEPILOT_PATH . 'includes/class-google-translate-client.php';
 require_once LOCALIZEPILOT_PATH . 'includes/class-client-factory.php';
+require_once LOCALIZEPILOT_PATH . 'includes/class-analytics.php';
 require_once LOCALIZEPILOT_PATH . 'includes/class-file-cache.php';
 require_once LOCALIZEPILOT_PATH . 'includes/class-html-translator.php';
 require_once LOCALIZEPILOT_PATH . 'includes/class-language-switcher.php';

@@ -21,6 +21,14 @@ defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 	delete_option( 'next_translate_cache_version' );
 	delete_option( 'next_translate_daily_usage' );
 	delete_option( 'localizepilot_translation_parent_migrated' );
+	delete_option( 'localizepilot_analytics_db_version' );
+
+	wp_clear_scheduled_hook( 'localizepilot_daily_analytics_cleanup' );
+
+	global $wpdb;
+	$localizepilot_analytics_table = $wpdb->prefix . 'localizepilot_visits';
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is generated from the WordPress database prefix.
+	$wpdb->query( "DROP TABLE IF EXISTS {$localizepilot_analytics_table}" );
 
 	$localizepilot_translation_ids = get_posts(
 		array(

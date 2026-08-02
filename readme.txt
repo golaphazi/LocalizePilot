@@ -4,7 +4,7 @@ Tags: translation, multilingual, gutenberg, localization, media
 Requires at least: 6.2
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -42,6 +42,9 @@ The plugin is disabled by default. It does not contact an external translation p
 * Rendered-page HTML file cache
 * Optional WordPress object-cache layer
 * Paginated cache history and cache-management actions
+* First-party visitor analytics by language page
+* Unique visitor and repeat page-view reporting
+* Analytics filters for language, date range, and URL
 * Configurable daily automatic-translation limit
 
 = Translation statuses =
@@ -95,6 +98,10 @@ No. Corrections are stored in the WordPress database. HTML files are generated s
 Yes. Normal frontend posts, pages, archives, menus, headers, and footers can be translated for both logged-in and logged-out visitors. Logged-in responses are translated in memory and are not saved to the shared full-page HTML cache. The WordPress admin bar is excluded from translation.
 
 For privacy and security, password-protected content, non-GET requests, and common WooCommerce cart, checkout, and account pages remain excluded from automatic full-page API translation.
+
+= How are analytics visitors counted? =
+
+When analytics is enabled, LocalizePilot stores every eligible page visit as an event. Unique visitor reports count the same one-way visitor identifier only once for each page and language combination, while Page Views includes all repeat visits. Raw IP addresses are not stored.
 
 = Are automatic translations guaranteed to be accurate? =
 
@@ -168,29 +175,27 @@ Each provider controls its own billing, retention, model training, quotas, regio
 
 == Privacy and data removal ==
 
-LocalizePilot stores settings and API keys in the WordPress options table, translation records in the WordPress posts and post-meta tables, daily usage counters in the options table, and generated cache files under `wp-content/cache/localizepilot/`.
+LocalizePilot stores settings and API keys in the WordPress options table, translation records in the WordPress posts and post-meta tables, daily usage counters in the options table, generated cache files under `wp-content/cache/localizepilot/`, and optional first-party analytics events in a dedicated WordPress database table.
 
-Using WordPress's Delete action for the plugin runs `uninstall.php` and removes LocalizePilot settings, usage counters, translation records, and generated cache files. Deactivation alone does not delete data.
+When analytics is enabled, anonymous visitors receive a random `localizepilot_visitor_id` cookie. The plugin stores a one-way hash of that identifier, the normalized source page URL, language code, and visit time. Raw IP addresses and user-agent strings are not stored. The same visitor is counted once per language page in unique visitor reports, while every repeat visit remains available as a page-view event.
+
+Using WordPress's Delete action for the plugin runs `uninstall.php` and removes LocalizePilot settings, usage counters, translation records, analytics events, the analytics table, scheduled cleanup, and generated cache files. Deactivation alone does not delete data.
 
 == Changelog ==
 
-= 1.0.3 =
-* Enabled translation for logged-in and logged-out visitors on normal frontend pages.
-* Kept shared rendered-page caching disabled for logged-in and personalized responses.
-* Kept the WordPress admin bar and sensitive WooCommerce account, cart, checkout, and password-protected screens excluded.
-
-= 1.0.2 =
-* Fixed internal links losing the active language prefix after navigation.
-* Localized links independently from API translation for logged-in previews and cached pages.
-
 = 1.0.1 =
-
-* Fixed automatic header language switcher not appearing while administrators were logged in.
-* Kept translation and full-page caching disabled for logged-in and personalized requests.
-* Cleaned release packaging metadata.
+* Added a new Analytics tab with visitor and page-view reports for each language page.
+* Added language, date-range, and specific URL filters.
+* Added a built-in visitor and page-view graph without external chart libraries.
+* Added unique visitor counts to the cache history table.
+* Stored repeat visits as separate events while counting each visitor once per language page.
+* Added configurable analytics retention and complete analytics-data removal.
+* Excluded WordPress `/embed/` endpoints from translation, cache, and analytics processing.
+* Removed trailing `/embed/` from URLs displayed in cache and analytics reports.
+* Kept translated links on the selected language and translated normal frontend pages for logged-in and logged-out visitors.
+* Kept shared rendered-page caching disabled for logged-in and personalized responses.
 
 = 1.0.0 =
-
 * Initial WordPress.org release.
 * Added Gutenberg-editable translation records and review statuses.
 * Added language-specific media support.
