@@ -359,14 +359,246 @@ final class Settings {
 		<?php
 	}
 
-	private function render_cache_table( array $history, int $cache_page, string $cache_type ): void {
+	private function render_cache_table(
+		array $history,
+		int $cache_page,
+		string $cache_type
+	): void {
 		if ( empty( $history['items'] ) ) {
-			echo ('<div class="nt-empty-state"><span class="dashicons dashicons-database-remove"></span><h3>') . esc_html__( 'No cache history found', 'localizepilot' ) . '</h3><p>' . esc_html__( 'Open a translated page or save a Gutenberg translation to create HTML files.', 'localizepilot' ) . '</p></div>';
+			?>
+			<div class="nt-empty-state">
+				<span class="dashicons dashicons-database-remove"></span>
+
+				<h3>
+					<?php esc_html_e( 'No cache history found', 'localizepilot' ); ?>
+				</h3>
+
+				<p>
+					<?php
+					esc_html_e(
+						'Open a translated page or save a Gutenberg translation to create HTML files.',
+						'localizepilot'
+					);
+					?>
+				</p>
+			</div>
+			<?php
+
 			return;
 		}
 		?>
-		<div class="nt-table-wrap"><table class="nt-cache-table"><thead><tr><th><?php esc_html_e( 'Cache entry', 'localizepilot' ); ?></th><th><?php esc_html_e( 'Type', 'localizepilot' ); ?></th><th><?php esc_html_e( 'Language', 'localizepilot' ); ?></th><th><?php esc_html_e( 'Provider / status', 'localizepilot' ); ?></th><th><?php esc_html_e( 'Updated', 'localizepilot' ); ?></th><th><?php esc_html_e( 'Size', 'localizepilot' ); ?></th><th></th></tr></thead><tbody><?php foreach ( $history['items'] as $item ) : ?><tr class="<?php echo esc_attr( ! empty( $item['expired'] ) ? 'is-expired' : '' ); ?>"><td><strong><?php echo esc_html( $item['url'] ?: $item['key'] . '.html' ); ?></strong><small><?php echo esc_html( $item['key'] . '.html' ); ?><?php if ( ! empty( $item['expired'] ) ) : ?> · <?php esc_html_e( 'Expired', 'localizepilot' ); ?><?php endif; ?></small></td><td><span class="nt-type-badge <?php echo esc_attr( 'snapshot' === $item['type'] ? 'is-snapshot' : '' ); ?>"><?php echo 'snapshot' === $item['type'] ? esc_html__( 'Snapshot', 'localizepilot' ) : esc_html__( 'Page', 'localizepilot' ); ?></span></td><td><span class="nt-code-badge"><?php echo esc_html( strtoupper( (string) $item['language'] ) ); ?></span></td><td><?php echo esc_html( ucfirst( (string) ( $item['provider'] ?: $item['status'] ?: '—' ) ) ); ?></td><td><?php echo $item['modified'] ? esc_html( human_time_diff( (int) $item['modified'], time() ) . ' ' . __( 'ago', 'localizepilot' ) ) : esc_html( '—' ); ?></td><td><?php echo esc_html( size_format( (int) $item['bytes'], 1 ) ); ?></td><td><?php $this->cache_action_form( 'delete', __( 'Delete', 'localizepilot' ), 'button-link-delete', (string) $item['key'], (string) $item['type'], $cache_page, $cache_type ); ?></td></tr><?php endforeach; ?></tbody></table></div>
-		<?php if ( $history['pages'] > 1 ) : $base = add_query_arg( array( 'page' => 'localizepilot', 'tab' => 'cache', 'cache_type' => $cache_type, 'cache_page' => 999999999 ), admin_url( 'admin.php' ) ); ?><div class="nt-pagination"><?php echo wp_kses_post( paginate_links( array( 'base' => str_replace( '999999999', '%#%', esc_url( $base ) ), 'format' => '', 'current' => $history['page'], 'total' => $history['pages'], 'type' => 'list', 'prev_text' => '‹', 'next_text' => '›' ) ) ); ?></div><?php endif;
+
+		<div class="nt-table-wrap">
+			<table class="nt-cache-table">
+				<thead>
+					<tr>
+						<th><?php esc_html_e( 'Cache entry', 'localizepilot' ); ?></th>
+						<th><?php esc_html_e( 'Type', 'localizepilot' ); ?></th>
+						<th><?php esc_html_e( 'Language', 'localizepilot' ); ?></th>
+						<th><?php esc_html_e( 'Provider / status', 'localizepilot' ); ?></th>
+						<th><?php esc_html_e( 'Updated', 'localizepilot' ); ?></th>
+						<th><?php esc_html_e( 'Size', 'localizepilot' ); ?></th>
+						<th>
+							<span class="screen-reader-text">
+								<?php esc_html_e( 'Actions', 'localizepilot' ); ?>
+							</span>
+						</th>
+					</tr>
+				</thead>
+
+				<tbody>
+					<?php foreach ( $history['items'] as $item ) : ?>
+						<?php
+						$item_key      = isset( $item['key'] )
+							? sanitize_file_name( (string) $item['key'] )
+							: '';
+
+						$item_type     = isset( $item['type'] )
+							? sanitize_key( (string) $item['type'] )
+							: 'page';
+
+						$item_url      = isset( $item['url'] )
+							? (string) $item['url']
+							: '';
+
+						$item_language = isset( $item['language'] )
+							? sanitize_key( (string) $item['language'] )
+							: '';
+
+						$item_provider = isset( $item['provider'] )
+							? sanitize_text_field( (string) $item['provider'] )
+							: '';
+
+						$item_status   = isset( $item['status'] )
+							? sanitize_text_field( (string) $item['status'] )
+							: '';
+
+						$item_modified = isset( $item['modified'] )
+							? absint( $item['modified'] )
+							: 0;
+
+						$item_bytes    = isset( $item['bytes'] )
+							? absint( $item['bytes'] )
+							: 0;
+
+						$is_expired    = ! empty( $item['expired'] );
+
+						$display_name = '' !== $item_url
+							? $item_url
+							: $item_key . '.html';
+
+						$provider_status = $item_provider;
+
+						if ( '' === $provider_status ) {
+							$provider_status = $item_status;
+						}
+
+						if ( '' === $provider_status ) {
+							$provider_status = '—';
+						}
+						?>
+
+						<tr class="<?php echo esc_attr( $is_expired ? 'is-expired' : '' ); ?>">
+							<td>
+								<strong>
+									<?php echo esc_html( $display_name ); ?>
+								</strong>
+
+								<small>
+									<?php echo esc_html( $item_key . '.html' ); ?>
+
+									<?php if ( $is_expired ) : ?>
+										&middot;
+										<?php esc_html_e( 'Expired', 'localizepilot' ); ?>
+									<?php endif; ?>
+								</small>
+							</td>
+
+							<td>
+								<span
+									class="nt-type-badge <?php echo esc_attr( 'snapshot' === $item_type ? 'is-snapshot' : '' ); ?>"
+								>
+									<?php
+									echo esc_html(
+										'snapshot' === $item_type
+											? __( 'Snapshot', 'localizepilot' )
+											: __( 'Page', 'localizepilot' )
+									);
+									?>
+								</span>
+							</td>
+
+							<td>
+								<span class="nt-code-badge">
+									<?php echo esc_html( strtoupper( $item_language ) ); ?>
+								</span>
+							</td>
+
+							<td>
+								<?php echo esc_html( ucfirst( $provider_status ) ); ?>
+							</td>
+
+							<td>
+								<?php
+								if ( $item_modified > 0 ) {
+									printf(
+										/* translators: %s: Human-readable time difference. */
+										esc_html__( '%s ago', 'localizepilot' ),
+										esc_html(
+											human_time_diff(
+												$item_modified,
+												current_time( 'timestamp' )
+											)
+										)
+									);
+								} else {
+									echo esc_html( '—' );
+								}
+								?>
+							</td>
+
+							<td>
+								<?php echo esc_html( size_format( $item_bytes, 1 ) ); ?>
+							</td>
+
+							<td>
+								<?php
+								$this->cache_action_form(
+									'delete',
+									__( 'Delete', 'localizepilot' ),
+									'button-link-delete',
+									$item_key,
+									$item_type,
+									$cache_page,
+									$cache_type
+								);
+								?>
+							</td>
+						</tr>
+					<?php endforeach; ?>
+				</tbody>
+			</table>
+		</div>
+
+		<?php
+		$total_pages = isset( $history['pages'] )
+			? absint( $history['pages'] )
+			: 1;
+
+		$current_page = isset( $history['page'] )
+			? max( 1, absint( $history['page'] ) )
+			: 1;
+
+		if ( $total_pages <= 1 ) {
+			return;
+		}
+
+		/*
+		* Use a numeric placeholder because add_query_arg() encodes `%#%`.
+		* Do not use esc_url() here because it converts "&" to "&#038;".
+		*/
+		$pagination_placeholder = 999999999;
+
+		$pagination_base = add_query_arg(
+			array(
+				'page'       => 'localizepilot',
+				'tab'        => 'cache',
+				'cache_type' => sanitize_key( $cache_type ),
+				'cache_page' => $pagination_placeholder,
+			),
+			admin_url( 'admin.php' )
+		);
+
+		$pagination_base = esc_url_raw( $pagination_base );
+
+		$pagination_base = str_replace(
+			(string) $pagination_placeholder,
+			'%#%',
+			$pagination_base
+		);
+
+		$pagination = paginate_links(
+			array(
+				'base'      => $pagination_base,
+				'format'    => '',
+				'current'   => $current_page,
+				'total'     => $total_pages,
+				'type'      => 'list',
+				'prev_text' => esc_html__( 'Previous', 'localizepilot' ),
+				'next_text' => esc_html__( 'Next', 'localizepilot' ),
+			)
+		);
+
+		if ( $pagination ) :
+			?>
+			<nav
+				class="nt-pagination"
+				aria-label="<?php esc_attr_e( 'Cache history pagination', 'localizepilot' ); ?>"
+			>
+				<?php echo wp_kses_post( $pagination ); ?>
+			</nav>
+			<?php
+		endif;
 	}
 
 	private function cache_action_form( string $action, string $label, string $class, string $key = '', string $item_type = 'page', int $cache_page = 1, string $filter_type = 'all' ): void {
