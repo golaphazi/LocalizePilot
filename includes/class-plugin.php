@@ -267,6 +267,14 @@ final class Plugin {
 	public function bump_cache_version(): void {
 		$version = max( 1, (int) get_option( self::CACHE_VERSION_OPTION, 1 ) );
 		update_option( self::CACHE_VERSION_OPTION, $version + 1, false );
+
+		/*
+		 * Every previously cached translation is now stale, including any
+		 * copy held by a server-level host cache (e.g. SiteGround Dynamic
+		 * Cache). Purge those too so visitors do not keep seeing pages that
+		 * reflect the old settings, provider, or model.
+		 */
+		File_Cache::purge_external_caches();
 	}
 
 	public function enqueue_frontend_assets(): void {

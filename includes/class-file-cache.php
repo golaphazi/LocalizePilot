@@ -259,7 +259,72 @@ final class File_Cache {
 		}
 
 		wp_cache_delete( $key, $this->group );
+
+		if ( $deleted ) {
+			self::purge_external_caches();
+		}
+
 		return $deleted;
+	}
+
+	/**
+	 * Purge known host-level and third-party page caches whenever LocalizePilot
+	 * invalidates its own translated-HTML cache.
+	 *
+	 * LocalizePilot's file and object cache are entirely internal to the
+	 * plugin. On managed hosts such as SiteGround, a separate server-level
+	 * page cache (SG Optimizer's Dynamic Cache / SuperCacher) also stores a
+	 * full copy of the rendered HTML and serves it directly, without PHP
+	 * running again, until it is told to purge. Without this integration a
+	 * cleared or regenerated translation keeps being served stale from that
+	 * host cache, which looks like "the cache system is not working" even
+	 * though LocalizePilot's own cache was cleared correctly.
+	 */
+	public static function purge_external_caches(): void {
+		// SiteGround SG Optimizer Dynamic Cache (Supercacher).
+		if ( class_exists( '\SiteGround_Optimizer\Supercacher\Supercacher' ) && method_exists( '\SiteGround_Optimizer\Supercacher\Supercacher', 'purge_cache' ) ) {
+			try {
+				\SiteGround_Optimizer\Supercacher\Supercacher::purge_cache();
+			} catch ( \Throwable $exception ) {
+				// Ignore; the action below is a second, independent path to the same purge.
+			}
+		}
+		do_action( 'sg_cachepress_purge_cache' );
+
+		// LiteSpeed Cache.
+		do_action( 'litespeed_purge_all' );
+
+		// WP Super Cache.
+		if ( function_exists( 'wp_cache_clear_cache' ) ) {
+			wp_cache_clear_cache();
+		}
+
+		// W3 Total Cache.
+		if ( function_exists( 'w3tc_flush_all' ) ) {
+			w3tc_flush_all();
+		}
+
+		// WP Rocket.
+		if ( function_exists( 'rocket_clean_domain' ) ) {
+			rocket_clean_domain();
+		}
+
+		// WP Engine.
+		if ( class_exists( '\WpeCommon' ) ) {
+			if ( method_exists( '\WpeCommon', 'purge_memcached' ) ) {
+				\WpeCommon::purge_memcached();
+			}
+			if ( method_exists( '\WpeCommon', 'purge_varnish_cache' ) ) {
+				\WpeCommon::purge_varnish_cache();
+			}
+		}
+
+		/**
+		 * Fires after LocalizePilot purges the host-level and third-party
+		 * page caches it knows how to reach, so other integrations can hook
+		 * in their own purge call.
+		 */
+		do_action( 'localizepilot_purge_external_caches' );
 	}
 
 	public function clear_all(): int {
@@ -289,6 +354,8 @@ final class File_Cache {
 			wp_cache_flush_group( $this->group );
 		}
 
+		self::purge_external_caches();
+
 		return $count;
 	}
 
@@ -308,9 +375,24 @@ final class File_Cache {
 			}
 
 			$key = substr( $file['name'], 0, -5 );
-			if ( $this->delete( $key ) ) {
+			// Use the filesystem delete directly; $this->delete() already purges
+			// external caches per-key, and clear_expired can run frequently on
+			// its own schedule, so avoid piling up redundant host cache purges.
+			$paths   = $this->paths( $key );
+			$removed = false;
+			foreach ( $paths as $path ) {
+				if ( $filesystem->is_file( $path ) ) {
+					$removed = $filesystem->delete( $path, false, 'f' ) || $removed;
+				}
+			}
+			wp_cache_delete( $key, $this->group );
+			if ( $removed ) {
 				$count++;
 			}
+		}
+
+		if ( $count > 0 ) {
+			self::purge_external_caches();
 		}
 
 		return $count;

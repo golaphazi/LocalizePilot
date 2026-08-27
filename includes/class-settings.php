@@ -29,9 +29,19 @@ final class Settings {
 			'manage_options',
 			'localizepilot',
 			array( $this, 'render_page' ),
-			'dashicons-translation',
+			$this->menu_icon(),
 			58
 		);
+	}
+
+	/**
+	 * Return the LocalizePilot brand icon for the admin menu, falling back to
+	 * a built-in dashicon if the bundled icon file is ever missing.
+	 */
+	private function menu_icon(): string {
+		return is_readable( LOCALIZEPILOT_PATH . 'assets/menu-icon.png' )
+			? LOCALIZEPILOT_URL . 'assets/menu-icon.png'
+			: 'dashicons-translation';
 	}
 
 	public function register(): void {
@@ -605,11 +615,15 @@ final class Settings {
 		$cache_type = in_array( $cache_type, array( 'all', 'page', 'snapshot' ), true ) ? $cache_type : 'all';
 		$history          = $cache->history( $cache_page, 15, $cache_type );
 		$history['items'] = $this->analytics->attach_counts( (array) $history['items'] );
+		$host_cache       = $this->detected_host_cache_label();
 		$this->form_start( 'cache' ); ?>
+		<?php if ( '' !== $host_cache ) : ?>
+		<div class="notice notice-info inline"><p><?php echo wp_kses_post( sprintf( /* translators: %s is the name of the detected host or plugin page cache. */ __( '%s was detected on this site. LocalizePilot automatically asks it to purge whenever the LocalizePilot cache is cleared or a translation changes, so visitors are not served a stale page from that cache. Use "Purge host page cache" below to trigger it manually.', 'localizepilot' ), '<strong>' . esc_html( $host_cache ) . '</strong>' ) ); ?></p></div>
+		<?php endif; ?>
 		<div class="nt-cache-summary"><div><span><?php esc_html_e( 'Rendered pages', 'localizepilot' ); ?></span><strong><?php echo esc_html( (string) $stats['count'] ); ?></strong></div><div><span><?php esc_html_e( 'Snapshots', 'localizepilot' ); ?></span><strong><?php echo esc_html( (string) ( $stats['snapshots'] ?? 0 ) ); ?></strong></div><div><span><?php esc_html_e( 'Total size', 'localizepilot' ); ?></span><strong><?php echo esc_html( size_format( (int) $stats['size'], 2 ) ); ?></strong></div><div><span><?php esc_html_e( 'Directory', 'localizepilot' ); ?></span><strong class="<?php echo esc_attr( $stats['writable'] ? 'is-good' : 'is-bad' ); ?>"><?php echo $stats['writable'] ? esc_html__( 'Writable', 'localizepilot' ) : esc_html__( 'Not writable', 'localizepilot' ); ?></strong></div></div>
 		<section class="nt-card"><div class="nt-card-head"><div><span class="nt-section-kicker"><?php esc_html_e( 'Cache configuration', 'localizepilot' ); ?></span><h2><?php esc_html_e( 'HTML and object cache', 'localizepilot' ); ?></h2><p><?php esc_html_e( 'Translated pages are saved as files under wp-content/cache/localizepilot.', 'localizepilot' ); ?></p></div></div><div class="nt-option-grid"><label class="nt-toggle-row"><span><strong><?php esc_html_e( 'HTML file cache', 'localizepilot' ); ?></strong><small><?php esc_html_e( 'Save translated output as persistent HTML files.', 'localizepilot' ); ?></small></span><input type="checkbox" name="<?php echo esc_attr( Plugin::OPTION ); ?>[cache_enabled]" value="1" <?php checked( ! empty( $options['cache_enabled'] ) ); ?>><i></i></label><label class="nt-toggle-row"><span><strong><?php esc_html_e( 'WordPress object cache', 'localizepilot' ); ?></strong><small><?php esc_html_e( 'Use wp_cache_get and wp_cache_set as a fast first layer.', 'localizepilot' ); ?></small></span><input type="checkbox" name="<?php echo esc_attr( Plugin::OPTION ); ?>[object_cache_enabled]" value="1" <?php checked( ! empty( $options['object_cache_enabled'] ) ); ?>><i></i></label></div><div class="nt-field nt-cache-duration"><label><?php esc_html_e( 'Cache lifetime', 'localizepilot' ); ?></label><div class="nt-number"><input type="number" min="1" max="8760" name="<?php echo esc_attr( Plugin::OPTION ); ?>[cache_hours]" value="<?php echo esc_attr( (string) $options['cache_hours'] ); ?>"><span><?php esc_html_e( 'hours', 'localizepilot' ); ?></span></div></div><div class="nt-cache-path"><span><?php esc_html_e( 'Cache directory', 'localizepilot' ); ?></span><code><?php echo esc_html( $stats['path'] ); ?></code></div></section>
 		<?php $this->form_end( __( 'Save cache settings', 'localizepilot' ) ); ?>
-		<section class="nt-card nt-cache-history-card"><div class="nt-card-head"><div><span class="nt-section-kicker"><?php esc_html_e( 'Cache history', 'localizepilot' ); ?></span><h2><?php esc_html_e( 'Generated HTML history', 'localizepilot' ); ?></h2><p><?php /* translators: %d is the total number of cached HTML entries. */ echo esc_html( sprintf( __( '%d total HTML entries. Newest files appear first.', 'localizepilot' ), $history['total'] ) ); ?></p></div><div class="nt-cache-actions"><?php $this->cache_action_form( 'clear_expired', __( 'Clear expired pages', 'localizepilot' ), 'button', '', 'page', $cache_page, $cache_type ); ?><?php $this->cache_action_form( 'clear_all', __( 'Clear rendered cache', 'localizepilot' ), 'button button-secondary nt-danger', '', 'page', $cache_page, $cache_type ); ?><?php $this->cache_action_form( 'clear_snapshots', __( 'Clear snapshots', 'localizepilot' ), 'button button-secondary nt-danger', '', 'snapshot', $cache_page, $cache_type ); ?></div></div><div class="nt-history-filter"><a class="<?php echo esc_attr( 'all' === $cache_type ? 'is-active' : '' ); ?>" href="<?php echo esc_url( add_query_arg( array( 'page' => 'localizepilot', 'tab' => 'cache', 'cache_type' => 'all' ), admin_url( 'admin.php' ) ) ); ?>"><?php esc_html_e( 'All', 'localizepilot' ); ?></a><a class="<?php echo esc_attr( 'page' === $cache_type ? 'is-active' : '' ); ?>" href="<?php echo esc_url( add_query_arg( array( 'page' => 'localizepilot', 'tab' => 'cache', 'cache_type' => 'page' ), admin_url( 'admin.php' ) ) ); ?>"><?php esc_html_e( 'Rendered pages', 'localizepilot' ); ?></a><a class="<?php echo esc_attr( 'snapshot' === $cache_type ? 'is-active' : '' ); ?>" href="<?php echo esc_url( add_query_arg( array( 'page' => 'localizepilot', 'tab' => 'cache', 'cache_type' => 'snapshot' ), admin_url( 'admin.php' ) ) ); ?>"><?php esc_html_e( 'Gutenberg snapshots', 'localizepilot' ); ?></a></div><?php $this->render_cache_table( $history, $cache_page, $cache_type ); ?></section>
+		<section class="nt-card nt-cache-history-card"><div class="nt-card-head"><div><span class="nt-section-kicker"><?php esc_html_e( 'Cache history', 'localizepilot' ); ?></span><h2><?php esc_html_e( 'Generated HTML history', 'localizepilot' ); ?></h2><p><?php /* translators: %d is the total number of cached HTML entries. */ echo esc_html( sprintf( __( '%d total HTML entries. Newest files appear first.', 'localizepilot' ), $history['total'] ) ); ?></p></div><div class="nt-cache-actions"><?php $this->cache_action_form( 'clear_expired', __( 'Clear expired pages', 'localizepilot' ), 'button', '', 'page', $cache_page, $cache_type ); ?><?php $this->cache_action_form( 'clear_all', __( 'Clear rendered cache', 'localizepilot' ), 'button button-secondary nt-danger', '', 'page', $cache_page, $cache_type ); ?><?php $this->cache_action_form( 'clear_snapshots', __( 'Clear snapshots', 'localizepilot' ), 'button button-secondary nt-danger', '', 'snapshot', $cache_page, $cache_type ); ?><?php $this->cache_action_form( 'purge_host', __( 'Purge host page cache', 'localizepilot' ), 'button', '', 'page', $cache_page, $cache_type ); ?></div></div><div class="nt-history-filter"><a class="<?php echo esc_attr( 'all' === $cache_type ? 'is-active' : '' ); ?>" href="<?php echo esc_url( add_query_arg( array( 'page' => 'localizepilot', 'tab' => 'cache', 'cache_type' => 'all' ), admin_url( 'admin.php' ) ) ); ?>"><?php esc_html_e( 'All', 'localizepilot' ); ?></a><a class="<?php echo esc_attr( 'page' === $cache_type ? 'is-active' : '' ); ?>" href="<?php echo esc_url( add_query_arg( array( 'page' => 'localizepilot', 'tab' => 'cache', 'cache_type' => 'page' ), admin_url( 'admin.php' ) ) ); ?>"><?php esc_html_e( 'Rendered pages', 'localizepilot' ); ?></a><a class="<?php echo esc_attr( 'snapshot' === $cache_type ? 'is-active' : '' ); ?>" href="<?php echo esc_url( add_query_arg( array( 'page' => 'localizepilot', 'tab' => 'cache', 'cache_type' => 'snapshot' ), admin_url( 'admin.php' ) ) ); ?>"><?php esc_html_e( 'Gutenberg snapshots', 'localizepilot' ); ?></a></div><?php $this->render_cache_table( $history, $cache_page, $cache_type ); ?></section>
 		<?php
 	}
 
@@ -913,6 +927,32 @@ final class Settings {
 		endif;
 	}
 
+	/**
+	 * Identify a known host-level or plugin page cache active on this site,
+	 * for the informational notice shown on the Cache tab.
+	 */
+	private function detected_host_cache_label(): string {
+		if ( class_exists( '\SiteGround_Optimizer\Supercacher\Supercacher' ) ) {
+			return __( 'SiteGround Dynamic Cache (SG Optimizer)', 'localizepilot' );
+		}
+		if ( defined( 'LSCWP_V' ) || class_exists( '\LiteSpeed\Core' ) ) {
+			return __( 'LiteSpeed Cache', 'localizepilot' );
+		}
+		if ( function_exists( 'rocket_clean_domain' ) ) {
+			return __( 'WP Rocket', 'localizepilot' );
+		}
+		if ( function_exists( 'w3tc_flush_all' ) ) {
+			return __( 'W3 Total Cache', 'localizepilot' );
+		}
+		if ( function_exists( 'wp_cache_clear_cache' ) ) {
+			return __( 'WP Super Cache', 'localizepilot' );
+		}
+		if ( class_exists( '\WpeCommon' ) ) {
+			return __( 'WP Engine page cache', 'localizepilot' );
+		}
+		return '';
+	}
+
 	private function cache_action_form( string $action, string $label, string $class, string $key = '', string $item_type = 'page', int $cache_page = 1, string $filter_type = 'all' ): void {
 		$args = array( 'action' => 'next_translate_cache_action', 'cache_action' => $action, 'cache_item_type' => $item_type, 'cache_page' => $cache_page, 'cache_type' => $filter_type );
 		if ( '' !== $key ) { $args['cache_key'] = $key; }
@@ -988,6 +1028,9 @@ final class Settings {
 		} elseif ( 'clear_snapshots' === $action ) {
 			/* translators: %d is the number of deleted translation snapshot files. */
 			$message = sprintf( __( 'Cleared %d translation snapshot files.', 'localizepilot' ), $cache->clear_snapshots() );
+		} elseif ( 'purge_host' === $action ) {
+			File_Cache::purge_external_caches();
+			$message = __( 'Requested a purge of the SiteGround Dynamic Cache and any other detected host or plugin page cache.', 'localizepilot' );
 		} elseif ( 'delete' === $action ) {
 			$key     = sanitize_text_field( wp_unslash( $_GET['cache_key'] ?? '' ) );
 			$deleted = $cache->delete_history_item( $item_type, $key );

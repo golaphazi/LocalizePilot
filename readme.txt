@@ -4,7 +4,7 @@ Tags: translation, multilingual, translate, ai translation, automatic translatio
 Requires at least: 6.2
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.0.1
+Stable tag: 1.0.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -12,7 +12,7 @@ Translate WordPress with translation or AI providers, edit every language in Gut
 
 == Description ==
 
-LocalizePilot is a multilingual WordPress translation plugin for automatically translating posts and pages and managing each language version directly inside WordPress.
+LocalizePilot[https://localizepilot.com/] is a multilingual WordPress translation plugin for automatically translating posts and pages and managing each language version directly inside WordPress.
 
 Choose a translation or AI provider, generate a language version, and edit the translated content directly in Gutenberg. Review and customize text, blocks, links, images, featured media, and other supported content without changing the original page.
 
@@ -459,6 +459,15 @@ When analytics is enabled, anonymous visitors receive a random `localizepilot_vi
 Using WordPress's Delete action for the plugin runs `uninstall.php` and removes LocalizePilot settings, usage counters, translation records, analytics events, the analytics table, scheduled cleanup, and generated cache files. Deactivation alone does not delete data.
 
 == Changelog ==
+
+= 1.0.3 =
+* Added the LocalizePilot brand icon to the admin menu, replacing the generic dashicon.
+
+= 1.0.2 =
+* Fixed the cache system not updating on SiteGround: LocalizePilot now automatically purges SiteGround's Dynamic Cache (SG Optimizer / SuperCacher) whenever the LocalizePilot cache is cleared, a translation is regenerated, a source page is edited, or cache-affecting settings change.
+* Added the same automatic purge for LiteSpeed Cache, WP Super Cache, W3 Total Cache, WP Rocket, and WP Engine's page cache.
+* Added a "Purge host page cache" button and a detected-cache notice on the Cache tab so the host cache can also be purged manually.
+* Added the `localizepilot_purge_external_caches` action so other caching integrations can hook into LocalizePilot's cache-clear events.
 
 = 1.0.1 =
 * Added a new Analytics tab with visitor and page-view reports for each language page.
