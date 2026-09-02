@@ -8,6 +8,7 @@ final class File_Cache {
 	private array $settings;
 	private string $directory;
 	private string $page_directory;
+	private string $memory_directory;
 	private string $group = 'localizepilot_html';
 
 	/**
@@ -22,8 +23,9 @@ final class File_Cache {
 		$this->settings = $settings;
 		$new_directory  = trailingslashit( WP_CONTENT_DIR ) . 'cache/localizepilot';
 
-		$this->directory      = $new_directory;
-		$this->page_directory = trailingslashit( $this->directory ) . 'pages';
+		$this->directory        = $new_directory;
+		$this->page_directory   = trailingslashit( $this->directory ) . 'pages';
+		$this->memory_directory = trailingslashit( $this->directory ) . 'memory';
 	}
 
 	public function directory(): string {
@@ -245,6 +247,98 @@ final class File_Cache {
 		return true;
 	}
 
+	/**
+	 * Read translated string values cached for one rendered language page.
+	 *
+	 * Source strings are represented only by SHA-256 hashes in the cache file.
+	 *
+	 * @return array{provider:string,translations:array<string,string>}
+	 */
+	public function get_translation_memory( string $key, string $fingerprint, string $language ): array {
+		$empty = array(
+			'provider'     => '',
+			'translations' => array(),
+		);
+
+		if ( ! $this->is_enabled() ) {
+			return $empty;
+		}
+
+		$filesystem = $this->filesystem();
+		if ( null === $filesystem ) {
+			return $empty;
+		}
+
+		$path = $this->translation_memory_path( $key, $fingerprint );
+		if ( ! $filesystem->is_file( $path ) ) {
+			return $empty;
+		}
+
+		$ttl      = max( HOUR_IN_SECONDS, absint( $this->settings['cache_hours'] ?? 24 ) * HOUR_IN_SECONDS );
+		$modified = $filesystem->mtime( $path );
+		if ( false === $modified || ( time() - (int) $modified ) >= $ttl ) {
+			return $empty;
+		}
+
+		$data = $this->read_metadata( $path );
+		if ( sanitize_key( (string) ( $data['language'] ?? '' ) ) !== sanitize_key( $language ) ) {
+			return $empty;
+		}
+
+		$translations = array();
+		foreach ( (array) ( $data['translations'] ?? array() ) as $source_hash => $translation ) {
+			if ( is_string( $source_hash ) && preg_match( '/^[a-f0-9]{64}$/', $source_hash ) && is_string( $translation ) ) {
+				$translations[ $source_hash ] = $translation;
+			}
+		}
+
+		return array(
+			'provider'     => sanitize_key( (string) ( $data['provider'] ?? '' ) ),
+			'translations' => $translations,
+		);
+	}
+
+	/**
+	 * Persist translated string values for one rendered language page.
+	 *
+	 * @param array<string,string> $translations Source-hash to translation map.
+	 */
+	public function set_translation_memory(
+		string $key,
+		string $fingerprint,
+		string $language,
+		array $translations,
+		string $provider
+	): bool {
+		if ( ! $this->is_enabled() || ! $this->ensure_memory_directory() ) {
+			return false;
+		}
+
+		$clean = array();
+		foreach ( $translations as $source_hash => $translation ) {
+			if ( is_string( $source_hash ) && preg_match( '/^[a-f0-9]{64}$/', $source_hash ) && is_string( $translation ) ) {
+				$clean[ $source_hash ] = $translation;
+			}
+		}
+
+		if ( count( $clean ) > 2000 ) {
+			$clean = array_slice( $clean, -2000, null, true );
+		}
+
+		return $this->atomic_write(
+			$this->translation_memory_path( $key, $fingerprint ),
+			(string) wp_json_encode(
+				array(
+					'language'     => sanitize_key( $language ),
+					'provider'     => sanitize_key( $provider ),
+					'updated_at'   => time(),
+					'translations' => $clean,
+				),
+				JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+			)
+		);
+	}
+
 	public function delete( string $key ): bool {
 		$filesystem = $this->filesystem();
 		$paths      = $this->paths( $key );
@@ -259,12 +353,41 @@ final class File_Cache {
 		}
 
 		wp_cache_delete( $key, $this->group );
+		$deleted = $this->delete_translation_memory( $key ) || $deleted;
 
 		if ( $deleted ) {
 			self::purge_external_caches();
 		}
 
 		return $deleted;
+	}
+
+	/**
+	 * Name the host-level or plugin page cache LocalizePilot can currently
+	 * detect. Kept beside the purge integrations so detection and support do
+	 * not drift apart between admin screens.
+	 */
+	public static function detected_external_cache_label(): string {
+		if ( class_exists( '\\SiteGround_Optimizer\\Supercacher\\Supercacher' ) ) {
+			return __( 'SiteGround Dynamic Cache (SG Optimizer)', 'localizepilot' );
+		}
+		if ( defined( 'LSCWP_V' ) || class_exists( '\\LiteSpeed\\Core' ) ) {
+			return __( 'LiteSpeed Cache', 'localizepilot' );
+		}
+		if ( function_exists( 'rocket_clean_domain' ) ) {
+			return __( 'WP Rocket', 'localizepilot' );
+		}
+		if ( function_exists( 'w3tc_flush_all' ) ) {
+			return __( 'W3 Total Cache', 'localizepilot' );
+		}
+		if ( function_exists( 'wp_cache_clear_cache' ) ) {
+			return __( 'WP Super Cache', 'localizepilot' );
+		}
+		if ( class_exists( '\\WpeCommon' ) ) {
+			return __( 'WP Engine page cache', 'localizepilot' );
+		}
+
+		return '';
 	}
 
 	/**
@@ -350,6 +473,10 @@ final class File_Cache {
 			wp_cache_delete( $key, $this->group );
 		}
 
+		foreach ( $this->list_files( $this->memory_directory, 'json' ) as $file ) {
+			$filesystem->delete( $file['path'], false, 'f' );
+		}
+
 		if ( function_exists( 'wp_cache_flush_group' ) ) {
 			wp_cache_flush_group( $this->group );
 		}
@@ -388,6 +515,13 @@ final class File_Cache {
 			wp_cache_delete( $key, $this->group );
 			if ( $removed ) {
 				$count++;
+			}
+		}
+
+		foreach ( $this->list_files( $this->memory_directory, 'json' ) as $file ) {
+			$modified = $this->file_modified_time( $file );
+			if ( 0 === $modified || ( time() - $modified ) >= $ttl ) {
+				$filesystem->delete( $file['path'], false, 'f' );
 			}
 		}
 
@@ -595,6 +729,30 @@ final class File_Cache {
 		);
 	}
 
+	private function translation_memory_path( string $key, string $fingerprint ): string {
+		$key = preg_replace( '/[^a-z0-9_-]/i', '', $key ) ?: hash( 'sha256', $key );
+		return trailingslashit( $this->memory_directory ) . $key . '_' . substr( hash( 'sha256', $fingerprint ), 0, 16 ) . '.json';
+	}
+
+	private function delete_translation_memory( string $key ): bool {
+		$filesystem = $this->filesystem();
+		if ( null === $filesystem || ! $filesystem->is_dir( $this->memory_directory ) ) {
+			return false;
+		}
+
+		$key     = preg_replace( '/[^a-z0-9_-]/i', '', $key ) ?: hash( 'sha256', $key );
+		$prefix  = $key . '_';
+		$deleted = false;
+
+		foreach ( $this->list_files( $this->memory_directory, 'json' ) as $file ) {
+			if ( 0 === strpos( $file['name'], $prefix ) ) {
+				$deleted = $filesystem->delete( $file['path'], false, 'f' ) || $deleted;
+			}
+		}
+
+		return $deleted;
+	}
+
 	private function ensure_directory(): bool {
 		$filesystem = $this->filesystem();
 		if ( null === $filesystem ) {
@@ -612,6 +770,19 @@ final class File_Cache {
 		$this->ensure_protection_files();
 
 		return $filesystem->is_dir( $this->directory ) && $filesystem->is_dir( $this->page_directory );
+	}
+
+	private function ensure_memory_directory(): bool {
+		$filesystem = $this->filesystem();
+		if ( null === $filesystem || ! $this->ensure_directory() ) {
+			return false;
+		}
+
+		if ( ! $filesystem->is_dir( $this->memory_directory ) && ! $this->make_directory( $this->memory_directory ) ) {
+			return false;
+		}
+
+		return $filesystem->is_dir( $this->memory_directory ) && $filesystem->is_writable( $this->memory_directory );
 	}
 
 	private function ensure_protection_files(): void {
@@ -709,8 +880,9 @@ final class File_Cache {
 
 		$content_directory = $this->filesystem->wp_content_dir();
 		if ( is_string( $content_directory ) && '' !== $content_directory ) {
-			$this->directory      = trailingslashit( $content_directory ) . 'cache/localizepilot';
-			$this->page_directory = trailingslashit( $this->directory ) . 'pages';
+			$this->directory        = trailingslashit( $content_directory ) . 'cache/localizepilot';
+			$this->page_directory   = trailingslashit( $this->directory ) . 'pages';
+			$this->memory_directory = trailingslashit( $this->directory ) . 'memory';
 		}
 
 		return $this->filesystem;

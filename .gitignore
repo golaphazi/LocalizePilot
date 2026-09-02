@@ -1,0 +1,15 @@
+# Operating-system artefacts. Two .DS_Store files had been committed into the
+# plugin and were shipping with it; these entries stop them coming back.
+.DS_Store
+._*
+Thumbs.db
+desktop.ini
+
+# Editor and IDE state.
+.idea/
+.vscode/
+*.swp
+*~
+
+# The plugin has no build step, so there is deliberately nothing here for
+# node_modules or vendor. Add them alongside the tooling, not before it.

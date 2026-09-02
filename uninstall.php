@@ -24,6 +24,7 @@ defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 	delete_option( 'localizepilot_analytics_db_version' );
 
 	wp_clear_scheduled_hook( 'localizepilot_daily_analytics_cleanup' );
+	wp_clear_scheduled_hook( 'localizepilot_warm_page_cache' );
 
 	global $wpdb;
 	$localizepilot_analytics_table = $wpdb->prefix . 'localizepilot_visits';

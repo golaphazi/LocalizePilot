@@ -7,6 +7,7 @@ defined( 'ABSPATH' ) || exit;
 final class Plugin {
 	public const OPTION = 'next_translate_settings';
 	private const CACHE_VERSION_OPTION = 'next_translate_cache_version';
+	private const CACHE_WARM_HOOK = 'localizepilot_warm_page_cache';
 	private static ?Plugin $instance = null;
 	private Router $router;
 	private Usage_Limiter $limiter;
@@ -78,11 +79,13 @@ final class Plugin {
 		$this->translations->hooks();
 		$this->analytics->hooks();
 		add_filter( 'do_parse_request', array( $this->router, 'before_parse_request' ), 0, 3 );
-		( new Settings( $this->limiter, $this->analytics ) )->hooks();
+		( new Settings( $this->analytics ) )->hooks();
 
 		add_shortcode( 'localizepilot_switcher', array( $this, 'language_switcher_shortcode' ) );
 		add_action( 'init', array( $this, 'register_language_switcher_block' ) );
 		add_action( 'template_redirect', array( $this, 'start_buffer' ), 0 );
+		add_action( 'localizepilot_schedule_cache_warm', array( $this, 'schedule_cache_warm' ), 10, 2 );
+		add_action( self::CACHE_WARM_HOOK, array( $this, 'warm_page_cache' ), 10, 2 );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_frontend_assets' ) );
 		add_action( 'wp_head', array( $this, 'output_hreflang' ), 2 );
 		add_filter( 'redirect_canonical', array( $this, 'disable_canonical_redirect' ), 10, 2 );
@@ -246,6 +249,7 @@ final class Plugin {
 
 	public static function deactivate(): void {
 		Analytics::deactivate();
+		wp_clear_scheduled_hook( self::CACHE_WARM_HOOK );
 		flush_rewrite_rules( false );
 	}
 
@@ -333,15 +337,19 @@ final class Plugin {
 			if ( is_string( $cached ) && '' !== $cached ) {
 				$processed = $cached;
 			} else {
-				$limit_enabled = ! empty( $this->settings['daily_limit_enabled'] );
-				$daily_limit   = max( 1, absint( $this->settings['daily_limit'] ?? 10 ) );
+				$limit_enabled    = ! empty( $this->settings['daily_limit_enabled'] );
+				$daily_limit      = max( 1, absint( $this->settings['daily_limit'] ?? 10 ) );
+				$provider_allowed = ! $limit_enabled || $this->limiter->can_translate( $daily_limit );
 
-				if ( $limit_enabled && ! $this->limiter->can_translate( $daily_limit ) ) {
+				if ( ! $provider_allowed && empty( $this->settings['cache_enabled'] ) ) {
 					$stale = $cacheable && ! empty( $this->settings['stale_cache_fallback'] ) ? $cache->get_stale( $cache_key ) : null;
 					$processed = is_string( $stale ) ? $stale : $html;
 				} else {
 					try {
 						$client     = Client_Factory::make( $this->settings );
+						if ( ! empty( $this->settings['cache_enabled'] ) ) {
+							$client = new Translation_Memory_Client( $client, $cache, $cache_key, $fingerprint, $provider_allowed );
+						}
 						$protected  = $this->translations->protected_strings_for_current_request();
 						$translator = new HTML_Translator( $client, $this->router, $this->settings, $protected );
 						$processed  = $translator->translate_document( $html, $current );
@@ -361,8 +369,18 @@ final class Plugin {
 							);
 						}
 
-						if ( $limit_enabled ) {
+						$provider_used = ! $client instanceof Translation_Memory_Client || $client->used_provider();
+						if ( $limit_enabled && $provider_used ) {
 							$this->limiter->increment( $daily_limit );
+						}
+
+						if (
+							! $cacheable
+							&& is_user_logged_in()
+							&& $post_id
+							&& null === $cache->get( $cache_key )
+						) {
+							$this->schedule_cache_warm( $post_id, $current );
 						}
 					} catch ( \Throwable $exception ) {
 						$stale = $cacheable && ! empty( $this->settings['stale_cache_fallback'] ) ? $cache->get_stale( $cache_key ) : null;
@@ -383,6 +401,88 @@ final class Plugin {
 
 		$switcher = new Language_Switcher( $this->router, $this->settings );
 		return $switcher->inject( $processed );
+	}
+
+	/** Queue one anonymous request that can safely populate shared page HTML. */
+	public function schedule_cache_warm( int $post_id, string $language ): void {
+		$settings = $this->get_settings();
+		$language = sanitize_key( $language );
+
+		if ( ! $this->cache_warm_post( $post_id, $language, $settings ) ) {
+			return;
+		}
+
+		$args = array( absint( $post_id ), $language );
+		if ( ! wp_next_scheduled( self::CACHE_WARM_HOOK, $args ) ) {
+			wp_schedule_single_event( time(), self::CACHE_WARM_HOOK, $args );
+
+			if ( ! wp_doing_cron() && function_exists( 'spawn_cron' ) ) {
+				spawn_cron( time() );
+			}
+		}
+	}
+
+	/**
+	 * Visit a translated public URL without authentication cookies.
+	 *
+	 * The normal frontend cache guards still decide whether the response is
+	 * cacheable. This method never writes a logged-in response to shared cache.
+	 */
+	public function warm_page_cache( int $post_id, string $language ): void {
+		$settings = $this->get_settings();
+		$language = sanitize_key( $language );
+		$post     = $this->cache_warm_post( $post_id, $language, $settings );
+
+		if ( ! $post ) {
+			return;
+		}
+
+		$router = new Router();
+		$url    = $router->localize_url( (string) get_permalink( $post ), $language );
+		$host   = strtolower( (string) wp_parse_url( $url, PHP_URL_HOST ) );
+		$home   = strtolower( (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST ) );
+
+		if ( '' === $host || '' === $home || $host !== $home ) {
+			return;
+		}
+
+		$response = wp_remote_get(
+			$url,
+			array(
+				'timeout'     => 30,
+				'redirection' => 3,
+				'user-agent'  => 'LocalizePilotCacheBot/' . LOCALIZEPILOT_VERSION,
+				'cookies'     => array(),
+				'headers'     => array(
+					'Cache-Control'              => 'no-cache',
+					'X-LocalizePilot-Cache-Warm' => '1',
+				),
+			)
+		);
+
+		/** Fires after a cache-warm request completes for observability and tests. */
+		do_action( 'localizepilot_cache_warm_complete', $post_id, $language, $url, $response );
+	}
+
+	/** Return the public post that is eligible for an anonymous cache warm. */
+	private function cache_warm_post( int $post_id, string $language, array $settings ): ?\WP_Post {
+		$post    = get_post( $post_id );
+		$source  = sanitize_key( (string) ( $settings['source_language'] ?? 'en' ) );
+		$enabled = array_map( 'sanitize_key', (array) ( $settings['enabled_languages'] ?? array() ) );
+
+		if (
+			empty( $settings['enabled'] )
+			|| empty( $settings['cache_enabled'] )
+			|| ! $post instanceof \WP_Post
+			|| 'publish' !== $post->post_status
+			|| ! in_array( $post->post_type, array( 'post', 'page' ), true )
+			|| $language === $source
+			|| ! in_array( $language, $enabled, true )
+		) {
+			return null;
+		}
+
+		return $post;
 	}
 
 	/**
@@ -517,18 +617,9 @@ final class Plugin {
 			echo ('<div class="notice notice-success is-dismissible"><p>' . esc_html( $message ) . '</p></div>');
 		}
 
-		$options = $this->get_settings();
 		if ( empty( get_option( 'permalink_structure', '' ) ) ) {
 			/* translators: %s is the URL of the WordPress permalink settings page. */
 			echo ('<div class="notice notice-error"><p>' . wp_kses_post( sprintf( __( 'LocalizePilot language URLs require pretty permalinks. <a href="%s">Open Permalink Settings</a> and click Save Changes.', 'localizepilot' ), esc_url( admin_url( 'options-permalink.php' ) ) ) ) . '</p></div>');
-		}
-
-		$provider = (string) ( $options['translation_provider'] ?? 'translatex' );
-		$key_field = Provider_Catalog::key_field( $provider );
-		$key       = '' !== $key_field ? (string) ( $options[ $key_field ] ?? '' ) : '';
-		if ( ! empty( $options['enabled'] ) && '' === trim( $key ) ) {
-			/* translators: %s is the URL of the LocalizePilot settings page. */
-			echo ('<div class="notice notice-warning"><p>' . wp_kses_post( sprintf( __( 'LocalizePilot is active, but the selected translation API key is missing. <a href="%s">Open settings</a>.', 'localizepilot' ), esc_url( admin_url( 'admin.php?page=localizepilot' ) ) ) ) . '</p></div>');
 		}
 	}
 

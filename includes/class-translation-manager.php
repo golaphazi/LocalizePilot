@@ -542,6 +542,7 @@ final class Translation_Manager {
 			)
 		);
 		$cache->delete_post_cache( $source_id, $language );
+		do_action( 'localizepilot_schedule_cache_warm', $source_id, $language );
 	}
 
 	public function before_delete_post( int $post_id ): void {

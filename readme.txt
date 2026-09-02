@@ -353,6 +353,8 @@ Yes. Normal frontend posts, pages, archives, menus, headers, and footers can be 
 
 Logged-in responses are translated in memory and are not saved to the shared full-page HTML cache. The WordPress admin bar is excluded from translation.
 
+When a logged-in editor opens or saves a translated public page, LocalizePilot queues a cookie-free visit to warm the anonymous rendered-page cache. Unchanged translated strings are reused from the protected LocalizePilot cache, avoiding a second provider request while keeping personalized HTML out of shared cache.
+
 For privacy and security, password-protected content, non-GET requests, and common WooCommerce cart, checkout, and account pages remain excluded from automatic full-page API translation.
 
 = How are analytics visitors counted? =
@@ -462,6 +464,7 @@ Using WordPress's Delete action for the plugin runs `uninstall.php` and removes 
 
 = 1.0.3 =
 * Added the LocalizePilot brand icon to the admin menu, replacing the generic dashicon.
+* Fixed rendered-page warming from logged-in translation workflows without caching personalized WordPress HTML or repeating provider requests for unchanged strings.
 
 = 1.0.2 =
 * Fixed the cache system not updating on SiteGround: LocalizePilot now automatically purges SiteGround's Dynamic Cache (SG Optimizer / SuperCacher) whenever the LocalizePilot cache is cleared, a translation is regenerated, a source page is edited, or cache-affecting settings change.

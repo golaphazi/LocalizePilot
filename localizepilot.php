@@ -21,6 +21,31 @@ define( 'LOCALIZEPILOT_PATH', plugin_dir_path( __FILE__ ) );
 define( 'LOCALIZEPILOT_URL', plugin_dir_url( __FILE__ ) );
 
 
+/**
+ * Autoload LocalizePilot classes.
+ *
+ * Maps LocalizePilot\Admin\Screens\Overview_Screen to
+ * includes/Admin/Screens/class-overview-screen.php, following the naming
+ * convention already used by the classes in includes/.
+ */
+spl_autoload_register(
+	static function ( string $class ): void {
+		if ( 0 !== strpos( $class, 'LocalizePilot\\' ) ) {
+			return;
+		}
+
+		$parts = explode( '\\', substr( $class, strlen( 'LocalizePilot\\' ) ) );
+		$name  = array_pop( $parts );
+		$file  = LOCALIZEPILOT_PATH . 'includes/'
+			. ( $parts ? implode( '/', $parts ) . '/' : '' )
+			. 'class-' . strtolower( str_replace( '_', '-', $name ) ) . '.php';
+
+		if ( is_readable( $file ) ) {
+			require_once $file;
+		}
+	}
+);
+
 require_once LOCALIZEPILOT_PATH . 'includes/class-language-catalog.php';
 require_once LOCALIZEPILOT_PATH . 'includes/class-usage-limiter.php';
 require_once LOCALIZEPILOT_PATH . 'includes/class-router.php';
@@ -46,3 +71,4 @@ register_activation_hook( __FILE__, array( 'LocalizePilot\\Plugin', 'activate' )
 register_deactivation_hook( __FILE__, array( 'LocalizePilot\\Plugin', 'deactivate' ) );
 
 LocalizePilot\Plugin::instance()->boot();
+LocalizePilot\Admin\Admin::instance()->hooks();

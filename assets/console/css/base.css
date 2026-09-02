@@ -1,0 +1,196 @@
+/**
+ * Console base: fitting the console into the WordPress admin, plus typography
+ * and element resets.
+ *
+ * Every rule is scoped to .localizepilot-console so nothing leaks onto other
+ * plugins' screens. The WordPress admin bar and admin menu stay exactly where
+ * they are — the console lives inside the normal content area.
+ */
+
+/* -------------------------------------------------------------------------
+ * Fitting into the admin content area
+ *
+ * WordPress pads #wpcontent and #wpbody-content for pages built out of .wrap.
+ * The console draws its own sidebar and gutters, so those paddings are removed
+ * and it sits flush against the admin menu instead.
+ * ---------------------------------------------------------------------- */
+
+/*
+ * Core pads the side the admin menu sits on, which is the right one in an RTL
+ * admin, so this has to be logical or it zeroes nothing in Arabic.
+ */
+body.localizepilot-console #wpcontent {
+	padding-inline-start: 0;
+}
+
+/*
+ * Core reserves 65px here for the absolutely positioned #wpfooter. The console
+ * reserves its own bottom space in .lp-main, so this only adds a dead strip.
+ * #wpfooter itself is left alone — its margin-left is what clears the admin
+ * menu, and the console has no business moving it.
+ */
+body.localizepilot-console #wpbody-content {
+	padding-bottom: 0;
+}
+
+body.localizepilot-console #wpwrap,
+body.localizepilot-console #wpbody-content {
+	background: var(--lp-surface-2);
+}
+
+/*
+ * Core prints .notice elements straight into #wpbody-content. The console
+ * captures them and re-renders them inside its own content column, so any that
+ * are added later by script must not stack up above the app.
+ */
+body.localizepilot-console #wpbody-content > .notice,
+body.localizepilot-console #wpbody-content > .updated,
+body.localizepilot-console #wpbody-content > .error,
+body.localizepilot-console #wpbody-content > .update-nag {
+	margin: 16px 32px;
+}
+
+/* -------------------------------------------------------------------------
+ * Typography and element resets
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-app {
+	color: var(--lp-ink-2);
+	font-family: var(--lp-font-body);
+	font-size: var(--lp-text-base);
+	line-height: 1.5;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+.localizepilot-console .lp-app *,
+.localizepilot-console .lp-app *::before,
+.localizepilot-console .lp-app *::after {
+	box-sizing: border-box;
+}
+
+.localizepilot-console .lp-app h1,
+.localizepilot-console .lp-app h2,
+.localizepilot-console .lp-app h3,
+.localizepilot-console .lp-app h4 {
+	margin: 0;
+	color: var(--lp-ink);
+	font-family: var(--lp-font-display);
+	font-weight: 700;
+	line-height: 1.28;
+}
+
+.localizepilot-console .lp-app p {
+	margin: 0;
+}
+
+/*
+ * Only links that carry no class of their own take the default colour. A
+ * blanket `.lp-app a` rule is three classes deep and quietly outranks every
+ * two-class component rule — which is how nav items, menu items, and the solid
+ * row action all ended up brand cyan, the last of those being cyan on cyan.
+ * Components own their own colour; this covers everything else.
+ */
+.localizepilot-console .lp-app a {
+	text-decoration: none;
+}
+
+.localizepilot-console .lp-app a:not([class]) {
+	color: var(--lp-brand-ink);
+}
+
+.localizepilot-console .lp-app button {
+	margin: 0;
+	font-family: inherit;
+	font-size: inherit;
+	cursor: pointer;
+}
+
+.localizepilot-console .lp-app code,
+.localizepilot-console .lp-app kbd {
+	font-family: var(--lp-font-mono);
+}
+
+.localizepilot-console .lp-app ul {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+/* Keyboard focus is always visible, on every interactive element. */
+.localizepilot-console .lp-app :focus-visible {
+	outline: 2px solid var(--lp-brand);
+	outline-offset: 2px;
+	border-radius: var(--lp-radius-xs);
+}
+
+.localizepilot-console .lp-app :focus:not(:focus-visible) {
+	outline: none;
+	box-shadow: none;
+}
+
+/* Icons inherit colour from their parent, which is how one file serves both
+   the active and the inactive nav state. */
+.localizepilot-console .lp-icon,
+.localizepilot-console .lp-nav__icon {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	color: currentColor;
+}
+
+.localizepilot-console .lp-icon svg,
+.localizepilot-console .lp-nav__icon svg {
+	display: block;
+	width: 100%;
+	height: 100%;
+}
+
+.localizepilot-console .lp-icon {
+	width: 16px;
+	height: 16px;
+}
+
+.localizepilot-console .lp-nav__icon {
+	width: 18px;
+	height: 18px;
+}
+
+/*
+ * WordPress core defines .screen-reader-text, but the console must not depend
+ * on core CSS for its own labels to stay hidden.
+ */
+.localizepilot-console .lp-app .screen-reader-text {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	overflow: hidden;
+	border: 0;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+
+.localizepilot-console .lp-skip-link {
+	position: absolute;
+	inset-inline-start: -9999px;
+	top: 0;
+	z-index: 100;
+	padding: 10px 16px;
+	border-radius: 0 0 var(--lp-radius) 0;
+	background: var(--lp-ink);
+	color: #fff;
+	font-weight: 600;
+}
+
+.localizepilot-console .lp-skip-link:focus {
+	inset-inline-start: 0;
+	color: #fff;
+}
+
+/* Anything gated behind Preview reads as inert. */
+.localizepilot-console [data-lp-preview] {
+	cursor: default;
+}

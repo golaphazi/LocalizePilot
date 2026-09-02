@@ -1,0 +1,3588 @@
+/**
+ * Console components.
+ *
+ * Every value here is read from the Figma file. Components reference the
+ * semantic tokens in tokens.css, never a raw hue.
+ *
+ * Order: buttons · cards · KPIs · toolbar · bulk bar · table · cells · chips
+ * · badges · progress · row actions · menus · pagination · empty state
+ * · drawer · banner · forms · tasks · charts · navigation · scaffold.
+ */
+
+/* -------------------------------------------------------------------------
+ * Buttons
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	padding: 10px 16px;
+	border: 1px solid transparent;
+	border-radius: var(--lp-radius);
+	font-family: var(--lp-font-display);
+	font-size: var(--lp-text-base);
+	font-weight: 700;
+	letter-spacing: -0.3px;
+	line-height: 20px;
+	text-align: center;
+	white-space: nowrap;
+	transition: background var(--lp-transition), border-color var(--lp-transition), color var(--lp-transition);
+}
+
+.localizepilot-console .lp-btn--ghost {
+	border-color: var(--lp-border);
+	background: var(--lp-surface);
+	color: var(--lp-ink);
+}
+
+.localizepilot-console .lp-btn--ghost:hover {
+	border-color: var(--lp-brand);
+	color: var(--lp-ink);
+}
+
+.localizepilot-console .lp-btn--primary {
+	background: var(--lp-brand);
+	box-shadow: var(--lp-shadow-primary);
+	color: #fff;
+}
+
+.localizepilot-console .lp-btn--primary:hover {
+	background: var(--lp-brand-ink);
+	color: #fff;
+}
+
+.localizepilot-console .lp-btn[data-lp-preview],
+.localizepilot-console .lp-icon-button[data-lp-preview],
+.localizepilot-console .lp-search-trigger[data-lp-preview] {
+	cursor: default;
+}
+
+/* -------------------------------------------------------------------------
+ * Card
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-card {
+	display: block;
+	border: 1px solid var(--lp-border);
+	border-radius: var(--lp-radius-lg);
+	background: var(--lp-surface);
+	box-shadow: var(--lp-shadow-card);
+}
+
+.localizepilot-console .lp-card__head {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 20px 20px 0;
+}
+
+.localizepilot-console .lp-card--flush .lp-card__head {
+	padding: 18px 20px;
+	border-bottom: 1px solid var(--lp-border);
+}
+
+.localizepilot-console .lp-card__title {
+	font-size: var(--lp-text-lg);
+	font-weight: 700;
+	letter-spacing: -0.3px;
+	line-height: 27px;
+}
+
+.localizepilot-console .lp-card__subtitle {
+	margin-top: 2px;
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-md);
+	line-height: 19.5px;
+}
+
+.localizepilot-console .lp-card__link {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	flex: none;
+	color: var(--lp-brand-ink);
+	font-size: var(--lp-text-md);
+	font-weight: 600;
+}
+
+.localizepilot-console .lp-card__body {
+	padding: 20px;
+}
+
+.localizepilot-console .lp-card--flush > .lp-card__body {
+	padding: 0;
+}
+
+/* -------------------------------------------------------------------------
+ * KPI cards
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-kpis {
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: var(--lp-gap);
+	margin-bottom: var(--lp-gutter);
+}
+
+.localizepilot-console .lp-kpi {
+	display: flex;
+	flex-direction: column;
+	padding: var(--lp-card-padding);
+	border: 1px solid var(--lp-border);
+	border-radius: var(--lp-radius-lg);
+	background: var(--lp-surface);
+	box-shadow: var(--lp-shadow-card);
+}
+
+.localizepilot-console .lp-kpi__label {
+	color: var(--lp-ink-3);
+	font-size: var(--lp-text-sm);
+	font-weight: 600;
+	letter-spacing: 0.7px;
+	line-height: 18px;
+	text-transform: uppercase;
+}
+
+.localizepilot-console .lp-kpi__figure {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	padding-top: 8px;
+}
+
+.localizepilot-console .lp-kpi__value {
+	color: var(--lp-ink);
+	font-family: var(--lp-font-display);
+	font-size: var(--lp-text-2xl);
+	font-weight: 700;
+	letter-spacing: -0.6px;
+	line-height: 28px;
+	font-variant-numeric: tabular-nums;
+}
+
+.localizepilot-console .lp-kpi__delta {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	font-size: var(--lp-text-sm);
+	font-weight: 500;
+	line-height: 18px;
+}
+
+.localizepilot-console .lp-kpi__delta--up {
+	color: var(--lp-success);
+}
+
+.localizepilot-console .lp-kpi__delta--down {
+	color: var(--lp-warning);
+}
+
+/* The exported arrow, turned to point the way the trend runs. */
+.localizepilot-console .lp-kpi__delta-icon {
+	width: 13px;
+	height: 13px;
+}
+
+.localizepilot-console .lp-kpi__delta--up .lp-kpi__delta-icon svg {
+	transform: rotate(-45deg);
+}
+
+.localizepilot-console .lp-kpi__delta--down .lp-kpi__delta-icon svg {
+	transform: rotate(45deg);
+}
+
+.localizepilot-console .lp-kpi__sub {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding-top: 8px;
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-md);
+	line-height: 19.5px;
+}
+
+.localizepilot-console .lp-kpi__sub--warning {
+	color: var(--lp-warning);
+	font-weight: 500;
+}
+
+.localizepilot-console .lp-kpi__sub--warning i {
+	width: 6px;
+	height: 6px;
+	border-radius: var(--lp-radius-full);
+	background: currentColor;
+}
+
+.localizepilot-console .lp-kpi .lp-progress {
+	padding-top: 10px;
+}
+
+/* Compact variant: the summary row the list screens run above their tables. */
+.localizepilot-console .lp-kpis--compact .lp-kpi {
+	padding: 14px 16px;
+	border-radius: var(--lp-radius-md);
+}
+
+.localizepilot-console .lp-kpis--compact .lp-kpi__label {
+	font-weight: 500;
+}
+
+.localizepilot-console .lp-kpis--compact .lp-kpi__figure {
+	padding-top: 6px;
+}
+
+.localizepilot-console .lp-kpis--compact .lp-kpi__value {
+	font-size: var(--lp-text-xl);
+	letter-spacing: -0.44px;
+	line-height: 22px;
+}
+
+.localizepilot-console .lp-kpi__note {
+	font-size: var(--lp-text-sm);
+	font-weight: 500;
+	line-height: 18px;
+}
+
+.localizepilot-console .lp-kpi__note--brand {
+	color: var(--lp-brand-ink);
+}
+
+.localizepilot-console .lp-kpi__note--warning {
+	color: var(--lp-warning);
+}
+
+.localizepilot-console .lp-kpi__note--success {
+	color: var(--lp-success);
+}
+
+.localizepilot-console .lp-kpi__note--muted {
+	color: var(--lp-ink-3);
+}
+
+/* -------------------------------------------------------------------------
+ * Toolbar
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-toolbar {
+	display: flex;
+	align-items: center;
+	gap: var(--lp-gap);
+	padding: 16px;
+	border-bottom: 1px solid var(--lp-border);
+}
+
+.localizepilot-console .lp-search {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex: 1 1 auto;
+	min-width: 0;
+	height: 36px;
+	padding: 0 12px;
+	border: 1px solid var(--lp-border);
+	border-radius: var(--lp-radius);
+	background: var(--lp-surface-2);
+}
+
+.localizepilot-console .lp-search__icon {
+	color: var(--lp-ink-3);
+}
+
+.localizepilot-console .lp-search__input {
+	width: 100%;
+	min-width: 0;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	box-shadow: none;
+	color: var(--lp-ink);
+	font-size: var(--lp-text-base);
+	line-height: 21px;
+}
+
+.localizepilot-console .lp-search__input:focus {
+	box-shadow: none;
+	outline: none;
+}
+
+.localizepilot-console .lp-search:focus-within {
+	border-color: var(--lp-brand);
+}
+
+.localizepilot-console .lp-toolbar__filters {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex: none;
+	flex-wrap: wrap;
+}
+
+.localizepilot-console .lp-toolbar__divider {
+	width: 1px;
+	height: 20px;
+	margin: 0 2px;
+	background: var(--lp-border);
+}
+
+/*
+ * Filters are native selects wearing the design's button. appearance:none
+ * removes the platform control; the chevron sits on top and never intercepts
+ * the click.
+ */
+.localizepilot-console .lp-filter {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+}
+
+.localizepilot-console .lp-filter__select {
+	height: 36px;
+	min-height: 36px;
+	margin: 0;
+	padding: 0 32px 0 12px;
+	border: 1px solid var(--lp-border);
+	border-radius: var(--lp-radius);
+	background: var(--lp-surface);
+	box-shadow: none;
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-md);
+	font-weight: 500;
+	line-height: 19.5px;
+	-webkit-appearance: none;
+	-moz-appearance: none;
+	appearance: none;
+}
+
+.localizepilot-console .lp-filter__chevron {
+	position: absolute;
+	inset-inline-end: 10px;
+	width: 14px;
+	height: 14px;
+	color: var(--lp-ink-3);
+	pointer-events: none;
+}
+
+.localizepilot-console .lp-filter.is-active .lp-filter__select {
+	border-color: rgba(25, 199, 232, 0.4);
+	background: var(--lp-brand-wash);
+	color: var(--lp-brand-ink);
+}
+
+.localizepilot-console .lp-filter.is-active .lp-filter__chevron {
+	color: var(--lp-brand-ink);
+}
+
+/* -------------------------------------------------------------------------
+ * Bulk action bar
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-bulk-bar {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 10px 20px;
+	border-bottom: 1px solid var(--lp-border);
+	background: rgba(234, 251, 254, 0.5);
+}
+
+.localizepilot-console .lp-bulk-bar[hidden] {
+	display: none;
+}
+
+.localizepilot-console .lp-bulk-bar__count {
+	color: var(--lp-ink);
+	font-size: var(--lp-text-md);
+	font-weight: 600;
+	line-height: 19.5px;
+}
+
+.localizepilot-console .lp-bulk-bar__actions {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding-inline-start: 4px;
+}
+
+.localizepilot-console .lp-bulk-bar__button {
+	height: 32px;
+	padding: 6px 12px;
+	border: 0;
+	border-radius: var(--lp-radius);
+	background: var(--lp-surface);
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-md);
+	font-weight: 500;
+	line-height: 19.5px;
+}
+
+.localizepilot-console .lp-bulk-bar__button:hover {
+	color: var(--lp-ink);
+}
+
+.localizepilot-console .lp-bulk-bar__clear {
+	margin-inline-start: auto;
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--lp-ink-3);
+	font-size: var(--lp-text-md);
+	font-weight: 500;
+}
+
+/* -------------------------------------------------------------------------
+ * Table
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-table-wrap {
+	overflow-x: auto;
+}
+
+.localizepilot-console .lp-table {
+	width: 100%;
+	min-width: 860px;
+	border-collapse: collapse;
+	border-spacing: 0;
+}
+
+.localizepilot-console .lp-table th {
+	padding: 10px 12px;
+	border-bottom: 1px solid var(--lp-border);
+	background: rgba(247, 249, 252, 0.5);
+	color: var(--lp-ink-3);
+	font-size: var(--lp-text-sm);
+	font-weight: 700;
+	letter-spacing: 0.48px;
+	line-height: 18px;
+	text-align: start;
+	text-transform: uppercase;
+	white-space: nowrap;
+}
+
+.localizepilot-console .lp-table td {
+	padding: 12px;
+	border-bottom: 1px solid var(--lp-border);
+	vertical-align: middle;
+}
+
+.localizepilot-console .lp-table tbody tr:last-child td {
+	border-bottom: 0;
+}
+
+.localizepilot-console .lp-table tbody tr:hover {
+	background: rgba(247, 249, 252, 0.6);
+}
+
+.localizepilot-console .lp-table th:first-child,
+.localizepilot-console .lp-table td:first-child {
+	padding-inline-start: 20px;
+}
+
+.localizepilot-console .lp-table th:last-child,
+.localizepilot-console .lp-table td:last-child {
+	padding-inline-end: 20px;
+}
+
+.localizepilot-console .lp-table [data-align="right"] {
+	text-align: end;
+}
+
+.localizepilot-console .lp-table [data-align="center"] {
+	text-align: center;
+}
+
+.localizepilot-console .lp-table__select {
+	width: 44px;
+}
+
+/* Cell content shared by every table. */
+.localizepilot-console .lp-cell__title {
+	display: block;
+	color: var(--lp-ink);
+	font-size: var(--lp-text-base);
+	font-weight: 600;
+	line-height: 21px;
+}
+
+.localizepilot-console .lp-cell__meta {
+	display: block;
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-md);
+	line-height: 18px;
+}
+
+.localizepilot-console .lp-cell__note {
+	display: block;
+	margin-top: 2px;
+	color: var(--lp-warning);
+	font-size: var(--lp-text-sm);
+	line-height: 18px;
+}
+
+.localizepilot-console .lp-cell__muted {
+	color: var(--lp-ink-3);
+	font-size: var(--lp-text-md);
+	line-height: 18px;
+}
+
+.localizepilot-console .lp-cell__pair {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.localizepilot-console .lp-cell__arrow {
+	width: 13px;
+	height: 13px;
+	color: var(--lp-ink-3);
+}
+
+/* -------------------------------------------------------------------------
+ * Checkbox
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-checkbox {
+	display: inline-flex;
+	align-items: center;
+	cursor: pointer;
+}
+
+.localizepilot-console .lp-checkbox input {
+	position: relative;
+	width: 16px;
+	height: 16px;
+	min-width: 16px;
+	margin: 0;
+	border: 1px solid #767676;
+	border-radius: var(--lp-radius-xs);
+	background: var(--lp-surface);
+	box-shadow: none;
+	-webkit-appearance: none;
+	-moz-appearance: none;
+	appearance: none;
+	transition: background var(--lp-transition), border-color var(--lp-transition);
+}
+
+.localizepilot-console .lp-checkbox input:checked {
+	border-color: var(--lp-brand);
+	background: var(--lp-brand);
+}
+
+.localizepilot-console .lp-checkbox input:checked::after {
+	content: "";
+	position: absolute;
+	top: 1px;
+	left: 4.5px;
+	width: 4px;
+	height: 8px;
+	border: solid #fff;
+	border-width: 0 2px 2px 0;
+	transform: rotate(45deg);
+}
+
+.localizepilot-console .lp-checkbox input:indeterminate {
+	border-color: var(--lp-brand);
+	background: var(--lp-brand);
+}
+
+.localizepilot-console .lp-checkbox input:indeterminate::after {
+	content: "";
+	position: absolute;
+	top: 6px;
+	left: 3px;
+	width: 8px;
+	height: 2px;
+	background: #fff;
+}
+
+/* -------------------------------------------------------------------------
+ * Language chip
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-lang-chip {
+	display: inline-flex;
+	align-items: center;
+	height: 24px;
+	padding: 0 6px;
+	border-radius: var(--lp-radius-sm);
+	font-size: var(--lp-text-xs);
+	font-weight: 600;
+	line-height: 16px;
+}
+
+.localizepilot-console .lp-lang-chip--source {
+	background: var(--lp-surface-2);
+	color: var(--lp-ink-2);
+}
+
+.localizepilot-console .lp-lang-chip--target {
+	background: var(--lp-brand-wash);
+	color: var(--lp-brand-ink);
+}
+
+/* -------------------------------------------------------------------------
+ * Status badge
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: 26px;
+	padding: 4px 10px;
+	border-radius: var(--lp-radius-full);
+	font-size: var(--lp-text-sm);
+	font-weight: 500;
+	line-height: 18px;
+	white-space: nowrap;
+}
+
+.localizepilot-console .lp-badge i {
+	width: 6px;
+	height: 6px;
+	border-radius: var(--lp-radius-full);
+	background: currentColor;
+	flex: none;
+}
+
+.localizepilot-console .lp-badge--reviewed {
+	background: var(--lp-status-reviewed-wash);
+	color: var(--lp-status-reviewed);
+}
+
+.localizepilot-console .lp-badge--edited {
+	background: var(--lp-status-edited-wash);
+	color: var(--lp-status-edited);
+}
+
+.localizepilot-console .lp-badge--needs-update {
+	background: var(--lp-status-needs-update-wash);
+	color: var(--lp-status-needs-update);
+}
+
+.localizepilot-console .lp-badge--automatic {
+	background: var(--lp-status-automatic-wash);
+	color: var(--lp-status-automatic);
+}
+
+.localizepilot-console .lp-badge--neutral {
+	background: var(--lp-surface-2);
+	color: var(--lp-ink-2);
+}
+
+/* -------------------------------------------------------------------------
+ * Progress
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-progress {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.localizepilot-console .lp-progress__track {
+	width: 80px;
+	height: 6px;
+	overflow: hidden;
+	border-radius: var(--lp-radius-full);
+	background: var(--lp-surface-2);
+	flex: none;
+}
+
+.localizepilot-console .lp-progress__fill {
+	display: block;
+	height: 100%;
+	border-radius: var(--lp-radius-full);
+}
+
+.localizepilot-console .lp-progress__fill--brand {
+	background: var(--lp-brand);
+}
+
+.localizepilot-console .lp-progress__fill--success {
+	background: var(--lp-success);
+}
+
+.localizepilot-console .lp-progress__fill--warning {
+	background: var(--lp-warning);
+}
+
+.localizepilot-console .lp-progress__value {
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-sm);
+	font-weight: 500;
+	line-height: 18px;
+	font-variant-numeric: tabular-nums;
+}
+
+/* -------------------------------------------------------------------------
+ * Row actions and overflow menu
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-row-actions {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 4px;
+}
+
+.localizepilot-console .lp-row-action {
+	padding: 6px 12px;
+	border-radius: var(--lp-radius);
+	color: var(--lp-brand-ink);
+	font-size: var(--lp-text-md);
+	font-weight: 600;
+	line-height: 18px;
+}
+
+.localizepilot-console .lp-row-action:hover {
+	background: var(--lp-brand-wash);
+}
+
+.localizepilot-console .lp-row-action--solid {
+	background: var(--lp-brand);
+	color: #fff;
+}
+
+.localizepilot-console .lp-row-action--solid:hover {
+	background: var(--lp-brand-ink);
+	color: #fff;
+}
+
+.localizepilot-console .lp-menu {
+	position: relative;
+}
+
+.localizepilot-console .lp-menu__trigger {
+	display: grid;
+	place-items: center;
+	width: 32px;
+	height: 32px;
+	padding: 0;
+	border: 0;
+	border-radius: var(--lp-radius);
+	background: none;
+	color: var(--lp-ink-3);
+}
+
+.localizepilot-console .lp-menu__trigger:hover {
+	background: var(--lp-surface-2);
+	color: var(--lp-ink-2);
+}
+
+.localizepilot-console .lp-menu__trigger .lp-icon {
+	width: 18px;
+	height: 18px;
+}
+
+.localizepilot-console .lp-menu__list {
+	position: absolute;
+	top: calc(100% + 4px);
+	inset-inline-end: 0;
+	z-index: 20;
+	min-width: 180px;
+	padding: 6px;
+	border: 1px solid var(--lp-border);
+	border-radius: var(--lp-radius-md);
+	background: var(--lp-surface);
+	box-shadow: var(--lp-shadow-pop);
+}
+
+.localizepilot-console .lp-menu__list[hidden] {
+	display: none;
+}
+
+.localizepilot-console .lp-menu__item {
+	display: block;
+	padding: 8px 10px;
+	border-radius: var(--lp-radius);
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-md);
+	line-height: 18px;
+	text-align: start;
+	white-space: nowrap;
+}
+
+.localizepilot-console .lp-menu__item:hover {
+	background: var(--lp-surface-2);
+	color: var(--lp-ink);
+}
+
+.localizepilot-console .lp-menu__item.is-destructive {
+	color: var(--lp-danger);
+}
+
+/* -------------------------------------------------------------------------
+ * Pagination
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-pagination {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	flex-wrap: wrap;
+	padding: 14px 20px;
+	border-top: 1px solid var(--lp-border);
+}
+
+.localizepilot-console .lp-pagination__summary {
+	color: var(--lp-ink-3);
+	font-size: var(--lp-text-md);
+	line-height: 18px;
+}
+
+.localizepilot-console .lp-pager {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.localizepilot-console .lp-pager__page,
+.localizepilot-console .lp-pager__step,
+.localizepilot-console .lp-pager__gap {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 32px;
+	padding: 6px 10px;
+	border-radius: var(--lp-radius);
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-md);
+	font-weight: 500;
+	line-height: 18px;
+	font-variant-numeric: tabular-nums;
+}
+
+.localizepilot-console .lp-pager__page:hover,
+.localizepilot-console a.lp-pager__step:hover {
+	background: var(--lp-surface-2);
+	color: var(--lp-ink);
+}
+
+.localizepilot-console .lp-pager__page.is-current {
+	background: var(--lp-brand-wash);
+	color: var(--lp-brand-ink);
+	font-weight: 600;
+}
+
+.localizepilot-console .lp-pager__step {
+	border: 1px solid var(--lp-border);
+}
+
+.localizepilot-console .lp-pager__step.is-disabled {
+	opacity: 0.4;
+}
+
+.localizepilot-console .lp-pager__gap {
+	color: var(--lp-ink-3);
+}
+
+/* -------------------------------------------------------------------------
+ * Empty state
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 8px;
+	padding: 56px 24px;
+	text-align: center;
+}
+
+.localizepilot-console .lp-empty__icon {
+	width: 28px;
+	height: 28px;
+	color: var(--lp-ink-3);
+}
+
+.localizepilot-console .lp-empty__title {
+	font-size: var(--lp-text-lg);
+}
+
+.localizepilot-console .lp-empty__message {
+	max-width: 46ch;
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-md);
+	line-height: 20px;
+}
+
+/* -------------------------------------------------------------------------
+ * Drawer
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-drawer {
+	position: fixed;
+	inset: 0;
+	z-index: 100000;
+}
+
+.localizepilot-console .lp-drawer[hidden] {
+	display: none;
+}
+
+.localizepilot-console .lp-drawer__backdrop {
+	position: absolute;
+	inset: 0;
+	background: rgba(16, 24, 40, 0.4);
+}
+
+.localizepilot-console .lp-drawer__panel {
+	position: absolute;
+	inset-block: 0;
+	inset-inline: auto 0;
+	display: flex;
+	flex-direction: column;
+	width: min(460px, 100%);
+	background: var(--lp-surface);
+	box-shadow: 0 20px 30px rgba(16, 24, 40, 0.18);
+}
+
+.localizepilot-console .lp-drawer__head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	flex: none;
+	padding: 16px 20px;
+	border-bottom: 1px solid var(--lp-border);
+}
+
+.localizepilot-console .lp-drawer__title {
+	font-family: var(--lp-font-display);
+	font-size: var(--lp-text-lg);
+	font-weight: 500;
+	letter-spacing: -0.3px;
+	line-height: 27px;
+}
+
+.localizepilot-console .lp-drawer__close {
+	display: grid;
+	place-items: center;
+	width: 32px;
+	height: 32px;
+	padding: 0;
+	border: 0;
+	border-radius: var(--lp-radius);
+	background: none;
+	color: var(--lp-ink-2);
+}
+
+.localizepilot-console .lp-drawer__close:hover {
+	background: var(--lp-surface-2);
+}
+
+.localizepilot-console .lp-drawer__close .lp-icon {
+	width: 18px;
+	height: 18px;
+}
+
+.localizepilot-console .lp-drawer__body {
+	flex: 1 1 auto;
+	overflow-y: auto;
+	padding: 20px;
+}
+
+.localizepilot-console .lp-drawer__foot {
+	display: flex;
+	gap: 8px;
+	flex: none;
+	padding: 16px 20px;
+	border-top: 1px solid var(--lp-border);
+}
+
+.localizepilot-console .lp-drawer__foot .lp-btn {
+	flex: 1 1 0;
+	padding: 8px 14px;
+}
+
+/* -------------------------------------------------------------------------
+ * Banner
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-banner {
+	margin-bottom: 20px;
+	padding: 16px;
+	border: 1px solid transparent;
+	border-radius: var(--lp-radius-md);
+}
+
+.localizepilot-console .lp-banner strong {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-family: var(--lp-font-display);
+	font-size: var(--lp-text-base);
+	font-weight: 500;
+	letter-spacing: -0.3px;
+	line-height: 22px;
+}
+
+.localizepilot-console .lp-banner__icon {
+	flex: none;
+}
+
+/* The heading carries the tone; the explanation stays body ink. */
+.localizepilot-console .lp-banner p {
+	margin-top: 6px;
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-md);
+	line-height: 18px;
+}
+
+.localizepilot-console .lp-banner--warning {
+	border-color: rgba(247, 144, 9, 0.3);
+	background: rgba(247, 144, 9, 0.06);
+	color: var(--lp-warning);
+}
+
+.localizepilot-console .lp-banner--info {
+	border-color: rgba(25, 199, 232, 0.28);
+	background: var(--lp-brand-wash);
+	color: var(--lp-brand-ink);
+}
+
+/* -------------------------------------------------------------------------
+ * Form controls
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-field {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.localizepilot-console .lp-field + .lp-field {
+	margin-top: 16px;
+}
+
+.localizepilot-console .lp-field__label {
+	color: var(--lp-ink-3);
+	font-size: var(--lp-text-sm);
+	font-weight: 500;
+	letter-spacing: 0.6px;
+	line-height: 18px;
+	text-transform: uppercase;
+}
+
+.localizepilot-console .lp-field__control {
+	width: 100%;
+	min-height: 40px;
+	margin: 0;
+	padding: 9px 12px;
+	border: 1px solid var(--lp-border);
+	border-radius: var(--lp-radius);
+	background: var(--lp-surface);
+	box-shadow: none;
+	color: var(--lp-ink);
+	font-family: inherit;
+	font-size: var(--lp-text-md);
+	line-height: 20px;
+}
+
+.localizepilot-console .lp-field__control:focus {
+	border-color: var(--lp-brand);
+	box-shadow: none;
+	outline: none;
+}
+
+.localizepilot-console .lp-field__control[readonly] {
+	background: var(--lp-surface-2);
+	color: var(--lp-ink-2);
+}
+
+.localizepilot-console .lp-field__code {
+	display: block;
+	padding: 9px 12px;
+	border-radius: var(--lp-radius);
+	background: var(--lp-surface-2);
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-md);
+	line-height: 20px;
+	word-break: break-all;
+}
+
+.localizepilot-console .lp-field__hint {
+	color: var(--lp-ink-3);
+	font-size: var(--lp-text-sm);
+	line-height: 18px;
+}
+
+.localizepilot-console .lp-toggle {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 20px;
+	padding: 14px 0;
+}
+
+.localizepilot-console .lp-toggle + .lp-toggle {
+	border-top: 1px solid var(--lp-border);
+}
+
+.localizepilot-console .lp-toggle__text {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.localizepilot-console .lp-toggle__label {
+	color: var(--lp-ink);
+	font-size: var(--lp-text-base);
+	font-weight: 600;
+	line-height: 20px;
+	cursor: pointer;
+}
+
+.localizepilot-console .lp-toggle__description {
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-md);
+	line-height: 19.5px;
+}
+
+.localizepilot-console .lp-toggle__switch {
+	position: relative;
+	flex: none;
+	width: 44px;
+	height: 24px;
+}
+
+.localizepilot-console .lp-toggle__switch input {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	opacity: 0;
+	cursor: pointer;
+}
+
+.localizepilot-console .lp-toggle__track {
+	position: absolute;
+	inset: 0;
+	border-radius: var(--lp-radius-full);
+	background: #cfd8dd;
+	transition: background var(--lp-transition);
+	pointer-events: none;
+}
+
+/*
+ * The knob is offset from the inline start rather than translated, so it
+ * travels toward the inline end in either direction with no RTL override.
+ */
+.localizepilot-console .lp-toggle__track::after {
+	content: "";
+	position: absolute;
+	inset-block-start: 2px;
+	inset-inline-start: 2px;
+	width: 20px;
+	height: 20px;
+	border-radius: var(--lp-radius-full);
+	background: #fff;
+	box-shadow: 0 1px 3px rgba(16, 24, 40, 0.2);
+	transition: inset-inline-start var(--lp-transition);
+}
+
+.localizepilot-console .lp-toggle__switch input:checked + .lp-toggle__track {
+	background: var(--lp-brand);
+}
+
+.localizepilot-console .lp-toggle__switch input:checked + .lp-toggle__track::after {
+	inset-inline-start: 22px;
+}
+
+.localizepilot-console .lp-toggle__switch input:focus-visible + .lp-toggle__track {
+	outline: 2px solid var(--lp-brand);
+	outline-offset: 2px;
+}
+
+/* -------------------------------------------------------------------------
+ * Task list
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-tasks {
+	display: flex;
+	flex-direction: column;
+}
+
+.localizepilot-console .lp-task + .lp-task {
+	border-top: 1px solid var(--lp-border);
+}
+
+.localizepilot-console .lp-task__link {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 14px 4px;
+	color: inherit;
+}
+
+.localizepilot-console .lp-task__link:hover .lp-task__text strong {
+	color: var(--lp-brand-ink);
+}
+
+.localizepilot-console .lp-task__icon,
+.localizepilot-console .lp-task__count {
+	display: grid;
+	place-items: center;
+	width: 32px;
+	height: 32px;
+	flex: none;
+	border-radius: var(--lp-radius-md);
+	font-size: var(--lp-text-md);
+	font-weight: 600;
+}
+
+.localizepilot-console .lp-task__icon--brand,
+.localizepilot-console .lp-task__count--brand {
+	background: var(--lp-brand-wash);
+	color: var(--lp-brand-ink);
+}
+
+.localizepilot-console .lp-task__icon--warning,
+.localizepilot-console .lp-task__count--warning {
+	background: var(--lp-warning-wash);
+	color: var(--lp-warning);
+}
+
+.localizepilot-console .lp-task__icon--success,
+.localizepilot-console .lp-task__count--success {
+	background: var(--lp-success-wash);
+	color: var(--lp-success);
+}
+
+.localizepilot-console .lp-task__icon--violet,
+.localizepilot-console .lp-task__count--violet {
+	background: var(--lp-violet-wash);
+	color: var(--lp-violet);
+}
+
+.localizepilot-console .lp-task__text {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.localizepilot-console .lp-task__text strong {
+	color: var(--lp-ink);
+	font-size: var(--lp-text-md);
+	font-weight: 600;
+	line-height: 19.5px;
+}
+
+.localizepilot-console .lp-task__text span {
+	color: var(--lp-ink-3);
+	font-size: var(--lp-text-sm);
+	line-height: 18px;
+}
+
+.localizepilot-console .lp-task__chevron {
+	flex: none;
+	color: var(--lp-ink-3);
+}
+
+.localizepilot-console .lp-task__action {
+	flex: none;
+	color: var(--lp-brand-ink);
+	font-size: var(--lp-text-md);
+	font-weight: 600;
+}
+
+/* -------------------------------------------------------------------------
+ * Charts
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-chart-scroll {
+	overflow-x: auto;
+}
+
+.localizepilot-console .lp-chart {
+	display: block;
+	width: 100%;
+	min-width: 560px;
+	height: auto;
+}
+
+.localizepilot-console .lp-chart__grid {
+	stroke: var(--lp-border);
+	stroke-width: 1;
+}
+
+.localizepilot-console .lp-chart__axis {
+	fill: var(--lp-ink-3);
+	font-family: var(--lp-font-body);
+	font-size: 11px;
+}
+
+.localizepilot-console .lp-chart__line {
+	fill: none;
+	stroke-width: 2.5;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+.localizepilot-console .lp-chart__line--brand {
+	stroke: var(--lp-brand);
+}
+
+.localizepilot-console .lp-chart__line--ink {
+	stroke: var(--lp-ink);
+}
+
+.localizepilot-console .lp-chart__point {
+	stroke: #fff;
+	stroke-width: 2;
+}
+
+.localizepilot-console .lp-chart__point--brand {
+	fill: var(--lp-brand);
+}
+
+.localizepilot-console .lp-chart__point--ink {
+	fill: var(--lp-ink);
+}
+
+.localizepilot-console .lp-chart-legend {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	flex-wrap: wrap;
+	margin-top: 12px;
+}
+
+.localizepilot-console .lp-chart-legend__item {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-md);
+	font-weight: 500;
+}
+
+.localizepilot-console .lp-chart-legend__item i {
+	width: 8px;
+	height: 8px;
+	border-radius: var(--lp-radius-full);
+}
+
+.localizepilot-console .lp-chart-legend__item--brand i {
+	background: var(--lp-brand);
+}
+
+.localizepilot-console .lp-chart-legend__item--ink i {
+	background: var(--lp-ink);
+}
+
+.localizepilot-console .lp-donut {
+	position: relative;
+	display: grid;
+	place-items: center;
+	width: 168px;
+	height: 168px;
+	margin: 0 auto;
+}
+
+.localizepilot-console .lp-donut__ring {
+	width: 100%;
+	height: 100%;
+}
+
+.localizepilot-console .lp-donut__track {
+	fill: none;
+	stroke: var(--lp-surface-2);
+	stroke-width: 12;
+}
+
+.localizepilot-console .lp-donut__value {
+	fill: none;
+	stroke-width: 12;
+	stroke-linecap: round;
+}
+
+.localizepilot-console .lp-donut__value--brand {
+	stroke: var(--lp-brand);
+}
+
+.localizepilot-console .lp-donut__value--success {
+	stroke: var(--lp-success);
+}
+
+.localizepilot-console .lp-donut__value--warning {
+	stroke: var(--lp-warning);
+}
+
+.localizepilot-console .lp-donut__label {
+	position: absolute;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 2px;
+}
+
+.localizepilot-console .lp-donut__label strong {
+	color: var(--lp-ink);
+	font-family: var(--lp-font-display);
+	font-size: var(--lp-text-2xl);
+	font-weight: 700;
+	letter-spacing: -0.6px;
+	line-height: 32px;
+}
+
+.localizepilot-console .lp-donut__label span {
+	color: var(--lp-ink-3);
+	font-size: var(--lp-text-md);
+	line-height: 18px;
+}
+
+/* -------------------------------------------------------------------------
+ * Layout helpers used by screens
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-stack {
+	display: flex;
+	flex-direction: column;
+	gap: var(--lp-gutter);
+}
+
+/* Compact vertical rhythm for consecutive cards and card-sized sections. */
+.localizepilot-console .lp-stack--cards {
+	gap: var(--lp-gap);
+}
+
+.localizepilot-console .lp-stack--cards > .lp-kpis,
+.localizepilot-console .lp-stack--cards > .lp-filtered-note {
+	margin-block: 0;
+}
+
+.localizepilot-console .lp-cols {
+	display: grid;
+	gap: var(--lp-gap);
+}
+
+.localizepilot-console .lp-cols--2 {
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.localizepilot-console .lp-cols--wide-narrow {
+	grid-template-columns: minmax(0, 712fr) minmax(0, 416fr);
+}
+
+/* -------------------------------------------------------------------------
+ * Client-side navigation
+ *
+ * The swap is usually too fast to see. These states exist so a slow request
+ * reads as loading rather than as a frozen page.
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-view {
+	transition: opacity var(--lp-transition);
+}
+
+.localizepilot-console .lp-view.is-loading {
+	opacity: 0.55;
+	pointer-events: none;
+}
+
+.localizepilot-console .lp-shell::before {
+	content: "";
+	position: fixed;
+	top: var(--lp-chrome-offset);
+	inset-inline: 0;
+	z-index: 30;
+	height: 2px;
+	background: var(--lp-brand);
+	transform: scaleX(0);
+	/* The bar fills from the inline start; rtl.css moves the origin. */
+	transform-origin: left 50%;
+	opacity: 0;
+	pointer-events: none;
+}
+
+.localizepilot-console .lp-app.is-navigating .lp-shell::before {
+	opacity: 1;
+	animation: lp-progress 1.6s ease-out forwards;
+}
+
+@keyframes lp-progress {
+	0% {
+		transform: scaleX(0);
+	}
+
+	60% {
+		transform: scaleX(0.75);
+	}
+
+	100% {
+		transform: scaleX(0.92);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.localizepilot-console .lp-app.is-navigating .lp-shell::before {
+		animation: none;
+		transform: scaleX(1);
+	}
+
+	.localizepilot-console .lp-view {
+		transition: none;
+	}
+}
+
+/* -------------------------------------------------------------------------
+ * Notification badge
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-icon-button--badged .lp-icon svg circle {
+	fill: var(--lp-danger);
+}
+
+/* -------------------------------------------------------------------------
+ * Build scaffold
+ *
+ * Temporary: shown on routes whose screen template has not landed yet, and
+ * removed once every screen exists.
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-scaffold {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 10px;
+	padding: 72px 24px;
+	border: 1px dashed var(--lp-border);
+	border-radius: var(--lp-radius-lg);
+	background: var(--lp-surface);
+	text-align: center;
+}
+
+.localizepilot-console .lp-scaffold__icon {
+	width: 28px;
+	height: 28px;
+	margin-bottom: 4px;
+	color: var(--lp-ink-3);
+}
+
+.localizepilot-console .lp-scaffold__title {
+	font-size: var(--lp-text-lg);
+}
+
+.localizepilot-console .lp-scaffold__body {
+	max-width: 52ch;
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-md);
+	line-height: 20px;
+}
+
+.localizepilot-console .lp-scaffold__path {
+	margin-top: 4px;
+	padding: 6px 10px;
+	border-radius: var(--lp-radius-sm);
+	background: var(--lp-surface-2);
+	color: var(--lp-ink-3);
+	font-size: var(--lp-text-sm);
+}
+
+/* -------------------------------------------------------------------------
+ * Responsive
+ * ---------------------------------------------------------------------- */
+
+@media (max-width: 1440px) {
+	.localizepilot-console .lp-kpis {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.localizepilot-console .lp-cols--wide-narrow {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+/*
+ * The artboard is 1440 wide and puts four summary cards on one line. Inside the
+ * admin that leaves a 1041px content column and a 238px card, which is enough
+ * for the longest label and its note without wrapping — measured, not guessed.
+ * The rule above catches 1439 and below, where they do need two lines.
+ */
+@media (min-width: 1440px) {
+	.localizepilot-console .lp-kpis {
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+	}
+}
+
+@media (max-width: 1100px) {
+	.localizepilot-console .lp-cols--2 {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.localizepilot-console .lp-toolbar {
+		align-items: stretch;
+		flex-direction: column;
+	}
+}
+
+@media (max-width: 782px) {
+	.localizepilot-console .lp-kpis {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.localizepilot-console .lp-pagination {
+		align-items: flex-start;
+		flex-direction: column;
+	}
+}
+
+/* -------------------------------------------------------------------------
+ * Component gallery
+ *
+ * Build-time review aid reached with &lp_kitchen_sink=1. Removable once every
+ * screen has landed.
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-sink {
+	display: flex;
+	flex-direction: column;
+	gap: var(--lp-gutter);
+}
+
+.localizepilot-console .lp-sink__lede {
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-md);
+}
+
+.localizepilot-console .lp-sink__title {
+	margin-bottom: 12px;
+	color: var(--lp-ink-3);
+	font-family: var(--lp-font-body);
+	font-size: var(--lp-text-xs);
+	font-weight: 600;
+	letter-spacing: 1px;
+	text-transform: uppercase;
+}
+
+.localizepilot-console .lp-sink__row {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+
+.localizepilot-console .lp-sink__section .lp-kpis {
+	margin-bottom: 0;
+}
+
+/* Filtered-results note under a list table. */
+.localizepilot-console .lp-filtered-note {
+	margin-top: var(--lp-gap);
+	color: var(--lp-ink-3);
+	font-size: var(--lp-text-md);
+	text-align: center;
+}
+
+.localizepilot-console .lp-filtered-note span {
+	margin: 0 4px;
+}
+
+/* -------------------------------------------------------------------------
+ * Section heading and save bar
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-section__head {
+	display: flex;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: 16px;
+	margin-bottom: var(--lp-gap);
+}
+
+.localizepilot-console .lp-section__title {
+	font-size: var(--lp-text-xl);
+	font-weight: 700;
+	letter-spacing: -0.44px;
+}
+
+.localizepilot-console .lp-section__subtitle {
+	margin-top: 4px;
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-md);
+	line-height: 19.5px;
+}
+
+/*
+ * Not sticky: the design puts the save bar at the end of the form, and a
+ * floating one covers the section heading below it.
+ */
+.localizepilot-console .lp-save-bar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 20px;
+	flex-wrap: wrap;
+	padding: 16px 20px;
+	border: 1px solid var(--lp-border);
+	border-radius: var(--lp-radius-md);
+	background: var(--lp-surface);
+	box-shadow: var(--lp-shadow-pop);
+}
+
+.localizepilot-console .lp-save-bar strong {
+	display: block;
+	color: var(--lp-ink);
+	font-size: var(--lp-text-base);
+	font-weight: 600;
+}
+
+.localizepilot-console .lp-save-bar span {
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-md);
+}
+
+/* -------------------------------------------------------------------------
+ * Language cards
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-lang-grid {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 12px;
+}
+
+.localizepilot-console .lp-lang-card {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 10px;
+	padding: 16px;
+	border: 1px solid var(--lp-border);
+	border-radius: var(--lp-radius-md);
+	background: var(--lp-surface);
+}
+
+.localizepilot-console .lp-lang-card.is-source {
+	border-color: rgba(25, 199, 232, 0.4);
+	background: var(--lp-brand-wash);
+}
+
+.localizepilot-console .lp-lang-card__head {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.localizepilot-console .lp-lang-card__code {
+	display: grid;
+	place-items: center;
+	width: 32px;
+	height: 32px;
+	flex: none;
+	border-radius: var(--lp-radius);
+	background: var(--lp-surface-2);
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-xs);
+	font-weight: 700;
+}
+
+.localizepilot-console .lp-lang-card.is-source .lp-lang-card__code,
+.localizepilot-console .lp-lang-option.is-selected .lp-lang-card__code {
+	background: var(--lp-brand);
+	color: #fff;
+}
+
+.localizepilot-console .lp-lang-card__names {
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+	min-width: 0;
+}
+
+.localizepilot-console .lp-lang-card__names strong {
+	color: var(--lp-ink);
+	font-size: var(--lp-text-base);
+	font-weight: 600;
+	line-height: 20px;
+}
+
+.localizepilot-console .lp-lang-card__names span {
+	color: var(--lp-ink-3);
+	font-size: var(--lp-text-sm);
+	line-height: 18px;
+}
+
+.localizepilot-console .lp-lang-card__source,
+.localizepilot-console .lp-lang-card__coverage {
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-md);
+	line-height: 18px;
+}
+
+.localizepilot-console .lp-lang-card.is-source .lp-lang-card__source {
+	color: var(--lp-brand-ink);
+	font-weight: 600;
+}
+
+.localizepilot-console .lp-lang-card .lp-progress {
+	width: 100%;
+}
+
+.localizepilot-console .lp-lang-option {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 12px 14px;
+	border: 1px solid var(--lp-border);
+	border-radius: var(--lp-radius-md);
+	background: var(--lp-surface);
+	cursor: pointer;
+	transition: border-color var(--lp-transition), background var(--lp-transition);
+}
+
+.localizepilot-console .lp-lang-option:hover {
+	border-color: rgba(25, 199, 232, 0.4);
+}
+
+.localizepilot-console .lp-lang-option.is-selected {
+	border-color: rgba(25, 199, 232, 0.5);
+	background: var(--lp-brand-wash);
+}
+
+.localizepilot-console .lp-lang-option .lp-checkbox {
+	margin-inline-start: auto;
+}
+
+.localizepilot-console .lp-lang-option .lp-lang-card__names {
+	flex: 1 1 auto;
+}
+
+/* -------------------------------------------------------------------------
+ * Language URL list
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-url-structure {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 12px 14px;
+	border-radius: var(--lp-radius);
+	background: var(--lp-surface-2);
+}
+
+.localizepilot-console .lp-url-structure span {
+	color: var(--lp-ink-3);
+	font-size: var(--lp-text-sm);
+	font-weight: 600;
+	letter-spacing: 0.6px;
+	text-transform: uppercase;
+}
+
+.localizepilot-console .lp-url-structure code {
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-md);
+}
+
+.localizepilot-console .lp-url-list {
+	margin-top: 12px;
+}
+
+.localizepilot-console .lp-url-row {
+	display: grid;
+	grid-template-columns: minmax(120px, 180px) minmax(0, 1fr);
+	gap: 12px;
+	align-items: center;
+	padding: 10px 0;
+	border-bottom: 1px solid var(--lp-border);
+}
+
+.localizepilot-console .lp-url-row:last-child {
+	border-bottom: 0;
+}
+
+.localizepilot-console .lp-url-row span {
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-md);
+}
+
+.localizepilot-console .lp-url-row code {
+	overflow: hidden;
+	color: var(--lp-ink-3);
+	font-size: var(--lp-text-md);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+@media (max-width: 1440px) {
+	.localizepilot-console .lp-lang-grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+@media (max-width: 782px) {
+	.localizepilot-console .lp-lang-grid {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.localizepilot-console .lp-url-row {
+		grid-template-columns: minmax(0, 1fr);
+		gap: 2px;
+	}
+}
+
+/* -------------------------------------------------------------------------
+ * Filter panel
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-filters {
+	display: grid;
+	grid-template-columns: minmax(140px, 0.8fr) minmax(140px, 0.8fr) minmax(220px, 1.6fr) auto;
+	gap: 12px;
+	align-items: end;
+}
+
+.localizepilot-console .lp-filters .lp-field + .lp-field {
+	margin-top: 0;
+}
+
+.localizepilot-console .lp-filters__actions {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.localizepilot-console .lp-filters__actions .lp-btn {
+	padding: 9px 14px;
+}
+
+@media (max-width: 1100px) {
+	.localizepilot-console .lp-filters {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.localizepilot-console .lp-filters__actions {
+		grid-column: 1 / -1;
+	}
+}
+
+@media (max-width: 782px) {
+	.localizepilot-console .lp-filters {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+/* -------------------------------------------------------------------------
+ * Overview
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-quick-links {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-wrap: wrap;
+	margin-bottom: var(--lp-gutter);
+}
+
+.localizepilot-console .lp-quick-link {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 9px 14px;
+	border: 1px solid var(--lp-border);
+	border-radius: var(--lp-radius);
+	background: var(--lp-surface);
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-md);
+	font-weight: 500;
+	transition: border-color var(--lp-transition), color var(--lp-transition);
+}
+
+.localizepilot-console .lp-quick-link:hover {
+	border-color: var(--lp-brand);
+	color: var(--lp-brand-ink);
+}
+
+.localizepilot-console .lp-provider {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 14px;
+	border: 1px solid var(--lp-border);
+	border-radius: var(--lp-radius-md);
+	background: var(--lp-surface-2);
+}
+
+.localizepilot-console .lp-provider__mark {
+	display: grid;
+	place-items: center;
+	width: 40px;
+	height: 40px;
+	flex: none;
+	border-radius: var(--lp-radius);
+	background: var(--lp-brand-wash);
+	color: var(--lp-brand-ink);
+	font-family: var(--lp-font-display);
+	font-size: var(--lp-text-md);
+	font-weight: 700;
+}
+
+.localizepilot-console .lp-provider__text {
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.localizepilot-console .lp-provider__text strong {
+	color: var(--lp-ink);
+	font-size: var(--lp-text-base);
+	font-weight: 600;
+}
+
+.localizepilot-console .lp-provider__text span {
+	color: var(--lp-ink-3);
+	font-size: var(--lp-text-sm);
+}
+
+.localizepilot-console .lp-provider__usage {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-top: 16px;
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-md);
+}
+
+.localizepilot-console .lp-provider__usage + .lp-progress {
+	margin-top: 6px;
+}
+
+.localizepilot-console .lp-provider__fallback {
+	margin-top: 12px;
+	color: var(--lp-ink-3);
+	font-size: var(--lp-text-md);
+}
+
+.localizepilot-console .lp-btn--block {
+	display: flex;
+	width: 100%;
+	margin-top: 16px;
+}
+
+.localizepilot-console .lp-coverage-row {
+	display: grid;
+	grid-template-columns: auto minmax(90px, 140px) minmax(0, 1fr) minmax(160px, 220px);
+	gap: 12px;
+	align-items: center;
+	padding: 12px 0;
+	border-bottom: 1px solid var(--lp-border);
+}
+
+.localizepilot-console .lp-coverage-row:last-child {
+	border-bottom: 0;
+}
+
+.localizepilot-console .lp-coverage-row__name {
+	color: var(--lp-ink);
+	font-size: var(--lp-text-base);
+	font-weight: 600;
+}
+
+.localizepilot-console .lp-coverage-row__meta {
+	color: var(--lp-ink-3);
+	font-size: var(--lp-text-md);
+}
+
+.localizepilot-console .lp-cache {
+	padding-bottom: 8px;
+}
+
+.localizepilot-console .lp-stat-list {
+	margin: 0;
+	padding-top: 8px;
+	border-top: 1px solid var(--lp-border);
+}
+
+.localizepilot-console .lp-stat-list > div {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 9px 0;
+}
+
+.localizepilot-console .lp-stat-list dt {
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-md);
+}
+
+.localizepilot-console .lp-stat-list dd {
+	margin: 0;
+	color: var(--lp-ink);
+	font-size: var(--lp-text-md);
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 1100px) {
+	.localizepilot-console .lp-coverage-row {
+		grid-template-columns: auto minmax(0, 1fr);
+		row-gap: 8px;
+	}
+
+	.localizepilot-console .lp-coverage-row .lp-progress {
+		grid-column: 1 / -1;
+	}
+}
+
+/* -------------------------------------------------------------------------
+ * Left-to-right strings
+ *
+ * A URL, a path, a language code and a version number read the same way in
+ * every locale. Without this they inherit the page direction, and their
+ * trailing punctuation is painted at the wrong end in Arabic.
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-app code,
+.localizepilot-console .lp-app kbd,
+.localizepilot-console .lp-lang-chip,
+.localizepilot-console .lp-sidebar__version {
+	direction: ltr;
+	unicode-bidi: isolate;
+}
+
+/* -------------------------------------------------------------------------
+ * Target sizes
+ *
+ * Every one of these keeps the design's proportions and only grows the area
+ * that answers a tap, to the 24px WCAG 2.2 asks for.
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-card__link,
+.localizepilot-console .lp-row-action,
+.localizepilot-console .lp-task__action,
+.localizepilot-console .lp-mini-check {
+	min-height: 24px;
+}
+
+/*
+ * The note's link is sometimes the whole paragraph rather than a word inside
+ * a sentence, so the inline-link exception does not cover it.
+ */
+.localizepilot-console .lp-filtered-note a {
+	display: inline-flex;
+	align-items: center;
+	min-height: 24px;
+}
+
+/* The whole field reads as the target, so the input fills it. */
+.localizepilot-console .lp-search__input {
+	min-height: 24px;
+}
+
+/*
+ * The box stays 16px; the label around it grows. Clicking a label toggles its
+ * checkbox, so the extra area is live without any script.
+ */
+.localizepilot-console .lp-checkbox {
+	justify-content: center;
+	min-width: 24px;
+	min-height: 24px;
+}
+
+/* The forward arrow on a card link and a task row; both mirror in RTL. */
+.localizepilot-console .lp-card__link-arrow,
+.localizepilot-console .lp-task__chevron .lp-icon {
+	width: 13px;
+	height: 13px;
+}
+
+/* -------------------------------------------------------------------------
+ * Media and URL table cells
+ * ---------------------------------------------------------------------- */
+
+/*
+ * The neutral sub-line under a cell title. .lp-cell__note is the amber one
+ * that flags a stale translation; this is the one that only carries a
+ * filename or a content type.
+ */
+.localizepilot-console .lp-cell__sub {
+	display: block;
+	margin-top: 2px;
+	color: var(--lp-ink-3);
+	font-size: var(--lp-text-sm);
+	line-height: 18px;
+}
+
+.localizepilot-console .lp-cell__path {
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-sm);
+	word-break: break-all;
+}
+
+.localizepilot-console .lp-chip-row {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	flex-wrap: wrap;
+}
+
+.localizepilot-console .lp-media-cell {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.localizepilot-console .lp-media-cell__thumb {
+	display: grid;
+	place-items: center;
+	overflow: hidden;
+	flex: none;
+	width: 48px;
+	height: 48px;
+	border: 1px solid var(--lp-border);
+	border-radius: var(--lp-radius);
+	background: var(--lp-surface-2);
+	color: var(--lp-ink-3);
+}
+
+.localizepilot-console .lp-media-cell__thumb img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.localizepilot-console .lp-media-cell__text {
+	min-width: 0;
+}
+
+/* The URL pattern bar at the top of the SEO card. */
+.localizepilot-console .lp-url-pattern {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 12px 16px;
+	border: 1px solid var(--lp-border);
+	border-radius: var(--lp-radius-md);
+	background: rgba(247, 249, 252, 0.6);
+}
+
+.localizepilot-console .lp-url-pattern__label {
+	color: var(--lp-ink-3);
+	font-size: var(--lp-text-sm);
+	font-weight: 500;
+	letter-spacing: 0.6px;
+	line-height: 18px;
+	text-transform: uppercase;
+}
+
+.localizepilot-console .lp-url-pattern__code {
+	padding: 4px 8px;
+	border-radius: var(--lp-radius-sm);
+	background: var(--lp-surface-2);
+	color: var(--lp-ink-2);
+	font-family: var(--lp-font-body);
+	font-size: var(--lp-text-sm);
+	line-height: 18px;
+}
+
+/* -------------------------------------------------------------------------
+ * Language to URL map
+ *
+ * "inline" is the URL structure card, where the URL sits at the right of the
+ * language name; "stacked" is the drawer, where it sits under it.
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-url-map {
+	/* Shrinkable wherever it is placed: a flex item's automatic minimum is its
+	   content width, and these rows hold long URLs. */
+	min-width: 0;
+	border: 1px solid var(--lp-border);
+	border-radius: var(--lp-radius-md);
+}
+
+.localizepilot-console .lp-url-map__row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 10px 14px;
+	border-bottom: 1px solid var(--lp-border);
+}
+
+.localizepilot-console .lp-url-map__row:last-child {
+	border-bottom: 0;
+}
+
+.localizepilot-console .lp-url-map__text {
+	display: flex;
+	align-items: baseline;
+	gap: 10px;
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.localizepilot-console .lp-url-map__name {
+	flex: none;
+	color: var(--lp-ink);
+	font-size: var(--lp-text-md);
+	font-weight: 500;
+}
+
+.localizepilot-console .lp-url-map__url {
+	overflow: hidden;
+	flex: 1 1 auto;
+	min-width: 0;
+	color: var(--lp-ink-2);
+	font-family: var(--lp-font-body);
+	font-size: var(--lp-text-sm);
+	text-align: end;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.localizepilot-console .lp-url-map--stacked .lp-url-map__row {
+	gap: 12px;
+	padding: 12px 14px;
+}
+
+.localizepilot-console .lp-url-map--stacked .lp-url-map__text {
+	display: block;
+}
+
+.localizepilot-console .lp-url-map--stacked .lp-url-map__url {
+	display: block;
+	color: var(--lp-ink-3);
+	text-align: start;
+}
+
+.localizepilot-console .lp-url-map__open {
+	display: grid;
+	place-items: center;
+	flex: none;
+	width: 28px;
+	height: 28px;
+	border-radius: var(--lp-radius);
+	color: var(--lp-ink-3);
+}
+
+.localizepilot-console .lp-url-map__open:hover {
+	background: var(--lp-surface-2);
+	color: var(--lp-ink-2);
+}
+
+.localizepilot-console .lp-url-structure__columns {
+	margin-top: 16px;
+}
+
+.localizepilot-console .lp-eyebrow {
+	margin-bottom: 8px;
+	color: var(--lp-ink-3);
+	font-family: var(--lp-font-body);
+	font-size: var(--lp-text-sm);
+	font-weight: 600;
+	letter-spacing: 0.6px;
+	line-height: 18px;
+	text-transform: uppercase;
+}
+
+/* The tinted footnote under the URL structure card. */
+.localizepilot-console .lp-note {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	margin-top: 16px;
+	padding: 12px 16px;
+	border-radius: var(--lp-radius-md);
+	background: rgba(234, 251, 254, 0.6);
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-md);
+	line-height: 18px;
+}
+
+.localizepilot-console .lp-note__icon {
+	margin-top: 1px;
+	color: var(--lp-brand-ink);
+}
+
+/* -------------------------------------------------------------------------
+ * Label and value rows: drawer language signals, internal links
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-signals {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.localizepilot-console .lp-signals__row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 8px 12px;
+	border-radius: var(--lp-radius);
+	background: var(--lp-surface-2);
+}
+
+.localizepilot-console .lp-signals__label {
+	flex: none;
+	width: 64px;
+	color: var(--lp-ink-3);
+	font-size: var(--lp-text-sm);
+	font-weight: 500;
+}
+
+.localizepilot-console .lp-signals__value {
+	overflow: hidden;
+	flex: 1 1 auto;
+	min-width: 0;
+	color: var(--lp-ink-2);
+	font-family: var(--lp-font-body);
+	font-size: var(--lp-text-sm);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* The drawer's hreflang list: language codes, and the quieter grey on the URL. */
+.localizepilot-console .lp-signals--caps .lp-signals__label {
+	color: var(--lp-ink-2);
+	text-transform: uppercase;
+}
+
+.localizepilot-console .lp-signals--caps .lp-signals__value {
+	color: var(--lp-ink-3);
+}
+
+/* -------------------------------------------------------------------------
+ * Localized internal links card
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-linkcard .lp-card__body {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	align-items: flex-start;
+}
+
+.localizepilot-console .lp-linkcard__head {
+	display: flex;
+	align-items: flex-start;
+	gap: 12px;
+}
+
+.localizepilot-console .lp-linkcard__icon {
+	display: grid;
+	place-items: center;
+	flex: none;
+	width: 40px;
+	height: 40px;
+	border-radius: var(--lp-radius-md);
+	background: var(--lp-brand-wash);
+	color: var(--lp-brand-ink);
+}
+
+.localizepilot-console .lp-linkcard__icon .lp-icon {
+	width: 19px;
+	height: 19px;
+}
+
+.localizepilot-console .lp-linkcard .lp-signals {
+	width: 100%;
+}
+
+/* -------------------------------------------------------------------------
+ * Toolbar chip toggle
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-chip-toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: 36px;
+	padding: 8px 12px;
+	border: 1px solid var(--lp-border);
+	border-radius: var(--lp-radius);
+	background: var(--lp-surface);
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-md);
+	line-height: 18px;
+	white-space: nowrap;
+	cursor: pointer;
+	transition: border-color var(--lp-transition), background var(--lp-transition);
+}
+
+.localizepilot-console .lp-chip-toggle:hover {
+	border-color: var(--lp-ink-3);
+}
+
+.localizepilot-console .lp-chip-toggle.is-active {
+	border-color: var(--lp-brand);
+	background: var(--lp-brand-wash);
+	color: var(--lp-brand-ink);
+}
+
+.localizepilot-console .lp-chip-toggle .lp-icon {
+	width: 14px;
+	height: 14px;
+}
+
+/* A filter for something the plugin does not record yet. */
+.localizepilot-console .lp-filter[data-lp-preview] {
+	opacity: 0.6;
+}
+
+.localizepilot-console .lp-filter[data-lp-preview] .lp-filter__select {
+	cursor: default;
+}
+
+/* -------------------------------------------------------------------------
+ * Drawer body
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-detail__title {
+	font-size: var(--lp-text-lg);
+	font-weight: 500;
+	letter-spacing: -0.3px;
+	line-height: 27px;
+}
+
+.localizepilot-console .lp-detail__meta {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 12px 16px;
+	margin: 12px 0 0;
+}
+
+.localizepilot-console .lp-detail__meta-wide {
+	grid-column: 1 / -1;
+}
+
+.localizepilot-console .lp-detail__meta dt {
+	color: var(--lp-ink-3);
+	font-size: var(--lp-text-sm);
+	font-weight: 500;
+	letter-spacing: 0.6px;
+	line-height: 18px;
+	text-transform: uppercase;
+}
+
+.localizepilot-console .lp-detail__meta dd {
+	margin: 4px 0 0;
+	color: var(--lp-ink);
+	font-size: var(--lp-text-md);
+	line-height: 22px;
+}
+
+.localizepilot-console .lp-detail__code {
+	display: inline-block;
+	max-width: 100%;
+	padding: 3px 8px;
+	border-radius: var(--lp-radius-sm);
+	background: var(--lp-surface-2);
+	color: var(--lp-ink-2);
+	font-family: var(--lp-font-body);
+	font-size: var(--lp-text-sm);
+	line-height: 18px;
+	word-break: break-all;
+}
+
+.localizepilot-console .lp-detail__section {
+	margin-top: 24px;
+}
+
+.localizepilot-console .lp-detail__heading {
+	font-size: var(--lp-text-lg);
+	font-weight: 500;
+	letter-spacing: -0.3px;
+	line-height: 27px;
+}
+
+.localizepilot-console .lp-detail__heading-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.localizepilot-console .lp-detail__lede {
+	margin-top: 2px;
+	margin-bottom: 12px;
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-sm);
+	line-height: 21px;
+}
+
+/* -------------------------------------------------------------------------
+ * Semantic badge and task tones
+ *
+ * The same hues as the translation statuses, under the names the SEO, media
+ * and hreflang states use.
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-badge--success {
+	background: var(--lp-success-wash);
+	color: var(--lp-success);
+}
+
+.localizepilot-console .lp-badge--warning {
+	background: var(--lp-warning-wash);
+	color: var(--lp-warning);
+}
+
+.localizepilot-console .lp-badge--info {
+	background: var(--lp-info-wash);
+	color: var(--lp-info);
+}
+
+.localizepilot-console .lp-badge--violet {
+	background: var(--lp-violet-wash);
+	color: var(--lp-violet);
+}
+
+.localizepilot-console .lp-badge--danger {
+	background: var(--lp-danger-wash);
+	color: var(--lp-danger-soft);
+}
+
+/*
+ * The roomier attention row from the SEO screen: a 36px square tile and
+ * 20px of side padding, because that card is flush.
+ */
+.localizepilot-console .lp-tasks--detail .lp-task__link {
+	padding: 14px 20px;
+}
+
+.localizepilot-console .lp-tasks--detail .lp-task__icon,
+.localizepilot-console .lp-tasks--detail .lp-task__count {
+	width: 36px;
+	height: 36px;
+	border-radius: var(--lp-radius);
+}
+
+.localizepilot-console .lp-tasks--detail .lp-task__text strong {
+	font-size: var(--lp-text-base);
+	line-height: 21px;
+}
+
+.localizepilot-console .lp-tasks--detail .lp-task__text span {
+	color: var(--lp-ink-2);
+}
+
+.localizepilot-console .lp-task__icon--danger {
+	background: var(--lp-danger-wash);
+	color: var(--lp-danger-soft);
+}
+
+.localizepilot-console .lp-task__count--danger {
+	background: var(--lp-danger-wash);
+	color: var(--lp-danger-soft);
+}
+
+@media (max-width: 960px) {
+	.localizepilot-console .lp-url-structure__columns {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.localizepilot-console .lp-url-map__text {
+		display: block;
+	}
+
+	.localizepilot-console .lp-url-map__url {
+		text-align: start;
+	}
+}
+
+/* -------------------------------------------------------------------------
+ * Phase 4 configuration screens
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-cols--equal {
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.localizepilot-console .lp-settings-form {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+	margin-bottom: var(--lp-gutter);
+}
+
+.localizepilot-console .lp-settings-card {
+	min-width: 0;
+}
+
+.localizepilot-console .lp-form-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 16px;
+}
+
+.localizepilot-console .lp-form-grid > .lp-field + .lp-field {
+	margin-top: 0;
+}
+
+.localizepilot-console .lp-kpi__note--violet {
+	color: var(--lp-violet);
+}
+
+/* Provider selection and credentials. */
+.localizepilot-console .lp-provider-grid {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 12px;
+}
+
+.localizepilot-console .lp-provider-choice {
+	position: relative;
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr) auto;
+	grid-template-rows: auto auto;
+	gap: 8px 12px;
+	min-height: 104px;
+	padding: 14px;
+	border: 1px solid var(--lp-border);
+	border-radius: var(--lp-radius-md);
+	background: var(--lp-surface);
+	cursor: pointer;
+	transition: border-color var(--lp-transition), background var(--lp-transition), box-shadow var(--lp-transition);
+}
+
+.localizepilot-console .lp-provider-choice:hover {
+	border-color: var(--lp-brand);
+}
+
+.localizepilot-console .lp-provider-choice.is-selected {
+	border-color: var(--lp-brand);
+	background: var(--lp-brand-wash);
+	box-shadow: 0 0 0 1px var(--lp-brand);
+}
+
+.localizepilot-console .lp-provider-choice:focus-within {
+	outline: 2px solid var(--lp-brand);
+	outline-offset: 2px;
+}
+
+.localizepilot-console .lp-provider-choice > input {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	opacity: 0;
+}
+
+.localizepilot-console .lp-provider-choice__mark {
+	display: grid;
+	grid-row: 1 / span 2;
+	place-items: center;
+	width: 40px;
+	height: 40px;
+	border-radius: var(--lp-radius);
+	background: var(--lp-surface-2);
+	color: var(--lp-brand-ink);
+	font-family: var(--lp-font-display);
+	font-size: var(--lp-text-sm);
+	font-weight: 700;
+}
+
+.localizepilot-console .lp-provider-choice.is-selected .lp-provider-choice__mark {
+	background: var(--lp-surface);
+}
+
+.localizepilot-console .lp-provider-choice__text {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+
+.localizepilot-console .lp-provider-choice__text strong {
+	color: var(--lp-ink);
+	font-size: var(--lp-text-base);
+	font-weight: 600;
+	line-height: 20px;
+}
+
+.localizepilot-console .lp-provider-choice__text small {
+	display: -webkit-box;
+	overflow: hidden;
+	color: var(--lp-ink-3);
+	font-size: var(--lp-text-sm);
+	line-height: 17px;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+}
+
+.localizepilot-console .lp-provider-choice__state {
+	grid-column: 2;
+	align-self: end;
+}
+
+.localizepilot-console .lp-provider-choice__radio {
+	position: absolute;
+	top: 14px;
+	inset-inline-end: 14px;
+	width: 16px;
+	height: 16px;
+	border: 1px solid #cfd8dd;
+	border-radius: var(--lp-radius-full);
+	background: var(--lp-surface);
+}
+
+.localizepilot-console .lp-provider-choice.is-selected .lp-provider-choice__radio {
+	border: 5px solid var(--lp-brand);
+}
+
+.localizepilot-console .lp-provider-panel {
+	margin-top: 20px;
+	padding: 18px;
+	border: 1px solid rgba(25, 199, 232, 0.35);
+	border-radius: var(--lp-radius-md);
+	background: rgba(234, 251, 254, 0.45);
+}
+
+.localizepilot-console .lp-provider-panel__head,
+.localizepilot-console .lp-provider-test {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	flex-wrap: wrap;
+}
+
+.localizepilot-console .lp-provider-panel__head {
+	margin-bottom: 16px;
+}
+
+.localizepilot-console .lp-provider-panel__head > div,
+.localizepilot-console .lp-provider-test > div:first-child,
+.localizepilot-console .lp-provider-panel__note {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.localizepilot-console .lp-provider-panel__head strong,
+.localizepilot-console .lp-provider-test strong,
+.localizepilot-console .lp-provider-panel__note strong {
+	color: var(--lp-ink);
+	font-size: var(--lp-text-base);
+	font-weight: 600;
+	line-height: 20px;
+}
+
+.localizepilot-console .lp-provider-panel__head span,
+.localizepilot-console .lp-provider-test > div:first-child span,
+.localizepilot-console .lp-provider-panel__note span {
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-sm);
+	line-height: 18px;
+}
+
+.localizepilot-console .lp-provider-panel__note {
+	justify-content: center;
+	min-height: 76px;
+	padding: 14px;
+	border-radius: var(--lp-radius);
+	background: var(--lp-surface);
+}
+
+.localizepilot-console .lp-secret-field {
+	position: relative;
+	display: block;
+}
+
+.localizepilot-console .lp-secret-field .lp-field__control {
+	padding-inline-end: 68px;
+}
+
+.localizepilot-console .lp-secret-field__reveal {
+	position: absolute;
+	top: 50%;
+	inset-inline-end: 8px;
+	padding: 4px 7px;
+	border: 0;
+	border-radius: var(--lp-radius-xs);
+	background: transparent;
+	color: var(--lp-brand-ink);
+	font-size: var(--lp-text-sm);
+	font-weight: 600;
+	transform: translateY(-50%);
+	cursor: pointer;
+}
+
+.localizepilot-console .lp-secret-field__reveal:hover {
+	background: var(--lp-brand-wash);
+}
+
+.localizepilot-console .lp-mini-check {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	margin-top: 8px;
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-sm);
+	line-height: 18px;
+	cursor: pointer;
+}
+
+.localizepilot-console .lp-mini-check input {
+	margin: 2px 0 0;
+}
+
+.localizepilot-console .lp-provider-test {
+	margin-top: 16px;
+	padding: 14px 16px;
+	border: 1px solid var(--lp-border);
+	border-radius: var(--lp-radius-md);
+	background: var(--lp-surface-2);
+}
+
+.localizepilot-console .lp-provider-test__controls {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.localizepilot-console .lp-provider-test__controls .lp-field__control {
+	width: auto;
+	min-width: 150px;
+}
+
+.localizepilot-console .lp-provider-test__result {
+	width: 100%;
+	margin: 0;
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-sm);
+	line-height: 18px;
+}
+
+.localizepilot-console .lp-provider-test__result:empty {
+	display: none;
+}
+
+.localizepilot-console .lp-provider-test__result.is-success {
+	color: var(--lp-success);
+}
+
+.localizepilot-console .lp-provider-test__result.is-error {
+	color: var(--lp-danger-soft);
+}
+
+.localizepilot-console .lp-provider-test .lp-btn:disabled {
+	opacity: 0.6;
+	cursor: wait;
+}
+
+/* Shared settings details and danger zones. */
+.localizepilot-console .lp-danger-zone {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	margin-top: 20px;
+	padding: 14px;
+	border: 1px solid rgba(240, 68, 56, 0.24);
+	border-radius: var(--lp-radius-md);
+	background: var(--lp-danger-wash);
+}
+
+.localizepilot-console .lp-danger-zone > div {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.localizepilot-console .lp-danger-zone strong {
+	color: var(--lp-ink);
+	font-size: var(--lp-text-base);
+	font-weight: 600;
+}
+
+.localizepilot-console .lp-danger-zone span {
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-sm);
+	line-height: 18px;
+}
+
+.localizepilot-console .lp-btn--danger {
+	border-color: rgba(240, 68, 56, 0.3);
+	background: var(--lp-surface);
+	color: var(--lp-danger-soft);
+}
+
+.localizepilot-console .lp-btn--danger:hover {
+	border-color: var(--lp-danger-soft);
+	background: var(--lp-danger-wash);
+	color: var(--lp-danger-soft);
+}
+
+.localizepilot-console .lp-status-guide {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 10px;
+}
+
+.localizepilot-console .lp-status-guide > div {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 8px;
+	padding: 12px;
+	border-radius: var(--lp-radius);
+	background: var(--lp-surface-2);
+}
+
+.localizepilot-console .lp-status-guide > div > span:last-child {
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-sm);
+	line-height: 18px;
+}
+
+/* Language switcher choices and live preview. */
+.localizepilot-console .lp-choice-field {
+	margin: 20px 0;
+	padding: 0;
+	border: 0;
+}
+
+.localizepilot-console .lp-choice-field > .lp-field__label {
+	display: block;
+	margin-bottom: 8px;
+}
+
+.localizepilot-console .lp-choice-grid {
+	display: grid;
+	gap: 10px;
+}
+
+.localizepilot-console .lp-choice-grid--two {
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.localizepilot-console .lp-choice-card {
+	position: relative;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 12px;
+	border: 1px solid var(--lp-border);
+	border-radius: var(--lp-radius-md);
+	background: var(--lp-surface);
+	cursor: pointer;
+	transition: border-color var(--lp-transition), background var(--lp-transition);
+}
+
+.localizepilot-console .lp-choice-card:hover,
+.localizepilot-console .lp-choice-card.is-selected {
+	border-color: var(--lp-brand);
+}
+
+.localizepilot-console .lp-choice-card.is-selected {
+	background: var(--lp-brand-wash);
+}
+
+.localizepilot-console .lp-choice-card:focus-within {
+	outline: 2px solid var(--lp-brand);
+	outline-offset: 2px;
+}
+
+.localizepilot-console .lp-choice-card > input {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	opacity: 0;
+}
+
+.localizepilot-console .lp-choice-card > span:last-child {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.localizepilot-console .lp-choice-card strong {
+	color: var(--lp-ink);
+	font-size: var(--lp-text-md);
+	font-weight: 600;
+}
+
+.localizepilot-console .lp-choice-card small {
+	color: var(--lp-ink-3);
+	font-size: var(--lp-text-sm);
+	line-height: 17px;
+}
+
+.localizepilot-console .lp-choice-card__visual {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 3px;
+	width: 42px;
+	height: 34px;
+	flex: none;
+	border-radius: var(--lp-radius);
+	background: var(--lp-surface-2);
+}
+
+.localizepilot-console .lp-choice-card__visual i {
+	display: block;
+	width: 7px;
+	height: 7px;
+	border-radius: 2px;
+	background: var(--lp-brand);
+}
+
+.localizepilot-console .lp-choice-card__visual--dropdown {
+	align-items: flex-start;
+	flex-direction: column;
+	padding: 7px 9px;
+}
+
+.localizepilot-console .lp-choice-card__visual--dropdown i {
+	width: 100%;
+	height: 3px;
+	border-radius: var(--lp-radius-full);
+}
+
+.localizepilot-console .lp-switcher-preview-card .lp-card__body {
+	display: flex;
+	flex-direction: column;
+}
+
+.localizepilot-console .lp-switcher-stage {
+	display: flex;
+	align-items: center;
+	min-height: 280px;
+	padding: 28px;
+	border: 1px dashed rgba(25, 199, 232, 0.42);
+	border-radius: var(--lp-radius-md);
+	background:
+		linear-gradient(var(--lp-surface-veil), var(--lp-surface-veil)),
+		repeating-linear-gradient(45deg, var(--lp-brand-wash), var(--lp-brand-wash) 8px, var(--lp-surface) 8px, var(--lp-surface) 16px);
+}
+
+.localizepilot-console .lp-switcher-stage.is-start {
+	justify-content: flex-start;
+}
+
+.localizepilot-console .lp-switcher-stage.is-center {
+	justify-content: center;
+}
+
+.localizepilot-console .lp-switcher-stage.is-end {
+	justify-content: flex-end;
+}
+
+.localizepilot-console .lp-switcher-demo {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	width: 220px;
+	overflow: hidden;
+	border: 1px solid var(--lp-border);
+	border-radius: var(--lp-radius-md);
+	background: var(--lp-surface);
+	box-shadow: var(--lp-shadow-pop);
+}
+
+.localizepilot-console .lp-switcher-demo__language {
+	display: flex;
+	align-items: center;
+	gap: 9px;
+	min-height: 38px;
+	padding: 8px 12px;
+	border-top: 1px solid var(--lp-border);
+}
+
+.localizepilot-console .lp-switcher-demo__language:first-child {
+	order: -1;
+	min-height: 42px;
+	padding-inline-end: 36px;
+	border-top: 0;
+	background: var(--lp-brand-wash);
+}
+
+.localizepilot-console .lp-switcher-demo__language i {
+	display: grid;
+	place-items: center;
+	width: 27px;
+	height: 21px;
+	flex: none;
+	border-radius: var(--lp-radius-xs);
+	background: var(--lp-surface-2);
+	color: var(--lp-ink-3);
+	font-size: 9px;
+	font-style: normal;
+	font-weight: 700;
+}
+
+.localizepilot-console .lp-switcher-demo.is-code-labels .lp-switcher-demo__language i {
+	display: none;
+}
+
+.localizepilot-console .lp-switcher-demo__language b {
+	overflow: hidden;
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-md);
+	font-weight: 500;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.localizepilot-console .lp-switcher-demo__language.is-current b {
+	color: var(--lp-ink);
+	font-weight: 600;
+}
+
+.localizepilot-console .lp-switcher-demo__chevron {
+	position: absolute;
+	top: 16px;
+	inset-inline-end: 14px;
+	width: 7px;
+	height: 7px;
+	/* Two borders rotated 45deg draw a downward chevron, which is symmetric. */
+	border-right: 1.5px solid var(--lp-ink-3);
+	border-bottom: 1.5px solid var(--lp-ink-3);
+	transform: rotate(45deg);
+}
+
+.localizepilot-console .lp-switcher-demo.is-inline {
+	flex-direction: row;
+	width: auto;
+	max-width: 100%;
+	flex-wrap: wrap;
+	padding: 6px;
+}
+
+.localizepilot-console .lp-switcher-demo.is-inline .lp-switcher-demo__language {
+	min-height: 34px;
+	padding: 6px 9px;
+	border: 0;
+	border-radius: var(--lp-radius);
+	background: transparent;
+}
+
+.localizepilot-console .lp-switcher-demo.is-inline .lp-switcher-demo__language.is-current {
+	background: var(--lp-brand-wash);
+}
+
+.localizepilot-console .lp-switcher-demo.is-inline .lp-switcher-demo__chevron {
+	display: none;
+}
+
+.localizepilot-console .lp-switcher-tools {
+	margin-top: var(--lp-gutter);
+}
+
+.localizepilot-console .lp-code-copy {
+	display: flex;
+	align-items: stretch;
+	gap: 10px;
+}
+
+.localizepilot-console .lp-code-copy code {
+	display: flex;
+	align-items: center;
+	flex: 1 1 auto;
+	min-width: 0;
+	padding: 10px 12px;
+	overflow-wrap: anywhere;
+	border: 1px solid var(--lp-border);
+	border-radius: var(--lp-radius);
+	background: var(--lp-surface-2);
+	color: var(--lp-ink-2);
+	font-family: var(--lp-font-mono);
+	font-size: var(--lp-text-sm);
+	line-height: 20px;
+}
+
+.localizepilot-console .lp-code-copy .lp-btn {
+	flex: none;
+}
+
+.localizepilot-console .lp-code-copy .lp-btn.is-copied {
+	border-color: var(--lp-success);
+	color: var(--lp-success);
+}
+
+.localizepilot-console .lp-subheading {
+	margin: 20px 0 8px;
+	font-size: var(--lp-text-base);
+	font-weight: 600;
+}
+
+.localizepilot-console .lp-attribute-list {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 8px 14px;
+	margin: 20px 0 0;
+}
+
+.localizepilot-console .lp-attribute-list > div {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr);
+	gap: 8px;
+	padding-top: 8px;
+	border-top: 1px solid var(--lp-border);
+}
+
+.localizepilot-console .lp-attribute-list dt,
+.localizepilot-console .lp-attribute-list dd {
+	margin: 0;
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-sm);
+	line-height: 18px;
+}
+
+.localizepilot-console .lp-attribute-list code {
+	color: var(--lp-brand-ink);
+	font-size: var(--lp-text-sm);
+}
+
+.localizepilot-console .lp-steps {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	margin: 0;
+}
+
+.localizepilot-console .lp-steps li {
+	display: flex;
+	align-items: flex-start;
+	gap: 12px;
+}
+
+.localizepilot-console .lp-steps li > span {
+	display: grid;
+	place-items: center;
+	width: 28px;
+	height: 28px;
+	flex: none;
+	border-radius: var(--lp-radius-full);
+	background: var(--lp-brand-wash);
+	color: var(--lp-brand-ink);
+	font-size: var(--lp-text-sm);
+	font-weight: 700;
+}
+
+.localizepilot-console .lp-steps p {
+	padding-top: 4px;
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-md);
+	line-height: 20px;
+}
+
+.localizepilot-console .lp-feature-pills {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+	margin-top: 20px;
+}
+
+.localizepilot-console .lp-feature-pills span {
+	padding: 6px 9px;
+	border-radius: var(--lp-radius-full);
+	background: var(--lp-surface-2);
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-sm);
+}
+
+/* Cache configuration and history. */
+.localizepilot-console .lp-path-row {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr) auto;
+	align-items: center;
+	gap: 10px;
+	margin-top: 20px;
+	padding: 12px;
+	border-radius: var(--lp-radius);
+	background: var(--lp-surface-2);
+}
+
+.localizepilot-console .lp-path-row > span:first-child {
+	color: var(--lp-ink-3);
+	font-size: var(--lp-text-sm);
+	font-weight: 500;
+}
+
+.localizepilot-console .lp-path-row code {
+	overflow: hidden;
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-sm);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.localizepilot-console .lp-hit-rate {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	min-height: 154px;
+	margin-bottom: 16px;
+	border-radius: var(--lp-radius-md);
+	background: var(--lp-surface-2);
+	text-align: center;
+}
+
+.localizepilot-console .lp-hit-rate > span {
+	color: var(--lp-ink-3);
+	font-size: var(--lp-text-sm);
+	font-weight: 600;
+	letter-spacing: 0.6px;
+	text-transform: uppercase;
+}
+
+.localizepilot-console .lp-hit-rate strong {
+	margin: 8px 0 4px;
+	color: var(--lp-ink);
+	font-family: var(--lp-font-display);
+	font-size: 40px;
+	line-height: 44px;
+}
+
+.localizepilot-console .lp-hit-rate small {
+	color: var(--lp-ink-3);
+	font-size: var(--lp-text-sm);
+}
+
+.localizepilot-console .lp-cache-history {
+	margin-top: var(--lp-gutter);
+}
+
+.localizepilot-console .lp-cache-history > .lp-card__head {
+	align-items: center;
+}
+
+.localizepilot-console .lp-cache-actions {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.localizepilot-console .lp-cache-actions .lp-btn {
+	padding: 7px 10px;
+	font-size: var(--lp-text-sm);
+	line-height: 18px;
+}
+
+.localizepilot-console .lp-subnav {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 0 20px;
+	border-bottom: 1px solid var(--lp-border);
+}
+
+.localizepilot-console .lp-subnav__item {
+	position: relative;
+	padding: 12px 10px;
+	color: var(--lp-ink-3);
+	font-size: var(--lp-text-md);
+	font-weight: 500;
+}
+
+.localizepilot-console .lp-subnav__item:hover,
+.localizepilot-console .lp-subnav__item.is-active {
+	color: var(--lp-ink);
+}
+
+.localizepilot-console .lp-subnav__item.is-active::after {
+	content: "";
+	position: absolute;
+	inset-inline: 10px;
+	bottom: -1px;
+	height: 2px;
+	border-radius: var(--lp-radius-full);
+	background: var(--lp-brand);
+}
+
+.localizepilot-console .lp-cache-entry {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 3px;
+	min-width: 180px;
+}
+
+.localizepilot-console .lp-cache-entry .lp-badge {
+	margin-top: 3px;
+}
+
+.localizepilot-console .lp-cache-history .lp-table tr.is-expired td {
+	background: rgba(247, 144, 9, 0.035);
+}
+
+.localizepilot-console .lp-text-action {
+	color: var(--lp-brand-ink);
+	font-size: var(--lp-text-sm);
+	font-weight: 600;
+}
+
+.localizepilot-console .lp-text-action--danger {
+	color: var(--lp-danger-soft);
+}
+
+.localizepilot-console .lp-text-action--danger:hover {
+	color: var(--lp-danger);
+}
+
+@media (max-width: 1260px) {
+	.localizepilot-console .lp-provider-grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.localizepilot-console .lp-cols--equal {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+@media (max-width: 960px) {
+	.localizepilot-console .lp-form-grid,
+	.localizepilot-console .lp-status-guide {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.localizepilot-console .lp-cache-history > .lp-card__head {
+		align-items: flex-start;
+		flex-direction: column;
+	}
+
+	.localizepilot-console .lp-cache-actions {
+		justify-content: flex-start;
+	}
+}
+
+@media (max-width: 640px) {
+	.localizepilot-console .lp-provider-grid,
+	.localizepilot-console .lp-choice-grid--two,
+	.localizepilot-console .lp-attribute-list {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.localizepilot-console .lp-provider-test,
+	.localizepilot-console .lp-provider-test__controls,
+	.localizepilot-console .lp-danger-zone {
+		align-items: stretch;
+		flex-direction: column;
+	}
+
+	.localizepilot-console .lp-provider-test__controls .lp-field__control {
+		width: 100%;
+	}
+
+	.localizepilot-console .lp-path-row {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.localizepilot-console .lp-code-copy {
+		align-items: stretch;
+		flex-direction: column;
+	}
+
+	.localizepilot-console .lp-subnav {
+		overflow-x: auto;
+	}
+}

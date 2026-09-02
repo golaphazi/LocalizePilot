@@ -1,0 +1,93 @@
+/**
+ * LocalizePilot console design tokens.
+ *
+ * Values are read from the Figma file "LocalizePilot Dashboard Design".
+ * Screens and components reference the semantic aliases at the bottom, never
+ * the raw hues above them.
+ */
+
+.localizepilot-console {
+	/* Brand */
+	--lp-brand: #19c7e8;
+	--lp-brand-ink: #10b2d1;
+	--lp-brand-wash: #eafbfe;
+	--lp-brand-glow: rgba(25, 199, 232, 0.32);
+
+	/* Ink */
+	--lp-ink: #101828;
+	--lp-ink-2: #475467;
+	--lp-ink-3: #667085;
+	--lp-ink-faint: rgba(102, 112, 133, 0.7);
+
+	/* Surfaces */
+	--lp-surface: #ffffff;
+	--lp-surface-2: #f7f9fc;
+	--lp-surface-veil: rgba(255, 255, 255, 0.85);
+	--lp-border: #e5eaf0;
+
+	/* Semantic hues */
+	--lp-success: #12b76a;
+	--lp-success-wash: rgba(18, 183, 106, 0.1);
+	--lp-warning: #f79009;
+	--lp-warning-wash: rgba(247, 144, 9, 0.12);
+	--lp-violet: #6d5dfb;
+	--lp-violet-wash: rgba(109, 93, 251, 0.1);
+	--lp-info: #0ba5ec;
+	--lp-info-wash: rgba(11, 165, 236, 0.1);
+	--lp-danger: #ff1414;
+	--lp-danger-soft: #f04438;
+	--lp-danger-wash: rgba(240, 68, 56, 0.1);
+
+	/* Translation status, mapped to Translation_Manager::statuses() */
+	--lp-status-reviewed: var(--lp-success);
+	--lp-status-reviewed-wash: var(--lp-success-wash);
+	--lp-status-needs-update: var(--lp-warning);
+	--lp-status-needs-update-wash: var(--lp-warning-wash);
+	--lp-status-edited: var(--lp-violet);
+	--lp-status-edited-wash: var(--lp-violet-wash);
+	--lp-status-automatic: var(--lp-info);
+	--lp-status-automatic-wash: var(--lp-info-wash);
+
+	/* Radius */
+	--lp-radius-xs: 4px;
+	--lp-radius-sm: 6px;
+	--lp-radius: 8px;
+	--lp-radius-md: 12px;
+	--lp-radius-lg: 16px;
+	--lp-radius-full: 999px;
+
+	/* Elevation */
+	--lp-shadow-card: 0 1px 1px rgba(16, 24, 40, 0.04);
+	--lp-shadow-primary: 0 4px 8px var(--lp-brand-glow);
+	--lp-shadow-pop: 0 12px 32px rgba(16, 24, 40, 0.12);
+
+	/* Type */
+	--lp-font-display: "Satoshi", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+	--lp-font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+	--lp-font-mono: Consolas, "SF Mono", Menlo, monospace;
+
+	--lp-text-xs: 11px;
+	--lp-text-sm: 12px;
+	--lp-text-md: 13px;
+	--lp-text-base: 14px;
+	--lp-text-lg: 18px;
+	--lp-text-xl: 22px;
+	--lp-text-2xl: 28px;
+
+	/* Layout */
+	--lp-sidebar-width: 224px;
+	--lp-topbar-height: 64px;
+	--lp-content-max: 1152px;
+	--lp-gutter: 32px;
+	--lp-gap: 16px;
+	--lp-card-padding: 20px;
+
+	/* Motion */
+	--lp-transition: 140ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.localizepilot-console {
+		--lp-transition: 0ms;
+	}
+}

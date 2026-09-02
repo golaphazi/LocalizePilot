@@ -1,0 +1,536 @@
+/**
+ * Console shell: sidebar, top bar, content column, page header.
+ *
+ * Grid follows the Figma artboard — 224px sidebar, 64px top bar, a 1152px
+ * content column inside 32px gutters.
+ */
+
+/*
+ * The console sits inside the WordPress content area, below the admin bar and
+ * to the right of the admin menu. Both sticky elements offset by the admin bar
+ * height, which core exposes as a custom property and keeps correct when the
+ * bar changes height on small screens.
+ */
+.localizepilot-console .lp-app {
+	--lp-chrome-offset: var(--wp-admin--admin-bar--height, 32px);
+
+	position: relative;
+	display: grid;
+	grid-template-columns: var(--lp-sidebar-width) minmax(0, 1fr);
+	align-items: start;
+	min-height: calc(100vh - var(--lp-chrome-offset));
+	background: var(--lp-surface-2);
+}
+
+/* -------------------------------------------------------------------------
+ * Sidebar
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-sidebar {
+	position: sticky;
+	top: var(--lp-chrome-offset);
+	z-index: 12;
+	display: flex;
+	flex-direction: column;
+	height: calc(100vh - var(--lp-chrome-offset));
+	border-inline-end: 1px solid var(--lp-border);
+	background: var(--lp-surface);
+}
+
+.localizepilot-console .lp-sidebar__brand {
+	display: flex;
+	align-items: center;
+	flex: none;
+	height: var(--lp-topbar-height);
+	padding: 0 20px;
+	border-bottom: 1px solid var(--lp-border);
+}
+
+.localizepilot-console .lp-logo {
+	display: block;
+	width: 186px;
+	max-width: 100%;
+}
+
+.localizepilot-console .lp-logo__mark {
+	display: block;
+	width: 100%;
+	height: 32px;
+}
+
+.localizepilot-console .lp-logo__mark svg {
+	display: block;
+	width: 100%;
+	height: 100%;
+}
+
+.localizepilot-console .lp-nav {
+	flex: 1 1 auto;
+	overflow-y: auto;
+	padding: 16px 12px;
+}
+
+.localizepilot-console .lp-nav__group + .lp-nav__group {
+	padding-top: 24px;
+}
+
+.localizepilot-console .lp-nav__title {
+	display: block;
+	padding: 0 12px 6px;
+	color: var(--lp-ink-faint);
+	font-size: var(--lp-text-xs);
+	font-weight: 600;
+	letter-spacing: 1px;
+	line-height: 16px;
+	text-transform: uppercase;
+}
+
+.localizepilot-console .lp-nav__list {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.localizepilot-console .lp-nav__item {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 8px 12px;
+	border-radius: var(--lp-radius);
+	color: var(--lp-ink-2);
+	font-family: var(--lp-font-display);
+	font-size: var(--lp-text-base);
+	font-weight: 500;
+	letter-spacing: -0.3px;
+	line-height: 20px;
+	transition: background var(--lp-transition), color var(--lp-transition);
+}
+
+.localizepilot-console .lp-nav__item:hover {
+	background: var(--lp-surface-2);
+	color: var(--lp-ink);
+}
+
+.localizepilot-console .lp-nav__item.is-active {
+	background: var(--lp-brand-wash);
+	color: var(--lp-brand-ink);
+}
+
+.localizepilot-console .lp-sidebar__footer {
+	display: flex;
+	flex-direction: column;
+	flex: none;
+	padding: 12px;
+	border-top: 1px solid var(--lp-border);
+}
+
+.localizepilot-console .lp-sidebar__version {
+	padding: 8px 12px 4px;
+	color: var(--lp-ink-faint);
+	font-size: var(--lp-text-sm);
+	line-height: 18px;
+}
+
+/* -------------------------------------------------------------------------
+ * Shell and top bar
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-shell {
+	min-width: 0;
+	min-height: calc(100vh - var(--lp-chrome-offset));
+}
+
+.localizepilot-console .lp-topbar {
+	position: sticky;
+	top: var(--lp-chrome-offset);
+	z-index: 11;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 24px;
+	height: var(--lp-topbar-height);
+	padding: 0 24px;
+	border-bottom: 1px solid var(--lp-border);
+	background: var(--lp-surface-veil);
+	-webkit-backdrop-filter: blur(24px);
+	backdrop-filter: blur(24px);
+}
+
+.localizepilot-console .lp-breadcrumb {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-family: var(--lp-font-display);
+	font-size: var(--lp-text-base);
+	letter-spacing: -0.3px;
+	line-height: 20px;
+	white-space: nowrap;
+}
+
+.localizepilot-console .lp-breadcrumb__home {
+	color: var(--lp-ink-3);
+	font-weight: 500;
+}
+
+.localizepilot-console .lp-breadcrumb__home:hover {
+	color: var(--lp-ink-2);
+}
+
+.localizepilot-console .lp-breadcrumb__sep {
+	color: var(--lp-border);
+	font-family: var(--lp-font-body);
+}
+
+.localizepilot-console .lp-breadcrumb__current {
+	color: var(--lp-ink);
+	font-weight: 700;
+}
+
+.localizepilot-console .lp-topbar__tools {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-width: 0;
+}
+
+.localizepilot-console .lp-search-trigger {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 24px;
+	width: 360px;
+	max-width: 100%;
+	padding: 8px 12px;
+	border: 1px solid var(--lp-border);
+	border-radius: var(--lp-radius);
+	background: var(--lp-surface-2);
+	color: var(--lp-ink-3);
+	text-align: start;
+}
+
+.localizepilot-console .lp-search-trigger__label {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+	font-size: var(--lp-text-sm);
+	line-height: 18px;
+}
+
+.localizepilot-console .lp-search-trigger__label span {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.localizepilot-console .lp-kbd {
+	flex: none;
+	padding: 2px 6px;
+	border: 1px solid var(--lp-border);
+	border-radius: var(--lp-radius-xs);
+	background: var(--lp-surface);
+	color: var(--lp-ink-3);
+	font-size: var(--lp-text-xs);
+	line-height: 16px;
+}
+
+.localizepilot-console .lp-icon-button {
+	position: relative;
+	display: grid;
+	flex: none;
+	place-items: center;
+	width: 36px;
+	height: 36px;
+	border: 1px solid var(--lp-border);
+	border-radius: var(--lp-radius);
+	background: var(--lp-surface);
+	color: var(--lp-ink-2);
+	transition: border-color var(--lp-transition), color var(--lp-transition);
+}
+
+.localizepilot-console .lp-icon-button:hover {
+	border-color: var(--lp-brand);
+	color: var(--lp-brand-ink);
+}
+
+.localizepilot-console .lp-icon-button .lp-icon {
+	width: 18px;
+	height: 18px;
+}
+
+.localizepilot-console .lp-avatar {
+	display: grid;
+	flex: none;
+	place-items: center;
+	width: 36px;
+	height: 36px;
+	border-radius: var(--lp-radius-full);
+	background: var(--lp-brand-wash);
+	color: var(--lp-brand-ink);
+	font-family: var(--lp-font-display);
+	font-size: var(--lp-text-sm);
+	font-weight: 700;
+	letter-spacing: 0.2px;
+}
+
+/* -------------------------------------------------------------------------
+ * Content column
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-main {
+	display: block;
+	padding: var(--lp-gutter) 0 64px;
+}
+
+.localizepilot-console .lp-main:focus {
+	outline: none;
+}
+
+.localizepilot-console .lp-container {
+	width: 100%;
+	max-width: calc(var(--lp-content-max) + var(--lp-gutter) * 2);
+	margin: 0 auto;
+	padding: 0 var(--lp-gutter);
+}
+
+.localizepilot-console .lp-page-header {
+	display: flex;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: 24px;
+	flex-wrap: wrap;
+	margin-bottom: var(--lp-gutter);
+}
+
+.localizepilot-console .lp-page-title {
+	font-size: var(--lp-text-2xl);
+	font-weight: 700;
+	letter-spacing: -1px;
+	line-height: 36px;
+}
+
+.localizepilot-console .lp-page-description {
+	padding-top: 6px;
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-base);
+	line-height: 20px;
+}
+
+.localizepilot-console .lp-page-header__actions {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-wrap: wrap;
+}
+
+/* -------------------------------------------------------------------------
+ * Responsive
+ * ---------------------------------------------------------------------- */
+
+/*
+ * Breakpoints sit ~160px higher than the artboard's, because the WordPress
+ * admin menu occupies that much of the viewport before the console gets any.
+ */
+@media (max-width: 1440px) {
+	.localizepilot-console .lp-app {
+		--lp-gutter: 24px;
+	}
+
+	.localizepilot-console .lp-search-trigger {
+		width: 260px;
+	}
+}
+
+/* Sidebar collapses to icons before it collapses away entirely. */
+@media (max-width: 1260px) {
+	.localizepilot-console .lp-app {
+		--lp-sidebar-width: 72px;
+	}
+
+	.localizepilot-console .lp-sidebar__brand {
+		padding: 0 16px;
+	}
+
+	/*
+	 * The logo artwork puts the 32px mark at the left of a 186px lockup, so
+	 * clipping the box to 32px leaves exactly the mark — the same trick the
+	 * Figma frame uses, and no second logo file to keep in sync.
+	 */
+	.localizepilot-console .lp-logo {
+		width: 32px;
+		overflow: hidden;
+	}
+
+	.localizepilot-console .lp-logo__mark {
+		width: 186px;
+	}
+
+	.localizepilot-console .lp-nav,
+	.localizepilot-console .lp-sidebar__footer {
+		padding-inline: 10px;
+	}
+
+	.localizepilot-console .lp-nav__item {
+		justify-content: center;
+		padding-inline: 0;
+	}
+
+	.localizepilot-console .lp-nav__item span:not(.lp-nav__icon),
+	.localizepilot-console .lp-nav__title,
+	.localizepilot-console .lp-sidebar__version {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip-path: inset(50%);
+		white-space: nowrap;
+	}
+
+	.localizepilot-console .lp-nav__group + .lp-nav__group {
+		margin-top: 12px;
+		padding-top: 12px;
+		border-top: 1px solid var(--lp-border);
+	}
+}
+
+/* -------------------------------------------------------------------------
+ * The sidebar toggle
+ *
+ * Present in the top bar at every width but only shown once the rail becomes
+ * an overlay, so the markup does not change with the viewport.
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-nav-toggle {
+	display: none;
+	flex: none;
+	place-items: center;
+	width: 36px;
+	height: 36px;
+	padding: 0;
+	border: 1px solid var(--lp-border);
+	border-radius: var(--lp-radius);
+	background: var(--lp-surface);
+	color: var(--lp-ink-2);
+}
+
+.localizepilot-console .lp-nav-toggle:hover {
+	border-color: var(--lp-brand);
+	color: var(--lp-brand-ink);
+}
+
+.localizepilot-console .lp-sidebar__scrim {
+	display: none;
+}
+
+/* Below this, WordPress drops its own admin menu to an overlay. */
+@media (max-width: 782px) {
+	.localizepilot-console .lp-app {
+		--lp-gutter: 16px;
+
+		/* The admin bar stops being fixed here, so nothing needs offsetting. */
+		--lp-chrome-offset: 0px;
+	}
+
+	/*
+	 * The rail becomes an overlay. Zeroing the sidebar variable is not enough:
+	 * a fixed-position sidebar leaves the grid, so the shell would slide into
+	 * the empty first column and collapse to nothing. The grid loses the
+	 * column instead.
+	 *
+	 * It keeps its full width as an overlay so the labels come back — an
+	 * icon-only overlay would be the worst of both.
+	 */
+	.localizepilot-console .lp-app {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.localizepilot-console .lp-sidebar {
+		position: fixed;
+		inset-block: 0;
+		inset-inline-start: 0;
+		z-index: 100001;
+		width: 264px;
+		max-width: 84vw;
+		transform: translateX(-100%);
+		transition: transform var(--lp-transition);
+		visibility: hidden;
+	}
+
+	.localizepilot-console.rtl .lp-sidebar {
+		transform: translateX(100%);
+	}
+
+	.localizepilot-console .lp-app.is-nav-open .lp-sidebar {
+		transform: none;
+		visibility: visible;
+	}
+
+	.localizepilot-console .lp-app.is-nav-open .lp-sidebar__scrim {
+		position: fixed;
+		inset: 0;
+		z-index: 100000;
+		display: block;
+		border: 0;
+		padding: 0;
+		background: rgba(16, 24, 40, 0.4);
+	}
+
+	.localizepilot-console .lp-nav-toggle {
+		display: grid;
+	}
+
+	/*
+	 * The page heading below says the same thing, so only the current crumb
+	 * survives, and it is allowed to truncate rather than push the tools off
+	 * the screen.
+	 */
+	.localizepilot-console .lp-breadcrumb__home,
+	.localizepilot-console .lp-breadcrumb__sep {
+		display: none;
+	}
+
+	.localizepilot-console .lp-breadcrumb {
+		min-width: 0;
+	}
+
+	.localizepilot-console .lp-breadcrumb__current {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.localizepilot-console .lp-search-trigger__label span,
+	.localizepilot-console .lp-kbd {
+		display: none;
+	}
+
+	.localizepilot-console .lp-search-trigger {
+		flex: none;
+		width: 36px;
+		height: 36px;
+		justify-content: center;
+		padding: 0;
+	}
+
+	.localizepilot-console .lp-topbar {
+		gap: 12px;
+		padding-inline: 16px;
+	}
+
+	.localizepilot-console .lp-topbar__tools {
+		flex: none;
+		gap: 8px;
+	}
+
+	.localizepilot-console .lp-page-header {
+		align-items: flex-start;
+		flex-direction: column;
+		gap: 16px;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.localizepilot-console .lp-sidebar {
+		transition: none;
+	}
+}

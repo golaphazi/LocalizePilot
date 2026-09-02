@@ -1,0 +1,70 @@
+/**
+ * Right-to-left corrections.
+ *
+ * Deliberately short. Every offset, margin, padding and alignment in the other
+ * sheets is written with logical properties, so it already mirrors on its own —
+ * this file holds only the things logical properties cannot express: artwork
+ * that has a direction, and one clipping trick.
+ *
+ * Enqueued by Assets::enqueue() only when is_rtl(), and last, so it wins.
+ * WordPress puts the `rtl` class on <body> in the admin, and the console's own
+ * class is on the same element, hence the doubled selector.
+ */
+
+/* -------------------------------------------------------------------------
+ * Directional icons
+ *
+ * An arrow means "onward", so it has to point the other way once the page is
+ * mirrored. Icons that encode an axis rather than a direction — the down
+ * chevron, the external-link glyph, the language swap — are left alone.
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console.rtl .lp-icon--directional svg {
+	transform: scaleX(-1);
+}
+
+/* -------------------------------------------------------------------------
+ * The collapsed sidebar logo
+ *
+ * The rail clips a 186px lockup down to 32px to leave just the mark, which
+ * works because the mark sits at the start of the artwork. Clipping happens at
+ * the inline end, so in RTL the visible 32px would be the tail of the wordmark
+ * instead. Pulling the artwork back by the difference puts the mark under the
+ * clip again.
+ * ---------------------------------------------------------------------- */
+
+@media (max-width: 1260px) {
+	.localizepilot-console.rtl .lp-logo__mark {
+		margin-inline-start: -154px;
+	}
+}
+
+/* -------------------------------------------------------------------------
+ * The navigation progress bar
+ *
+ * scaleX grows toward the transform origin's opposite edge, and the origin is
+ * a physical keyword, so it needs the other edge here.
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console.rtl .lp-shell::before {
+	transform-origin: right 50%;
+}
+
+/* -------------------------------------------------------------------------
+ * Left-to-right strings, placed
+ *
+ * components.css forces these runs to direction: ltr so their punctuation
+ * lands correctly. text-align resolves against that direction, so start and
+ * end now mean left and right — put them back on the reading edge by hand.
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console.rtl .lp-app code,
+.localizepilot-console.rtl .lp-app kbd,
+.localizepilot-console.rtl .lp-sidebar__version {
+	text-align: right;
+}
+
+/* Except the one the design centres in its own chip. */
+.localizepilot-console.rtl .lp-lang-chip {
+	text-align: center;
+}
