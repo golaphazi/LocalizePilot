@@ -120,7 +120,6 @@ $lp_cell = static function ( array $row ) use ( $lp_data ): array {
 			'parts/row-actions',
 			array(
 				'label'   => (string) $row['title'],
-				'feature' => 'media',
 				'primary' => array(
 					'label' => __( 'Localize', 'localizepilot' ),
 					'style' => 'solid',
@@ -128,7 +127,7 @@ $lp_cell = static function ( array $row ) use ( $lp_data ): array {
 				),
 				'menu'    => array(
 					array( 'label' => __( 'Edit in Media Library', 'localizepilot' ), 'url' => (string) $row['edit_url'] ),
-					array( 'label' => __( 'Open file', 'localizepilot' ), 'url' => (string) $row['view_url'] ),
+					array( 'label' => __( 'Open file', 'localizepilot' ), 'url' => (string) $row['view_url'], 'external' => true ),
 				),
 			)
 		),

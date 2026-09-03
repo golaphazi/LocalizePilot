@@ -8,7 +8,10 @@
  * @package LocalizePilot
  *
  * @var array<string,mixed> $args {
- *     @type array  $items   Each {label, value, note, note_tone, delta, delta_tone, progress}.
+ *     @type array  $items   Each {label, value, value_tone, display, note, note_tone,
+ *                           delta, delta_tone, progress}. `display` is number by
+ *                           default; `status` renders the value as a coloured dot
+ *                           and word, which is how the design shows cache health.
  *     @type string $variant default | compact.
  * }
  */
@@ -32,12 +35,29 @@ $lp_compact = 'compact' === ( $args['variant'] ?? 'default' );
 		$lp_note_tone = (string) ( $lp_item['note_tone'] ?? 'muted' );
 		$lp_delta     = (string) ( $lp_item['delta'] ?? '' );
 		$lp_progress  = $lp_item['progress'] ?? null;
+		$lp_status    = 'status' === ( $lp_item['display'] ?? 'number' );
+		$lp_tone      = (string) ( $lp_item['value_tone'] ?? '' );
+
+		$lp_value_class = 'lp-kpi__value';
+
+		if ( $lp_status ) {
+			$lp_value_class .= ' lp-kpi__value--status';
+		}
+
+		if ( '' !== $lp_tone ) {
+			$lp_value_class .= ' lp-kpi__value--' . $lp_tone;
+		}
 		?>
 		<article class="lp-kpi">
 			<span class="lp-kpi__label"><?php echo esc_html( (string) ( $lp_item['label'] ?? '' ) ); ?></span>
 
 			<div class="lp-kpi__figure">
-				<strong class="lp-kpi__value"><?php echo esc_html( (string) ( $lp_item['value'] ?? '' ) ); ?></strong>
+				<strong class="<?php echo esc_attr( $lp_value_class ); ?>">
+					<?php if ( $lp_status ) : ?>
+						<i aria-hidden="true"></i>
+					<?php endif; ?>
+					<?php echo esc_html( (string) ( $lp_item['value'] ?? '' ) ); ?>
+				</strong>
 
 				<?php if ( $lp_compact && '' !== $lp_note ) : ?>
 					<span class="lp-kpi__note lp-kpi__note--<?php echo esc_attr( $lp_note_tone ); ?>"><?php echo esc_html( $lp_note ); ?></span>

@@ -22,6 +22,20 @@ $lp_actions = (array) ( $args['actions'] ?? array() );
 		<?php endif; ?>
 	</div>
 
+	<?php
+	$lp_badge = (array) ( $args['badge'] ?? array() );
+
+	if ( ! empty( $lp_badge['label'] ) ) {
+		Template::render(
+			'parts/badge',
+			array(
+				'label' => (string) $lp_badge['label'],
+				'tone'  => (string) ( $lp_badge['tone'] ?? 'neutral' ),
+			)
+		);
+	}
+	?>
+
 	<?php if ( ! empty( $lp_actions ) ) : ?>
 		<div class="lp-page-header__actions">
 			<?php

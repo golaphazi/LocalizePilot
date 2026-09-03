@@ -37,6 +37,20 @@ if ( empty( $lp_data['enabled'] ) ) {
 		)
 	);
 
+	/*
+	 * Coverage gaps do not depend on tracking, so this card still has something
+	 * true to report even with collection switched off.
+	 */
+	Template::render(
+		'parts/analytics-insights',
+		array(
+			'insights'     => array(),
+			'attention'    => (array) ( $lp_data['attention'] ?? array() ),
+			'enabled'      => false,
+			'settings_url' => (string) ( $lp_data['settings_url'] ?? Screen_Registry::url( 'settings' ) ),
+		)
+	);
+
 	return;
 }
 
@@ -194,9 +208,13 @@ Template::render(
 );
 
 /* Top localized pages. */
+// Share of the period's total page views, the same basis the language table uses.
+$lp_view_total = max( 1, (int) ( $lp_report['summary']['views'] ?? 0 ) );
+
 $lp_page_rows = array_map(
-	static function ( array $row ): array {
-		$url = (string) ( $row['page_url'] ?? '' );
+	static function ( array $row ) use ( $lp_view_total ): array {
+		$url   = (string) ( $row['page_url'] ?? '' );
+		$share = (int) round( 100 * (int) ( $row['views'] ?? 0 ) / $lp_view_total );
 
 		return array(
 			'id'    => (string) ( $row['page_hash'] ?? '' ),
@@ -206,6 +224,10 @@ $lp_page_rows = array_map(
 				'language'   => Template::capture( 'parts/lang-chip', array( 'code' => (string) ( $row['language'] ?? '' ), 'tone' => 'target' ) ),
 				'visitors'   => '<span class="lp-cell__title">' . esc_html( number_format_i18n( (int) ( $row['visitors'] ?? 0 ) ) ) . '</span>',
 				'views'      => '<span class="lp-cell__muted">' . esc_html( number_format_i18n( (int) ( $row['views'] ?? 0 ) ) ) . '</span>',
+				'share'      => Template::capture(
+					'parts/progress',
+					array( 'value' => $share, 'label' => true, 'tone' => 'auto' )
+				),
 				'last_visit' => '<span class="lp-cell__muted">' . esc_html(
 					date_i18n( get_option( 'date_format' ), (int) strtotime( (string) ( $row['last_visit'] ?? 'now' ) ) )
 				) . '</span>',
@@ -229,6 +251,7 @@ Template::render(
 					array( 'key' => 'language', 'label' => __( 'Language', 'localizepilot' ) ),
 					array( 'key' => 'visitors', 'label' => __( 'Unique Visitors', 'localizepilot' ) ),
 					array( 'key' => 'views', 'label' => __( 'Page Views', 'localizepilot' ) ),
+					array( 'key' => 'share', 'label' => __( 'Share', 'localizepilot' ) ),
 					array( 'key' => 'last_visit', 'label' => __( 'Last Visit', 'localizepilot' ), 'align' => 'right' ),
 				),
 				'rows'    => $lp_page_rows,
@@ -250,6 +273,18 @@ Template::render(
 				)
 			)
 			: '' ),
+	)
+);
+?>
+
+<?php
+Template::render(
+	'parts/analytics-insights',
+	array(
+		'insights'     => (array) ( $lp_data['insights'] ?? array() ),
+		'attention'    => (array) ( $lp_data['attention'] ?? array() ),
+		'enabled'      => ! empty( $lp_data['enabled'] ),
+		'settings_url' => (string) ( $lp_data['settings_url'] ?? Screen_Registry::url( 'settings' ) ),
 	)
 );
 ?>

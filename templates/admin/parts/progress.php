@@ -24,9 +24,14 @@ if ( 'auto' === $lp_tone ) {
 	$lp_tone = 100 === $lp_value ? 'success' : 'brand';
 }
 
-$lp_width = (string) ( $args['width'] ?? '' );
+$lp_width   = (string) ( $args['width'] ?? '' );
+$lp_classes = array( 'lp-progress' );
+
+if ( '100%' === trim( $lp_width ) ) {
+	$lp_classes[] = 'lp-progress--fluid';
+}
 ?>
-<div class="lp-progress">
+<div class="<?php echo esc_attr( implode( ' ', $lp_classes ) ); ?>">
 	<div
 		class="lp-progress__track"
 		<?php echo '' !== $lp_width ? ' style="width:' . esc_attr( $lp_width ) . '"' : ''; ?>

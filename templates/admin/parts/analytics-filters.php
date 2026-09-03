@@ -18,7 +18,7 @@ defined( 'ABSPATH' ) || exit;
 $lp_data    = (array) ( $args['data'] ?? array() );
 $lp_filters = (array) ( $lp_data['filters'] ?? array() );
 ?>
-<form class="lp-filters" method="get" action="<?php echo esc_url( admin_url( 'admin.php' ) ); ?>">
+<form class="lp-filters" method="get" action="<?php echo esc_url( admin_url( 'admin.php' ) ); ?>" data-lp-spa-filter>
 	<input type="hidden" name="page" value="localizepilot-analytics">
 
 	<?php

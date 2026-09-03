@@ -50,19 +50,6 @@
 			return '';
 		}
 
-		// Any other query args mean a filtered or deep-linked view; let the
-		// browser handle those normally until the screens that own them exist.
-		var extra = 0;
-		url.searchParams.forEach( function ( value, key ) {
-			if ( key !== 'page' ) {
-				extra++;
-			}
-		} );
-
-		if ( extra > 0 ) {
-			return '';
-		}
-
 		var match = '';
 
 		Object.keys( screens ).forEach( function ( slug ) {
@@ -131,6 +118,17 @@
 	 * @param {Object} payload Response payload from the navigation endpoint.
 	 */
 	function syncChrome( payload ) {
+		/*
+		 * The shell advertises which screen it is showing. Nothing styles off it
+		 * today, but leaving it on the screen you arrived from makes it a trap
+		 * for the first rule that does.
+		 */
+		var app = LocalizePilot.find( '.lp-app' );
+
+		if ( app && payload.slug ) {
+			app.setAttribute( 'data-lp-screen', payload.slug );
+		}
+
 		LocalizePilot.findAll( '.lp-nav__item' ).forEach( function ( link ) {
 			var active = slugFor( link.getAttribute( 'href' ) || '' ) === payload.slug;
 
@@ -218,16 +216,25 @@
 	/**
 	 * Navigate to a console screen.
 	 *
-	 * @param {string}  slug    Screen slug.
-	 * @param {boolean} replace Replace the history entry instead of pushing one.
-	 * @param {boolean} silent  Skip the history update entirely (popstate).
+	 * @param {string}  slug             Screen slug.
+	 * @param {boolean} replace          Replace the history entry instead of pushing one.
+	 * @param {boolean} silent           Skip the history update entirely (popstate).
+	 * @param {string}  href             Full filtered/deep-linked target URL.
+	 * @param {boolean} preservePosition Keep focus and scroll while refreshing a form.
 	 */
-	function go( slug, replace, silent ) {
+	function go( slug, replace, silent, href, preservePosition ) {
 		var region = view();
 		var target = screens[ slug ];
+		var targetUrl;
 
 		if ( ! region || ! target ) {
-			return;
+			return Promise.reject( new Error( 'invalid navigation target' ) );
+		}
+
+		try {
+			targetUrl = new URL( href || target.url, window.location.origin );
+		} catch ( error ) {
+			return Promise.reject( error );
 		}
 
 		if ( pending ) {
@@ -236,10 +243,15 @@
 
 		var request = { aborted: false };
 		pending = request;
+		var previousScroll = window.scrollY;
+
+		if ( LocalizePilot.ui && LocalizePilot.ui.closeMenus ) {
+			LocalizePilot.ui.closeMenus( null, false );
+		}
 
 		setBusy( true );
 
-		LocalizePilot.request( 'screen', { screen: slug } )
+		return LocalizePilot.request( 'screen', { screen: slug, query: targetUrl.search } )
 			.then( function ( response ) {
 				if ( request.aborted ) {
 					return;
@@ -250,9 +262,17 @@
 				}
 
 				var payload = response.data;
+				payload.url = targetUrl.href;
 
 				region.innerHTML = payload.html;
 				syncChrome( payload );
+
+				// Shared controls (search, filters, menus, settings forms) do not
+				// depend on a screen bundle. Bind them as soon as the fragment is
+				// visible so a fast first interaction cannot land while an optional
+				// screen script is still loading. The second idempotent init below
+				// picks up behaviours registered by that screen script.
+				LocalizePilot.ui.init( region );
 
 				if ( ! silent ) {
 					window.history[ replace ? 'replaceState' : 'pushState' ](
@@ -273,13 +293,17 @@
 
 					// Send the reader to the top of the new screen, and the
 					// keyboard with it.
-					var main = document.getElementById( 'lp-main' );
+					if ( preservePosition ) {
+						window.scrollTo( { top: previousScroll, behavior: 'auto' } );
+					} else {
+						var main = document.getElementById( 'lp-main' );
 
-					if ( main ) {
-						main.focus( { preventScroll: true } );
+						if ( main ) {
+							main.focus( { preventScroll: true } );
+						}
+
+						window.scrollTo( { top: 0, behavior: 'auto' } );
 					}
-
-					window.scrollTo( { top: 0, behavior: 'auto' } );
 				} );
 			} )
 			.catch( function () {
@@ -288,7 +312,7 @@
 				}
 
 				// A failed swap must never leave a half-navigated console.
-				window.location.href = target.url;
+				window.location.href = targetUrl.href;
 			} )
 			.finally( function () {
 				if ( ! request.aborted ) {
@@ -297,6 +321,30 @@
 				}
 			} );
 	}
+
+	function navigate( href, options ) {
+		var slug = slugFor( href );
+		var opts = options || {};
+
+		if ( ! slug || ! screens[ slug ] ) {
+			return false;
+		}
+
+		go( slug, !! opts.replace, !! opts.silent, href, !! opts.preservePosition );
+
+		return true;
+	}
+
+	LocalizePilot.router = {
+		navigate: navigate,
+		refresh: function ( options ) {
+			var opts = options || {};
+			opts.replace = true;
+			opts.preservePosition = opts.preservePosition !== false;
+
+			return navigate( window.location.href, opts );
+		},
+	};
 
 	/**
 	 * Ordinary modified clicks — new tab, new window, download — belong to the
@@ -338,25 +386,40 @@
 				return;
 			}
 
-			var slug = slugFor( link.getAttribute( 'href' ) || '' );
+			var href = link.getAttribute( 'href' ) || '';
+			var slug = slugFor( href );
 
-			if ( ! slug || slug === settings.screen ) {
-				if ( slug ) {
-					event.preventDefault();
-				}
+			if ( ! slug ) {
+				return;
+			}
 
+			var linkUrl = new URL( href, window.location.origin );
+			var currentUrl = new URL( window.location.href );
+
+			// Same-screen anchors belong to the browser's native scrolling and
+			// focus behaviour; no fragment request is needed.
+			if (
+				linkUrl.hash &&
+				linkUrl.pathname === currentUrl.pathname &&
+				linkUrl.search === currentUrl.search
+			) {
 				return;
 			}
 
 			event.preventDefault();
-			go( slug, false, false );
+
+			if ( linkUrl.href === window.location.href ) {
+				return;
+			}
+
+			go( slug, false, false, href, false );
 		} );
 
 		window.addEventListener( 'popstate', function ( event ) {
 			var slug = ( event.state && event.state.lpScreen ) || slugFor( window.location.href );
 
-			if ( slug && screens[ slug ] && slug !== settings.screen ) {
-				go( slug, false, true );
+			if ( slug && screens[ slug ] ) {
+				go( slug, false, true, window.location.href, false );
 			}
 		} );
 	} );

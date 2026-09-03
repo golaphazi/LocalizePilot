@@ -34,8 +34,11 @@ final class Analytics_Screen extends Abstract_Screen {
 
 		if ( ! $model->is_enabled() ) {
 			return array(
-				'enabled'  => false,
-				'base_url' => Screen_Registry::url( $this->slug() ),
+				'enabled'   => false,
+				// Coverage gaps are knowable whether or not tracking is on.
+				'attention' => $model->attention(),
+				'settings_url' => Screen_Registry::url( 'settings' ),
+				'base_url'  => Screen_Registry::url( $this->slug() ),
 			);
 		}
 
@@ -49,6 +52,9 @@ final class Analytics_Screen extends Abstract_Screen {
 			'languages' => $this->language_options(),
 			'ranges'    => $this->range_options(),
 			'by_language' => $model->by_language( $filters ),
+			'insights'  => $model->insights( $filters ),
+			'attention' => $model->attention( $filters ),
+			'settings_url' => Screen_Registry::url( 'settings' ),
 			'base_url'  => Screen_Registry::url( $this->slug() ),
 		);
 	}

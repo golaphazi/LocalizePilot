@@ -185,13 +185,20 @@ $lp_cell = static function ( array $row ) use ( $lp_base ): array {
 				'primary' => array(
 					'label'  => ! empty( $row['stale'] ) ? __( 'Review', 'localizepilot' ) : __( 'View', 'localizepilot' ),
 					'style'  => ! empty( $row['stale'] ) ? 'solid' : 'link',
-					// A real link, so the drawer still opens with no JavaScript.
-					'url'    => add_query_arg( 'view', (int) $row['id'], $lp_base ),
-					'drawer' => (int) $row['id'],
+					'url'    => ! empty( $row['stale'] )
+						? add_query_arg( 'view', (int) $row['id'], $lp_base )
+						: (string) $row['url'],
+					'drawer' => ! empty( $row['stale'] ) ? (int) $row['id'] : 0,
+					'external' => empty( $row['stale'] ),
 				),
 				'menu'    => array(
 					array( 'label' => __( 'Edit content', 'localizepilot' ), 'url' => (string) $row['edit_url'] ),
-					array( 'label' => __( 'View on site', 'localizepilot' ), 'url' => (string) $row['url'] ),
+					array(
+						'label'  => __( 'URL details', 'localizepilot' ),
+						'url'    => add_query_arg( 'view', (int) $row['id'], $lp_base ),
+						'drawer' => (int) $row['id'],
+					),
+					array( 'label' => __( 'View on site', 'localizepilot' ), 'url' => (string) $row['url'], 'external' => true ),
 				),
 			)
 		),

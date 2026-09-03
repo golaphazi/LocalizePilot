@@ -10,6 +10,7 @@
 
 namespace LocalizePilot\Admin\Data;
 
+use LocalizePilot\Admin\Screen_Registry;
 use LocalizePilot\Analytics;
 use LocalizePilot\Language_Catalog;
 use LocalizePilot\Plugin;
@@ -183,5 +184,279 @@ final class Analytics_Model {
 		}
 
 		return $rows;
+	}
+
+	/**
+	 * Filters describing the window immediately before the given one.
+	 *
+	 * @param array<string,mixed> $window Normalized filters from a report.
+	 * @return array<string,mixed>|null Null when the window has no usable dates.
+	 */
+	private function previous_window( array $window ): ?array {
+		$from = strtotime( (string) ( $window['date_from'] ?? '' ) );
+		$to   = strtotime( (string) ( $window['date_to'] ?? '' ) );
+
+		if ( false === $from || false === $to || $to < $from ) {
+			return null;
+		}
+
+		$length = max( 1, (int) round( ( $to - $from ) / DAY_IN_SECONDS ) + 1 );
+
+		return array_merge(
+			$window,
+			array(
+				'date_from' => gmdate( 'Y-m-d', $from - ( $length * DAY_IN_SECONDS ) ),
+				'date_to'   => gmdate( 'Y-m-d', $from - DAY_IN_SECONDS ),
+				'page'      => 1,
+			)
+		);
+	}
+
+	/**
+	 * Visitors and views per language for one window, keyed by language code.
+	 *
+	 * @param array<string,mixed> $filters Filters accepted by Analytics::report().
+	 * @return array<string,array{visitors:int,views:int}>
+	 */
+	private function language_totals( array $filters ): array {
+		global $wpdb;
+
+		$report = $this->analytics->report( array_merge( $filters, array( 'language' => '' ) ) );
+		$table  = Analytics::table_name();
+		$from   = (string) ( $report['filters']['date_from'] ?? '' );
+		$to     = (string) ( $report['filters']['date_to'] ?? '' );
+
+		if ( '' === $from || '' === $to ) {
+			return array();
+		}
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is internal; bounds are prepared.
+		$results = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT language, COUNT(*) AS views, COUNT(DISTINCT visitor_hash) AS visitors
+				 FROM {$table}
+				 WHERE visit_date BETWEEN %s AND %s
+				 GROUP BY language",
+				$from,
+				$to
+			),
+			ARRAY_A
+		);
+
+		$totals = array();
+
+		foreach ( (array) $results as $row ) {
+			$code = sanitize_key( (string) ( $row['language'] ?? '' ) );
+
+			if ( '' === $code ) {
+				continue;
+			}
+
+			$totals[ $code ] = array(
+				'visitors' => (int) ( $row['visitors'] ?? 0 ),
+				'views'    => (int) ( $row['views'] ?? 0 ),
+			);
+		}
+
+		return $totals;
+	}
+
+	/**
+	 * The Language Insights card.
+	 *
+	 * Every row is derived from recorded activity. A row whose comparison has
+	 * no prior data to stand on is left out rather than guessed at, so this can
+	 * legitimately return fewer than three rows, or none at all.
+	 *
+	 * @param array<string,mixed> $filters Filters accepted by Analytics::report().
+	 * @return array<int,array{icon:string,tone:string,title:string,note:string}>
+	 */
+	public function insights( array $filters = array() ): array {
+		if ( ! $this->is_enabled() ) {
+			return array();
+		}
+
+		$languages = $this->by_language( $filters );
+
+		if ( empty( $languages ) ) {
+			return array();
+		}
+
+		$report   = $this->analytics->report( $filters );
+		$window   = (array) ( $report['filters'] ?? array() );
+		$previous = $this->previous_window( $window );
+		$before   = null !== $previous ? $this->language_totals( $previous ) : array();
+		$insights = array();
+
+		// Biggest visitor increase against the preceding window of equal length.
+		$growth = array();
+
+		foreach ( $languages as $language ) {
+			$code = (string) $language['code'];
+			$was  = (int) ( $before[ $code ]['visitors'] ?? 0 );
+			$now  = (int) $language['visitors'];
+
+			if ( $was > 0 && $now > $was ) {
+				$growth[ $code ] = array(
+					'name'    => (string) $language['name'],
+					'percent' => (int) round( 100 * ( $now - $was ) / $was ),
+				);
+			}
+		}
+
+		uasort( $growth, static fn( array $a, array $b ): int => $b['percent'] <=> $a['percent'] );
+
+		if ( ! empty( $growth ) ) {
+			$top = reset( $growth );
+
+			$insights[] = array(
+				'icon'  => 'arrow-right',
+				'tone'  => 'success',
+				/* translators: %s: Language name. */
+				'title' => sprintf( __( '%s is your fastest-growing language', 'localizepilot' ), $top['name'] ),
+				/* translators: %d: Percentage increase in visitors. */
+				'note'  => sprintf( __( '+%d%% visitors this period', 'localizepilot' ), $top['percent'] ),
+			);
+		}
+
+		// Largest share of recorded page views.
+		$leader = $languages[0];
+
+		foreach ( $languages as $language ) {
+			if ( (int) $language['views'] > (int) $leader['views'] ) {
+				$leader = $language;
+			}
+		}
+
+		if ( (int) $leader['views'] > 0 ) {
+			$insights[] = array(
+				'icon'  => 'nav-analytics',
+				'tone'  => 'brand',
+				/* translators: %s: Language name. */
+				'title' => sprintf( __( '%s drives the most traffic', 'localizepilot' ), (string) $leader['name'] ),
+				/* translators: %d: Percentage of total page views. */
+				'note'  => sprintf( __( '%d%% of total page views', 'localizepilot' ), (int) $leader['share'] ),
+			);
+		}
+
+		// A second riser, so the card fills out when the data supports it.
+		if ( count( $growth ) > 1 ) {
+			array_shift( $growth );
+			$second = reset( $growth );
+
+			$insights[] = array(
+				'icon'  => 'clock',
+				'tone'  => 'info',
+				/* translators: %s: Language name. */
+				'title' => sprintf( __( '%s engagement is increasing', 'localizepilot' ), $second['name'] ),
+				/* translators: %d: Percentage increase. */
+				'note'  => sprintf( __( '+%d%% compared with the previous period', 'localizepilot' ), $second['percent'] ),
+			);
+		}
+
+		return array_slice( $insights, 0, 3 );
+	}
+
+	/**
+	 * The Needs Attention card.
+	 *
+	 * Counts of things that are genuinely checkable: languages that are not
+	 * fully translated, content with no recorded activity, and languages that
+	 * lost traffic against the preceding window. A count of zero is dropped, so
+	 * the card never manufactures a problem to look busy.
+	 *
+	 * @param array<string,mixed> $filters Filters accepted by Analytics::report().
+	 * @return array<int,array{count:int,label:string,action:string,url:string,tone:string}>
+	 */
+	public function attention( array $filters = array() ): array {
+		$stats     = new Language_Stats();
+		$languages = $stats->enabled();
+		$rows      = array();
+
+		// Enabled languages that are not fully translated.
+		$incomplete = 0;
+
+		foreach ( $languages as $language ) {
+			if ( empty( $language['is_source'] ) && (int) $language['coverage'] < 100 ) {
+				$incomplete++;
+			}
+		}
+
+		if ( $incomplete > 0 ) {
+			$rows[] = array(
+				'count'  => $incomplete,
+				'label'  => _n(
+					'language has incomplete localization',
+					'languages have incomplete localization',
+					$incomplete,
+					'localizepilot'
+				),
+				'action' => __( 'Review languages', 'localizepilot' ),
+				'url'    => Screen_Registry::url( 'languages' ),
+				'tone'   => 'warning',
+			);
+		}
+
+		if ( ! $this->is_enabled() ) {
+			return $rows;
+		}
+
+		$report = $this->analytics->report( $filters );
+		$active = (int) ( $report['summary']['pages'] ?? 0 );
+		$total  = 0;
+
+		foreach ( $languages as $language ) {
+			$total += (int) ( $language['translated'] ?? 0 );
+		}
+
+		$idle = max( 0, $total - $active );
+
+		if ( $idle > 0 ) {
+			$rows[] = array(
+				'count'  => $idle,
+				'label'  => _n(
+					'localized page has no recent activity',
+					'localized pages have no recent activity',
+					$idle,
+					'localizepilot'
+				),
+				'action' => __( 'Review language coverage', 'localizepilot' ),
+				'url'    => Screen_Registry::url( 'translations' ),
+				'tone'   => 'muted',
+			);
+		}
+
+		// Languages whose page views fell against the preceding window.
+		$window   = (array) ( $report['filters'] ?? array() );
+		$previous = $this->previous_window( $window );
+
+		if ( null !== $previous ) {
+			$before  = $this->language_totals( $previous );
+			$now     = $this->language_totals( $window );
+			$dropped = 0;
+
+			foreach ( $before as $code => $totals ) {
+				if ( (int) $totals['views'] > (int) ( $now[ $code ]['views'] ?? 0 ) ) {
+					$dropped++;
+				}
+			}
+
+			if ( $dropped > 0 ) {
+				$rows[] = array(
+					'count'  => $dropped,
+					'label'  => _n(
+						'language received less traffic than before',
+						'languages received less traffic than before',
+						$dropped,
+						'localizepilot'
+					),
+					'action' => __( 'View pages', 'localizepilot' ),
+					'url'    => Screen_Registry::url( 'seo-urls' ),
+					'tone'   => 'warning',
+				);
+			}
+		}
+
+		return array_slice( $rows, 0, 3 );
 	}
 }

@@ -51,12 +51,14 @@ Template::render(
 );
 ?>
 
-<form class="lp-stack" method="post" action="<?php echo esc_url( admin_url( 'options.php' ) ); ?>">
+<form class="lp-stack lp-settings-form" method="post" action="<?php echo esc_url( admin_url( 'options.php' ) ); ?>">
 	<?php
-	settings_fields( 'next_translate_group' );
-	printf(
-		'<input type="hidden" name="%s[settings_tab]" value="languages">',
-		esc_attr( Plugin::OPTION )
+	Template::render(
+		'parts/settings-form-fields',
+		array(
+			'tab'      => 'languages',
+			'redirect' => (string) ( $lp_data['base_url'] ?? '' ),
+		)
 	);
 	?>
 
@@ -110,7 +112,7 @@ Template::render(
 		</div>
 	</section>
 
-	<section class="lp-section">
+	<section class="lp-section" id="lp-available-languages">
 		<header class="lp-section__head">
 			<div>
 				<h2 class="lp-section__title"><?php esc_html_e( 'Available Languages', 'localizepilot' ); ?></h2>

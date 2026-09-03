@@ -28,7 +28,7 @@ final class Translations_Screen extends Abstract_Screen {
 			$this->view_site_action(),
 			array(
 				'label' => __( 'Translate Content', 'localizepilot' ),
-				'url'   => '',
+				'url'   => admin_url( 'edit.php?post_type=page' ),
 				'style' => 'primary',
 			),
 		);

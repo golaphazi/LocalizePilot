@@ -63,8 +63,18 @@ final class Language_Switcher {
 			}
 		}
 
-		self::$instance++;
-		$switcher_id = 'localizepilot-switcher-' . self::$instance;
+		/*
+		 * The counter keeps ids unique when a page renders more than one
+		 * switcher. A caller that renders exactly one — the console's live
+		 * preview — can pin the id instead, so the same screen produces the
+		 * same markup on a full load and on a client-side fragment fetch.
+		 */
+		$switcher_id = sanitize_html_class( (string) ( $overrides['id'] ?? '' ) );
+
+		if ( '' === $switcher_id ) {
+			self::$instance++;
+			$switcher_id = 'localizepilot-switcher-' . self::$instance;
+		}
 		$attributes  = sprintf(
 			'id="%1$s" class="%2$s" aria-label="%3$s" data-localizepilot-switcher="1" translate="no"',
 			esc_attr( $switcher_id ),

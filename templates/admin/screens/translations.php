@@ -104,11 +104,12 @@ $lp_cell = static function ( array $row ): array {
 				'primary' => array(
 					'label' => ! empty( $row['stale'] ) ? __( 'Update', 'localizepilot' ) : __( 'View', 'localizepilot' ),
 					'style' => ! empty( $row['stale'] ) ? 'solid' : 'link',
-					'url'   => (string) $row['edit_url'],
+					'url'   => ! empty( $row['stale'] ) ? (string) $row['edit_url'] : (string) $row['view_url'],
+					'external' => empty( $row['stale'] ),
 				),
 				'menu'    => array(
 					array( 'label' => __( 'Edit translation', 'localizepilot' ), 'url' => (string) $row['edit_url'] ),
-					array( 'label' => __( 'View on site', 'localizepilot' ), 'url' => (string) $row['view_url'] ),
+					array( 'label' => __( 'View on site', 'localizepilot' ), 'url' => (string) $row['view_url'], 'external' => true ),
 				),
 			)
 		),

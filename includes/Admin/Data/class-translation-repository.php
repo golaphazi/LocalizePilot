@@ -12,6 +12,7 @@ namespace LocalizePilot\Admin\Data;
 
 use LocalizePilot\Language_Catalog;
 use LocalizePilot\Plugin;
+use LocalizePilot\Router;
 use LocalizePilot\Translation_Manager;
 
 defined( 'ABSPATH' ) || exit;
@@ -94,6 +95,12 @@ final class Translation_Repository {
 		$source    = $source_id ? get_post( $source_id ) : null;
 		$statuses  = Translation_Manager::statuses();
 
+		$view_url = '';
+
+		if ( $source instanceof \WP_Post && '' !== $language ) {
+			$view_url = ( new Router() )->localize_url( (string) get_permalink( $source ), $language );
+		}
+
 		return array(
 			'id'           => $post->ID,
 			'title'        => $source instanceof \WP_Post ? get_the_title( $source ) : get_the_title( $post ),
@@ -107,7 +114,9 @@ final class Translation_Repository {
 			'stale'        => 'needs_update' === $status,
 			'updated'      => (string) get_post_modified_time( 'U', true, $post ),
 			'edit_url'     => (string) get_edit_post_link( $post->ID, 'raw' ),
-			'view_url'     => (string) get_permalink( $post->ID ),
+			// Translation records are deliberately not publicly queryable. The
+			// visitor-facing page is the source permalink with its language prefix.
+			'view_url'     => $view_url,
 		);
 	}
 

@@ -6,8 +6,8 @@
  * @package LocalizePilot
  *
  * @var array<string,mixed> $args {
- *     @type array  $primary Visible action {label, url, style: link|solid, drawer}.
- *     @type array  $menu    Overflow items, each {label, url, destructive}.
+ *     @type array  $primary Visible action {label, url, style: link|solid, drawer, external}.
+ *     @type array  $menu    Overflow items, each {label, url, destructive, external, drawer}.
  *     @type string $label   Row name, for the menu's accessible name.
  *     @type string $feature Preview feature key gating both.
  * }
@@ -36,6 +36,7 @@ $lp_solid   = 'solid' === ( $lp_primary['style'] ?? 'link' );
 		<a
 			class="lp-row-action<?php echo $lp_solid ? ' lp-row-action--solid' : ''; ?>"
 			href="<?php echo esc_url( (string) ( $lp_primary['url'] ?? '#' ) ); ?>"
+			<?php echo ! empty( $lp_primary['external'] ) ? ' target="_blank" rel="noopener noreferrer"' : ''; ?>
 			<?php if ( $lp_drawer > 0 ) : ?>
 				data-lp-drawer-remote="<?php echo esc_attr( (string) $lp_drawer ); ?>"
 				aria-haspopup="dialog"
@@ -80,11 +81,17 @@ $lp_solid   = 'solid' === ( $lp_primary['style'] ?? 'link' );
 
 			<div class="lp-menu__list" id="<?php echo esc_attr( $lp_menu_id ); ?>" role="menu" data-lp-menu-list hidden>
 				<?php foreach ( $lp_menu as $lp_item ) : ?>
+					<?php $lp_item_drawer = (int) ( $lp_item['drawer'] ?? 0 ); ?>
 					<a
 						class="lp-menu__item<?php echo ! empty( $lp_item['destructive'] ) ? ' is-destructive' : ''; ?>"
 						href="<?php echo esc_url( (string) ( $lp_item['url'] ?? '#' ) ); ?>"
 						role="menuitem"
 						tabindex="-1"
+						<?php echo ! empty( $lp_item['external'] ) ? ' target="_blank" rel="noopener noreferrer"' : ''; ?>
+						<?php if ( $lp_item_drawer > 0 ) : ?>
+							data-lp-drawer-remote="<?php echo esc_attr( (string) $lp_item_drawer ); ?>"
+							aria-haspopup="dialog"
+						<?php endif; ?>
 						<?php echo $lp_gate; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped literals. ?>
 					>
 						<?php echo esc_html( (string) ( $lp_item['label'] ?? '' ) ); ?>

@@ -8,6 +8,7 @@
 namespace LocalizePilot\Admin\Screens;
 
 use LocalizePilot\Admin\Data\Language_Stats;
+use LocalizePilot\Admin\Screen_Registry;
 use LocalizePilot\Language_Catalog;
 
 defined( 'ABSPATH' ) || exit;
@@ -25,7 +26,7 @@ final class Languages_Screen extends Abstract_Screen {
 			$this->view_site_action(),
 			array(
 				'label' => __( 'Add Language', 'localizepilot' ),
-				'url'   => '',
+				'url'   => Screen_Registry::url( $this->slug() ) . '#lp-available-languages',
 				'style' => 'primary',
 			),
 		);
@@ -46,6 +47,7 @@ final class Languages_Screen extends Abstract_Screen {
 			'coverage'      => $stats->average_coverage(),
 			'translated'    => $stats->translated_count(),
 			'urls'          => $stats->example_urls(),
+			'base_url'      => Screen_Registry::url( $this->slug() ),
 		);
 	}
 }

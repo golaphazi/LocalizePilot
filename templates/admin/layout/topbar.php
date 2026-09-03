@@ -2,8 +2,8 @@
 /**
  * Console top bar: breadcrumb, global search, notifications, account.
  *
- * Search and notifications render but do nothing — they are gated through
- * Preview so the unfinished surface stays greppable.
+ * Search opens an authenticated command palette. Notifications remain a
+ * preview until the plugin has an event source to populate them from.
  *
  * @package LocalizePilot
  *
@@ -56,8 +56,9 @@ $lp_initials = mb_substr( '' !== $lp_initials ? $lp_initials : 'WP', 0, 2 );
 		<button
 			type="button"
 			class="lp-search-trigger"
-			data-lp-action="global-search"
-			<?php echo Preview::attributes( 'global_search' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped literals in Preview::attributes(). ?>
+			data-lp-command-open
+			aria-haspopup="dialog"
+			aria-controls="lp-command-search"
 		>
 			<span class="lp-search-trigger__label">
 				<?php Template::the_icon( 'search', 'lp-icon' ); ?>

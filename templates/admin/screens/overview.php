@@ -224,6 +224,7 @@ Template::render( 'parts/card', array(
 				'parts/table',
 				array(
 					'label'   => __( 'Recent translations', 'localizepilot' ),
+					'compact' => true,
 					'columns' => array(
 						array( 'key' => 'content', 'label' => __( 'Content', 'localizepilot' ) ),
 						array( 'key' => 'language', 'label' => __( 'Language', 'localizepilot' ) ),

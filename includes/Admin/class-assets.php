@@ -51,6 +51,21 @@ final class Assets {
 			);
 		}
 
+		/*
+		 * The Language Switcher screen previews the real switcher, rendered by
+		 * the same class the front end uses. Without the front-end sheet the
+		 * preview is unstyled markup and looks nothing like what visitors get,
+		 * so that one screen loads it too.
+		 */
+		if ( 'language-switcher' === $screen_slug ) {
+			wp_enqueue_style(
+				self::HANDLE . '-switcher-preview',
+				LOCALIZEPILOT_URL . 'assets/frontend.css',
+				array( $previous ),
+				self::version( 'assets/frontend.css' )
+			);
+		}
+
 		wp_enqueue_script(
 			self::HANDLE . '-core',
 			LOCALIZEPILOT_URL . 'assets/console/js/core.js',
@@ -87,9 +102,17 @@ final class Assets {
 				'screens'    => $this->screen_map(),
 				'i18n'       => array(
 					'copied'      => __( 'Copied', 'localizepilot' ),
+					'saving'      => __( 'Saving…', 'localizepilot' ),
+					'saved'       => __( 'Changes saved.', 'localizepilot' ),
+					'saveFailed'  => __( 'Changes could not be saved.', 'localizepilot' ),
+					'searchFailed' => __( 'Search is temporarily unavailable.', 'localizepilot' ),
 					/* translators: %s is the name of the console screen that just loaded. */
 					'screenLoaded' => __( '%s screen loaded', 'localizepilot' ),
 					'preview'     => __( 'Not connected yet — this is a preview of the interface.', 'localizepilot' ),
+					'licenseEmpty' => __( 'Enter your license key first.', 'localizepilot' ),
+					'licenseFormat' => __( 'That does not look like a license key. The format is XXXX-XXXX-XXXX-XXXX-XXXX.', 'localizepilot' ),
+					'licenseNotConnected' => __( 'Key accepted. License activation is not connected in this build, so nothing was stored or verified.', 'localizepilot' ),
+					'licenseCheck' => __( 'No license is stored for this site, and status checks are not connected in this build.', 'localizepilot' ),
 					'loadFailed'  => __( 'That screen could not be loaded. Reloading the page.', 'localizepilot' ),
 					'show'        => __( 'Show', 'localizepilot' ),
 					'hide'        => __( 'Hide', 'localizepilot' ),

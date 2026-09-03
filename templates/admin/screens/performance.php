@@ -1,6 +1,11 @@
 <?php
 /**
- * Performance and cache screen.
+ * Performance screen.
+ *
+ * Follows the Figma design section for section. Every figure it asks for —
+ * hit rates, render times, provider response, health scores — is unmeasured,
+ * so each renders through parts/metric as an em dash carrying the preview
+ * marker. The languages, the providers and the cache summary are real.
  *
  * @package LocalizePilot
  *
@@ -9,319 +14,149 @@
 
 use LocalizePilot\Admin\Preview;
 use LocalizePilot\Admin\Template;
-use LocalizePilot\Analytics;
-use LocalizePilot\Language_Catalog;
-use LocalizePilot\Plugin;
-use LocalizePilot\Provider_Catalog;
 
 defined( 'ABSPATH' ) || exit;
 
-$lp_data     = (array) ( $args['data'] ?? array() );
-$lp_settings = (array) ( $lp_data['settings'] ?? array() );
-$lp_stats    = (array) ( $lp_data['stats'] ?? array() );
-$lp_history  = (array) ( $lp_data['history'] ?? array() );
-$lp_filters  = (array) ( $lp_data['filters'] ?? array() );
-$lp_actions  = (array) ( $lp_data['actions'] ?? array() );
-$lp_base_url = (string) ( $lp_data['base_url'] ?? '' );
+$lp_data      = (array) ( $args['data'] ?? array() );
+$lp_stats     = (array) ( $lp_data['stats'] ?? array() );
+$lp_settings  = (array) ( $lp_data['settings'] ?? array() );
+$lp_languages = (array) ( $lp_data['languages'] ?? array() );
+$lp_providers = (array) ( $lp_data['providers'] ?? array() );
+$lp_urls      = (array) ( $lp_data['urls'] ?? array() );
+$lp_gate      = Preview::attributes( 'perf_metrics' );
 
-if ( '' !== (string) ( $lp_data['message'] ?? '' ) ) :
-	?>
-	<div class="lp-banner lp-banner--info">
-		<strong><?php esc_html_e( 'Cache updated', 'localizepilot' ); ?></strong>
-		<p><?php echo esc_html( (string) $lp_data['message'] ); ?></p>
-	</div>
-	<?php
-endif;
-
-if ( '' !== (string) ( $lp_data['host_cache'] ?? '' ) ) :
-	?>
-	<div class="lp-banner lp-banner--info">
-		<strong>
-			<?php
-			printf(
-				/* translators: %s: Detected page-cache product. */
-				esc_html__( '%s detected', 'localizepilot' ),
-				esc_html( (string) $lp_data['host_cache'] )
-			);
-			?>
-		</strong>
-		<p><?php esc_html_e( 'LocalizePilot requests a purge when translations or cache settings change. You can also purge it manually below.', 'localizepilot' ); ?></p>
-	</div>
-	<?php
-endif;
-
-Template::render(
-	'parts/kpi-grid',
+/*
+ * The four headline figures. All four are timings or rates the plugin never
+ * records, so all four are dashes.
+ */
+$lp_kpis = array(
 	array(
-		'variant' => 'compact',
-		'items'   => array(
-			array(
-				'label' => __( 'Rendered pages', 'localizepilot' ),
-				'value' => number_format_i18n( (int) ( $lp_stats['count'] ?? 0 ) ),
-				'note'  => ! empty( $lp_settings['cache_enabled'] ) ? __( 'File cache on', 'localizepilot' ) : __( 'File cache off', 'localizepilot' ),
-				'note_tone' => ! empty( $lp_settings['cache_enabled'] ) ? 'success' : 'muted',
-			),
-			array(
-				'label' => __( 'Snapshots', 'localizepilot' ),
-				'value' => number_format_i18n( (int) ( $lp_stats['snapshots'] ?? 0 ) ),
-				'note'  => __( 'Gutenberg HTML', 'localizepilot' ),
-				'note_tone' => 'violet',
-			),
-			array(
-				'label' => __( 'Cache size', 'localizepilot' ),
-				'value' => size_format( (int) ( $lp_stats['size'] ?? 0 ), 2 ),
-				'note'  => ! empty( $lp_stats['writable'] ) ? __( 'Directory writable', 'localizepilot' ) : __( 'Not writable', 'localizepilot' ),
-				'note_tone' => ! empty( $lp_stats['writable'] ) ? 'success' : 'warning',
-			),
-			array(
-				'label' => __( 'Expired entries', 'localizepilot' ),
-				'value' => number_format_i18n( (int) ( $lp_stats['expired'] ?? 0 ) ),
-				'note'  => sprintf(
-					/* translators: %s: Cache lifetime in hours. */
-					__( '%s-hour lifetime', 'localizepilot' ),
-					number_format_i18n( (int) ( $lp_settings['cache_hours'] ?? 24 ) )
-				),
-				'note_tone' => ! empty( $lp_stats['expired'] ) ? 'warning' : 'muted',
-			),
-		),
-	)
+		'label' => __( 'Cache hit rate', 'localizepilot' ),
+		'note'  => __( 'Requests served from cache', 'localizepilot' ),
+	),
+	array(
+		'label' => __( 'Avg. render time', 'localizepilot' ),
+		'note'  => __( 'Average translated page render time', 'localizepilot' ),
+	),
+	array(
+		'label' => __( 'Provider response', 'localizepilot' ),
+		'note'  => __( 'Average translation provider response', 'localizepilot' ),
+	),
+	array(
+		'label' => __( 'Slow pages', 'localizepilot' ),
+		'note'  => __( 'Pages above 500 ms', 'localizepilot' ),
+	),
 );
 ?>
-
-<form class="lp-settings-form" method="post" action="<?php echo esc_url( admin_url( 'options.php' ) ); ?>">
-	<?php
-	Template::render(
-		'parts/settings-form-fields',
-		array(
-			'tab'      => 'performance',
-			'redirect' => $lp_base_url,
-		)
-	);
-	?>
-
-	<div class="lp-cols lp-cols--wide-narrow">
-		<section class="lp-card lp-settings-card">
-			<header class="lp-card__head">
-				<div>
-					<h2 class="lp-card__title"><?php esc_html_e( 'HTML and object cache', 'localizepilot' ); ?></h2>
-					<p class="lp-card__subtitle"><?php esc_html_e( 'Translated output is stored under wp-content/cache/localizepilot.', 'localizepilot' ); ?></p>
-				</div>
-			</header>
-			<div class="lp-card__body">
-				<div class="lp-form-grid">
-					<div>
-						<?php
-						Template::render(
-							'parts/toggle',
-							array(
-								'name'        => Plugin::OPTION . '[cache_enabled]',
-								'label'       => __( 'HTML file cache', 'localizepilot' ),
-								'description' => __( 'Save translated output as persistent HTML files.', 'localizepilot' ),
-								'checked'     => ! empty( $lp_settings['cache_enabled'] ),
-							)
-						);
-						?>
-					</div>
-					<div>
-						<?php
-						Template::render(
-							'parts/toggle',
-							array(
-								'name'        => Plugin::OPTION . '[object_cache_enabled]',
-								'label'       => __( 'WordPress object cache', 'localizepilot' ),
-								'description' => __( 'Use wp_cache_get and wp_cache_set as the fast first layer.', 'localizepilot' ),
-								'checked'     => ! empty( $lp_settings['object_cache_enabled'] ),
-							)
-						);
-						?>
-					</div>
-				</div>
-
-				<?php
-				Template::render(
-					'parts/field',
-					array(
-						'type'  => 'number',
-						'name'  => Plugin::OPTION . '[cache_hours]',
-						'label' => __( 'Cache lifetime in hours', 'localizepilot' ),
-						'value' => (string) ( $lp_settings['cache_hours'] ?? 24 ),
-						'min'   => '1',
-						'max'   => '8760',
-						'step'  => '1',
-						'hint'  => __( 'Expired pages can be removed manually without touching Gutenberg snapshots.', 'localizepilot' ),
-					)
-				);
-				?>
-
-				<div class="lp-path-row">
-					<span><?php esc_html_e( 'Cache directory', 'localizepilot' ); ?></span>
-					<code><?php echo esc_html( (string) ( $lp_stats['path'] ?? '' ) ); ?></code>
-					<?php
-					Template::render(
-						'parts/badge',
-						array(
-							'label' => ! empty( $lp_stats['writable'] ) ? __( 'Writable', 'localizepilot' ) : __( 'Not writable', 'localizepilot' ),
-							'tone'  => ! empty( $lp_stats['writable'] ) ? 'success' : 'danger',
-						)
-					);
-					?>
-				</div>
+<div class="lp-kpis lp-kpis--metric">
+	<?php foreach ( $lp_kpis as $lp_kpi ) : ?>
+		<article class="lp-kpi">
+			<span class="lp-kpi__label"><?php echo esc_html( $lp_kpi['label'] ); ?></span>
+			<div class="lp-kpi__figure">
+				<?php Template::render( 'parts/metric', array() ); ?>
 			</div>
-		</section>
+			<span class="lp-kpi__sub"><?php echo esc_html( $lp_kpi['note'] ); ?></span>
+		</article>
+	<?php endforeach; ?>
+</div>
 
-		<section class="lp-card lp-settings-card">
-			<header class="lp-card__head">
-				<div>
-					<h2 class="lp-card__title"><?php esc_html_e( 'Cache effectiveness', 'localizepilot' ); ?></h2>
-					<p class="lp-card__subtitle"><?php esc_html_e( 'Request-level counters are not recorded by the current cache engine.', 'localizepilot' ); ?></p>
-				</div>
-				<?php Template::render( 'parts/badge', array( 'label' => __( 'Preview', 'localizepilot' ), 'tone' => 'neutral' ) ); ?>
-			</header>
-			<div class="lp-card__body">
-				<div class="lp-hit-rate" <?php echo Preview::attributes( 'cache_hit_rate' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped literals. ?>>
-					<span><?php esc_html_e( 'Hit rate', 'localizepilot' ); ?></span>
-					<strong aria-label="<?php esc_attr_e( 'Not available', 'localizepilot' ); ?>">—</strong>
-					<small><?php esc_html_e( 'UI ready; counters not connected', 'localizepilot' ); ?></small>
-				</div>
-				<dl class="lp-stat-list">
-					<div><dt><?php esc_html_e( 'File cache', 'localizepilot' ); ?></dt><dd><?php echo ! empty( $lp_settings['cache_enabled'] ) ? esc_html__( 'Active', 'localizepilot' ) : esc_html__( 'Off', 'localizepilot' ); ?></dd></div>
-					<div><dt><?php esc_html_e( 'Object cache', 'localizepilot' ); ?></dt><dd><?php echo ! empty( $lp_settings['object_cache_enabled'] ) ? esc_html__( 'Active', 'localizepilot' ) : esc_html__( 'Off', 'localizepilot' ); ?></dd></div>
-					<div><dt><?php esc_html_e( 'Host cache', 'localizepilot' ); ?></dt><dd><?php echo '' !== (string) ( $lp_data['host_cache'] ?? '' ) ? esc_html( (string) $lp_data['host_cache'] ) : esc_html__( 'Not detected', 'localizepilot' ); ?></dd></div>
-				</dl>
-			</div>
-		</section>
-	</div>
-
-	<?php
-	Template::render(
-		'parts/save-bar',
-		array(
-			'title'   => __( 'Save cache configuration', 'localizepilot' ),
-			'message' => __( 'Changing cache layers or lifetime clears rendered page files safely.', 'localizepilot' ),
-			'label'   => __( 'Save performance', 'localizepilot' ),
-		)
-	);
-	?>
-</form>
-
-<section class="lp-card lp-card--flush lp-cache-history">
+<section class="lp-card">
 	<header class="lp-card__head">
 		<div>
-			<h2 class="lp-card__title"><?php esc_html_e( 'Generated HTML history', 'localizepilot' ); ?></h2>
-			<p class="lp-card__subtitle">
-				<?php
-				printf(
-					/* translators: %s: Total cache entries. */
-					esc_html__( '%s total entries. Newest files appear first.', 'localizepilot' ),
-					esc_html( number_format_i18n( (int) ( $lp_history['total'] ?? 0 ) ) )
-				);
-				?>
-			</p>
+			<h2 class="lp-card__title"><?php esc_html_e( 'Performance overview', 'localizepilot' ); ?></h2>
+			<p class="lp-card__subtitle"><?php esc_html_e( 'Track how efficiently translated content is delivered to visitors.', 'localizepilot' ); ?></p>
 		</div>
-		<div class="lp-cache-actions">
-			<a class="lp-btn lp-btn--ghost" href="<?php echo esc_url( (string) ( $lp_actions['clear_expired'] ?? '' ) ); ?>"><?php esc_html_e( 'Clear expired', 'localizepilot' ); ?></a>
-			<a class="lp-btn lp-btn--ghost" href="<?php echo esc_url( (string) ( $lp_actions['purge_host'] ?? '' ) ); ?>"><?php esc_html_e( 'Purge host cache', 'localizepilot' ); ?></a>
-			<a
-				class="lp-btn lp-btn--danger"
-				href="<?php echo esc_url( (string) ( $lp_actions['clear_all'] ?? '' ) ); ?>"
-				data-lp-confirm="<?php esc_attr_e( 'Clear every rendered LocalizePilot cache file?', 'localizepilot' ); ?>"
-			><?php esc_html_e( 'Clear rendered', 'localizepilot' ); ?></a>
-			<a
-				class="lp-btn lp-btn--danger"
-				href="<?php echo esc_url( (string) ( $lp_actions['clear_snapshots'] ?? '' ) ); ?>"
-				data-lp-confirm="<?php esc_attr_e( 'Clear every generated Gutenberg translation snapshot?', 'localizepilot' ); ?>"
-			><?php esc_html_e( 'Clear snapshots', 'localizepilot' ); ?></a>
+
+		<div class="lp-segmented lp-segmented--sm" role="group" aria-label="<?php esc_attr_e( 'Overview metric', 'localizepilot' ); ?>" data-lp-performance-tabs>
+			<button
+				type="button"
+				class="lp-segmented__option"
+				data-lp-performance-metric="render"
+				data-title="<?php esc_attr_e( 'No render-time history yet', 'localizepilot' ); ?>"
+				data-message="<?php esc_attr_e( 'LocalizePilot does not record page render timings yet, so there is no trend to plot.', 'localizepilot' ); ?>"
+				data-unit="<?php esc_attr_e( 'ms', 'localizepilot' ); ?>"
+				aria-pressed="false"
+			><?php esc_html_e( 'Render time', 'localizepilot' ); ?></button>
+			<button
+				type="button"
+				class="lp-segmented__option is-active"
+				data-lp-performance-metric="cache"
+				data-title="<?php esc_attr_e( 'No cache-hit history yet', 'localizepilot' ); ?>"
+				data-message="<?php esc_attr_e( 'LocalizePilot does not record cache hits and misses yet, so there is no trend to plot.', 'localizepilot' ); ?>"
+				data-unit="%"
+				aria-pressed="true"
+			><?php esc_html_e( 'Cache hit rate', 'localizepilot' ); ?></button>
 		</div>
 	</header>
 
-	<nav class="lp-subnav" aria-label="<?php esc_attr_e( 'Cache history type', 'localizepilot' ); ?>">
+	<div class="lp-card__body" data-lp-performance-overview>
 		<?php
-		$lp_filter_labels = array(
-			'all'      => __( 'All', 'localizepilot' ),
-			'page'     => __( 'Rendered pages', 'localizepilot' ),
-			'snapshot' => __( 'Gutenberg snapshots', 'localizepilot' ),
+		Template::render(
+			'parts/empty-state',
+			array(
+				'icon'    => 'nav-performance',
+				'title'   => __( 'No performance history yet', 'localizepilot' ),
+				'message' => __( 'LocalizePilot does not record render or response timings, so there is no trend to plot.', 'localizepilot' ),
+				'level'   => 3,
+			)
 		);
-		foreach ( $lp_filter_labels as $lp_type => $lp_label ) :
-			$lp_url = add_query_arg( 'cache_type', $lp_type, $lp_base_url );
-			?>
-			<a
-				class="lp-subnav__item<?php echo $lp_type === ( $lp_filters['type'] ?? 'all' ) ? ' is-active' : ''; ?>"
-				href="<?php echo esc_url( $lp_url ); ?>"
-				<?php echo $lp_type === ( $lp_filters['type'] ?? 'all' ) ? ' aria-current="page"' : ''; ?>
-			><?php echo esc_html( $lp_label ); ?></a>
-		<?php endforeach; ?>
-	</nav>
+		?>
+
+		<dl class="lp-stat-row" data-lp-performance-summary>
+			<?php
+			$lp_summary = array(
+				__( 'Fastest', 'localizepilot' ),
+				__( 'Average', 'localizepilot' ),
+				__( 'Slowest', 'localizepilot' ),
+			);
+
+			foreach ( $lp_summary as $lp_term ) :
+				?>
+				<div>
+					<dt><?php echo esc_html( $lp_term ); ?></dt>
+					<dd><?php Template::render( 'parts/metric', array( 'unit' => __( 'ms', 'localizepilot' ) ) ); ?></dd>
+				</div>
+			<?php endforeach; ?>
+		</dl>
+	</div>
+</section>
+
+<section class="lp-card lp-card--flush">
+	<header class="lp-card__head">
+		<div>
+			<h2 class="lp-card__title"><?php esc_html_e( 'Performance by language', 'localizepilot' ); ?></h2>
+			<p class="lp-card__subtitle"><?php esc_html_e( 'Compare delivery and rendering performance across your language versions.', 'localizepilot' ); ?></p>
+		</div>
+
+		<a class="lp-card__link" href="<?php echo esc_url( (string) ( $lp_urls['languages'] ?? '' ) ); ?>">
+			<?php esc_html_e( 'View all languages', 'localizepilot' ); ?>
+			<?php Template::the_icon( 'arrow-right-sm', 'lp-icon' ); ?>
+		</a>
+	</header>
 
 	<?php
 	$lp_rows = array();
 
-	foreach ( (array) ( $lp_history['items'] ?? array() ) as $lp_item ) {
-		$lp_key      = (string) ( $lp_item['key'] ?? '' );
-		$lp_type     = (string) ( $lp_item['type'] ?? 'page' );
-		$lp_url      = (string) ( $lp_item['url'] ?? '' );
-		$lp_language = sanitize_key( (string) ( $lp_item['language'] ?? '' ) );
-		$lp_provider = sanitize_key( (string) ( $lp_item['provider'] ?? '' ) );
-		$lp_status   = (string) ( $lp_item['status'] ?? '' );
-		$lp_modified = (int) ( $lp_item['modified'] ?? 0 );
-		$lp_expired  = ! empty( $lp_item['expired'] );
-
-		$lp_name = '' !== $lp_url ? Analytics::display_url( $lp_url ) : $lp_key . '.html';
-		$lp_provider_status = '' !== $lp_provider && Provider_Catalog::exists( $lp_provider )
-			? Provider_Catalog::label( $lp_provider )
-			: ( '' !== $lp_status ? ucfirst( str_replace( '_', ' ', $lp_status ) ) : '—' );
-
-		$lp_entry = '<span class="lp-cell__title">' . esc_html( $lp_name ) . '</span>'
-			. '<span class="lp-cell__muted">' . esc_html( $lp_key . '.html' ) . '</span>';
-
-		if ( $lp_expired ) {
-			$lp_entry .= Template::capture( 'parts/badge', array( 'label' => __( 'Expired', 'localizepilot' ), 'tone' => 'warning' ) );
-		}
-
-		$lp_language_cell = Language_Catalog::exists( $lp_language )
-			? Template::capture(
-				'parts/lang-chip',
-				array(
-					'code'  => $lp_language,
-					'tone'  => 'target',
-					'title' => Language_Catalog::label( $lp_language, 'english' ),
-				)
-			)
-			: '<span class="lp-cell__muted">—</span>';
+	foreach ( $lp_languages as $lp_language ) {
+		$lp_code = (string) ( $lp_language['code'] ?? '' );
 
 		$lp_rows[] = array(
-			'id'    => $lp_key,
-			'label' => $lp_name,
-			'class' => $lp_expired ? 'is-expired' : '',
+			'id'    => $lp_code,
+			'label' => (string) ( $lp_language['name'] ?? '' ),
 			'cells' => array(
-				'entry'    => '<div class="lp-cache-entry">' . $lp_entry . '</div>',
-				'type'     => Template::capture(
-					'parts/badge',
+				'language' => Template::capture(
+					'parts/lang-chip',
 					array(
-						'label' => 'snapshot' === $lp_type ? __( 'Snapshot', 'localizepilot' ) : __( 'Rendered', 'localizepilot' ),
-						'tone'  => 'snapshot' === $lp_type ? 'violet' : 'info',
+						'code'  => $lp_code,
+						'tone'  => ! empty( $lp_language['is_source'] ) ? 'source' : 'target',
+						'title' => (string) ( $lp_language['native'] ?? '' ),
 					)
-				),
-				'language' => $lp_language_cell,
-				'traffic'  => '<span class="lp-cell__title">' . esc_html( number_format_i18n( (int) ( $lp_item['visitors'] ?? 0 ) ) ) . '</span>'
-					. '<span class="lp-cell__muted">' . esc_html(
-						sprintf(
-							/* translators: %s: Page views. */
-							__( '%s views', 'localizepilot' ),
-							number_format_i18n( (int) ( $lp_item['views'] ?? 0 ) )
-						)
-					) . '</span>',
-				'provider' => '<span class="lp-cell__muted">' . esc_html( $lp_provider_status ) . '</span>',
-				'updated'  => '<span class="lp-cell__muted">' . esc_html(
-					$lp_modified > 0
-						? sprintf(
-							/* translators: %s: Human-readable time difference. */
-							__( '%s ago', 'localizepilot' ),
-							human_time_diff( $lp_modified, current_time( 'timestamp' ) )
-						)
-						: __( 'Unknown', 'localizepilot' )
-				) . '</span>',
-				'size'     => '<span class="lp-cell__muted">' . esc_html( size_format( (int) ( $lp_item['bytes'] ?? 0 ), 1 ) ) . '</span>',
-				'actions'  => '<a class="lp-text-action lp-text-action--danger" href="' . esc_url( (string) ( $lp_item['delete_url'] ?? '' ) ) . '" data-lp-confirm="' . esc_attr__( 'Delete this cache entry?', 'localizepilot' ) . '">' . esc_html__( 'Delete', 'localizepilot' ) . '</a>',
+				) . '<span class="lp-cell__title">' . esc_html( (string) ( $lp_language['name'] ?? '' ) ) . '</span>',
+				'hit_rate' => Template::capture( 'parts/metric', array( 'inline' => true ) ),
+				'render'   => Template::capture( 'parts/metric', array( 'inline' => true ) ),
+				// Real: how many pieces of content exist in this language.
+				'pages'    => '<span class="lp-cell__title">' . esc_html( number_format_i18n( (int) ( $lp_language['translated'] ?? 0 ) ) ) . '</span>',
+				'status'   => Template::capture( 'parts/metric', array( 'inline' => true ) ),
 			),
 		);
 	}
@@ -329,35 +164,140 @@ Template::render(
 	Template::render(
 		'parts/table',
 		array(
-			'label'   => __( 'Generated HTML cache history', 'localizepilot' ),
+			'label'   => __( 'Performance by language', 'localizepilot' ),
 			'columns' => array(
-				array( 'key' => 'entry', 'label' => __( 'Cache entry', 'localizepilot' ), 'width' => '28%' ),
-				array( 'key' => 'type', 'label' => __( 'Type', 'localizepilot' ) ),
-				array( 'key' => 'language', 'label' => __( 'Language', 'localizepilot' ) ),
-				array( 'key' => 'traffic', 'label' => __( 'Visitors', 'localizepilot' ) ),
-				array( 'key' => 'provider', 'label' => __( 'Provider / status', 'localizepilot' ) ),
-				array( 'key' => 'updated', 'label' => __( 'Updated', 'localizepilot' ) ),
-				array( 'key' => 'size', 'label' => __( 'Size', 'localizepilot' ) ),
-				array( 'key' => 'actions', 'label' => __( 'Actions', 'localizepilot' ), 'align' => 'right' ),
+				array( 'key' => 'language', 'label' => __( 'Language', 'localizepilot' ), 'width' => '28%' ),
+				array( 'key' => 'hit_rate', 'label' => __( 'Cache hit rate', 'localizepilot' ) ),
+				array( 'key' => 'render', 'label' => __( 'Avg. render', 'localizepilot' ) ),
+				array( 'key' => 'pages', 'label' => __( 'Translated pages', 'localizepilot' ) ),
+				array( 'key' => 'status', 'label' => __( 'Status', 'localizepilot' ) ),
 			),
 			'rows'    => $lp_rows,
 			'empty'   => array(
-				'icon'    => 'nav-performance',
-				'title'   => __( 'No cache history found', 'localizepilot' ),
-				'message' => __( 'Open a translated page or save a Gutenberg translation to create generated HTML.', 'localizepilot' ),
+				'icon'    => 'nav-languages',
+				'title'   => __( 'No languages enabled', 'localizepilot' ),
+				'message' => __( 'Enable a language to compare delivery across your site.', 'localizepilot' ),
 			),
 		)
 	);
-
-	$lp_pagination_url = add_query_arg( 'cache_type', (string) ( $lp_filters['type'] ?? 'all' ), $lp_base_url );
-	Template::render(
-		'parts/pagination',
-		array(
-			'total'    => (int) ( $lp_history['total'] ?? 0 ),
-			'page'     => (int) ( $lp_history['page'] ?? 1 ),
-			'per_page' => (int) ( $lp_history['per_page'] ?? 15 ),
-			'base_url' => $lp_pagination_url,
-		)
-	);
 	?>
+</section>
+
+<section class="lp-card">
+	<header class="lp-card__head">
+		<div>
+			<h2 class="lp-card__title"><?php esc_html_e( 'Pages needing attention', 'localizepilot' ); ?></h2>
+			<p class="lp-card__subtitle"><?php esc_html_e( 'Localized pages with slower-than-average rendering performance.', 'localizepilot' ); ?></p>
+		</div>
+	</header>
+
+	<div class="lp-card__body">
+		<?php
+		/*
+		 * This list can only exist once render times are recorded. An empty
+		 * state is the truthful rendering of it, not a sample of pages.
+		 */
+		Template::render(
+			'parts/empty-state',
+			array(
+				'icon'    => 'alert-triangle',
+				'title'   => __( 'Nothing flagged', 'localizepilot' ),
+				'message' => __( 'Pages are listed here once render times are recorded and one falls behind the average.', 'localizepilot' ),
+				'level'   => 3,
+			)
+		);
+		?>
+	</div>
+</section>
+
+<?php
+Template::render(
+	'parts/perf-providers',
+	array(
+		'providers' => $lp_providers,
+		'url'       => (string) ( $lp_urls['providers'] ?? '' ),
+	)
+);
+?>
+
+<div class="lp-cols lp-cols--wide-narrow">
+	<section class="lp-card">
+		<header class="lp-card__head">
+			<div>
+				<h2 class="lp-card__title"><?php esc_html_e( 'Performance alerts', 'localizepilot' ); ?></h2>
+				<p class="lp-card__subtitle"><?php esc_html_e( 'Potential issues affecting multilingual page delivery.', 'localizepilot' ); ?></p>
+			</div>
+		</header>
+
+		<div class="lp-card__body">
+			<?php
+			/*
+			 * Every alert in the design is a threshold on a measurement. With
+			 * nothing measured, there is nothing that could raise one — except
+			 * the cache conditions, which Cache Management already reports.
+			 */
+			Template::render(
+				'parts/empty-state',
+				array(
+					'icon'    => 'check-circle',
+					'title'   => __( 'No alerts', 'localizepilot' ),
+					'message' => __( 'Delivery alerts appear here once performance measurement is available.', 'localizepilot' ),
+					'action'  => array(
+						'label' => __( 'Review cache health', 'localizepilot' ),
+						'url'   => (string) ( $lp_urls['cache'] ?? '' ),
+					),
+					'level'   => 3,
+				)
+			);
+			?>
+		</div>
+	</section>
+
+	<section class="lp-card">
+		<header class="lp-card__head">
+			<div>
+				<h2 class="lp-card__title"><?php esc_html_e( 'Multilingual performance health', 'localizepilot' ); ?></h2>
+			</div>
+		</header>
+
+		<div class="lp-card__body lp-perf-health"<?php echo $lp_gate; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped literals. ?>>
+			<div class="lp-perf-health__score">
+				<span class="lp-perf-health__dial" aria-hidden="true"></span>
+				<strong aria-label="<?php esc_attr_e( 'Not measured', 'localizepilot' ); ?>">&mdash;</strong>
+				<small><?php esc_html_e( 'Overall', 'localizepilot' ); ?></small>
+			</div>
+
+			<dl class="lp-detail-list">
+				<?php
+				$lp_health = array(
+					__( 'Translation delivery', 'localizepilot' ),
+					__( 'Page rendering', 'localizepilot' ),
+					__( 'Cache efficiency', 'localizepilot' ),
+				);
+
+				foreach ( $lp_health as $lp_term ) :
+					?>
+					<div class="lp-detail-list__row">
+						<dt><?php echo esc_html( $lp_term ); ?></dt>
+						<dd><?php Template::render( 'parts/metric', array( 'inline' => true ) ); ?></dd>
+					</div>
+				<?php endforeach; ?>
+			</dl>
+
+			<p class="lp-perf-health__note"><?php esc_html_e( 'A health score needs render and response timings, which are not collected.', 'localizepilot' ); ?></p>
+		</div>
+	</section>
+</div>
+
+<section class="lp-card lp-perf-note">
+	<div class="lp-card__body">
+		<strong><?php esc_html_e( 'How performance is measured', 'localizepilot' ); ?></strong>
+		<p>
+			<?php esc_html_e( 'This screen is designed to report translated page rendering time, translation provider response time, cache efficiency, and language-level delivery performance. LocalizePilot does not collect those timings yet, so each figure reads as unavailable.', 'localizepilot' ); ?>
+		</p>
+		<a class="lp-card__link" href="<?php echo esc_url( (string) ( $lp_urls['cache'] ?? '' ) ); ?>">
+			<?php esc_html_e( 'See what is measured, in Cache Management', 'localizepilot' ); ?>
+			<?php Template::the_icon( 'arrow-right-sm', 'lp-icon' ); ?>
+		</a>
+	</div>
 </section>

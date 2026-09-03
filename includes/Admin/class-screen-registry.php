@@ -87,7 +87,7 @@ final class Screen_Registry {
 			),
 			'performance'       => array(
 				'label'       => __( 'Performance', 'localizepilot' ),
-				'description' => __( 'Monitor localized page caching and translation rendering.', 'localizepilot' ),
+				'description' => __( 'Monitor translation caching, rendering speed, and multilingual delivery health.', 'localizepilot' ),
 				'icon'        => 'nav-performance',
 				'group'       => 'insights',
 				'class'       => Screens\Performance_Screen::class,
@@ -98,6 +98,13 @@ final class Screen_Registry {
 				'icon'        => 'nav-providers',
 				'group'       => 'configuration',
 				'class'       => Screens\Providers_Screen::class,
+			),
+			'cache-management'  => array(
+				'label'       => __( 'Cache Management', 'localizepilot' ),
+				'description' => __( 'Manage translated page cache and keep localized content fresh across your site.', 'localizepilot' ),
+				'icon'        => 'nav-cache-management',
+				'group'       => 'configuration',
+				'class'       => Screens\Cache_Management_Screen::class,
 			),
 			'language-switcher' => array(
 				'label'       => __( 'Language Switcher', 'localizepilot' ),
@@ -112,6 +119,13 @@ final class Screen_Registry {
 				'icon'        => 'nav-settings',
 				'group'       => 'configuration',
 				'class'       => Screens\Settings_Screen::class,
+			),
+			'license'           => array(
+				'label'       => __( 'License Activation', 'localizepilot' ),
+				'description' => __( 'Activate your LocalizePilot license to unlock premium features, updates, and support.', 'localizepilot' ),
+				'icon'        => 'nav-license',
+				'group'       => 'configuration',
+				'class'       => Screens\License_Screen::class,
 			),
 		);
 

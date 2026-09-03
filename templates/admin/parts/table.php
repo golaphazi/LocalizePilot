@@ -15,6 +15,7 @@
  *     @type bool   $selectable Render the checkbox column.
  *     @type array  $empty      Args for parts/empty-state when rows is empty.
  *     @type string $label      Accessible table caption.
+ *     @type bool   $compact    Allow a small table to fit a narrow card.
  * }
  */
 
@@ -25,14 +26,15 @@ defined( 'ABSPATH' ) || exit;
 $lp_columns    = (array) ( $args['columns'] ?? array() );
 $lp_rows       = (array) ( $args['rows'] ?? array() );
 $lp_selectable = ! empty( $args['selectable'] );
+$lp_compact    = ! empty( $args['compact'] );
 
 if ( empty( $lp_rows ) ) {
 	Template::render( 'parts/empty-state', (array) ( $args['empty'] ?? array() ) );
 	return;
 }
 ?>
-<div class="lp-table-wrap">
-	<table class="lp-table" <?php echo $lp_selectable ? ' data-lp-selectable' : ''; ?>>
+<div class="lp-table-wrap<?php echo $lp_compact ? ' lp-table-wrap--compact' : ''; ?>">
+	<table class="lp-table<?php echo $lp_compact ? ' lp-table--compact' : ''; ?>" <?php echo $lp_selectable ? ' data-lp-selectable' : ''; ?>>
 		<?php if ( ! empty( $args['label'] ) ) : ?>
 			<caption class="screen-reader-text"><?php echo esc_html( (string) $args['label'] ); ?></caption>
 		<?php endif; ?>

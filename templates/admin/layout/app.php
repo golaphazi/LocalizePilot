@@ -44,4 +44,13 @@ $lp_slug = (string) ( $args['slug'] ?? '' );
 			</div>
 		</main>
 	</div>
+
+	<?php
+	/*
+	 * Overlays live here, as siblings of the shell, not inside the topbar:
+	 * the topbar's backdrop-filter makes it the containing block for any
+	 * position:fixed descendant, which would confine this to the header.
+	 */
+	Template::render( 'layout/command-palette', $args );
+	?>
 </div>

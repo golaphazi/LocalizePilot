@@ -166,13 +166,42 @@
 	 * submit button is there, just visually hidden. This only removes the
 	 * second step for people who can see the change take effect.
 	 */
+	function filterUrl( form ) {
+		var url = new URL( form.action || window.location.href, window.location.origin );
+		var data = new FormData( form );
+
+		url.search = '';
+		data.forEach( function ( value, key ) {
+			if ( typeof value === 'string' && ( '' !== value || key === 'page' ) ) {
+				url.searchParams.append( key, value );
+			}
+		} );
+
+		return url.href;
+	}
+
+	function submitFilter( form, replace ) {
+		if ( ! LocalizePilot.router || ! LocalizePilot.router.navigate ) {
+			return false;
+		}
+
+		return LocalizePilot.router.navigate( filterUrl( form ), { replace: !! replace } );
+	}
+
 	ui.register( 'toolbar-autosubmit', function ( scope ) {
-		LocalizePilot.findAll( '[data-lp-autosubmit]', scope ).forEach( function ( form ) {
+		LocalizePilot.findAll( '[data-lp-autosubmit], [data-lp-spa-filter]', scope ).forEach( function ( form ) {
 			if ( form.__lpAutoSubmitBound ) {
 				return;
 			}
 
 			form.__lpAutoSubmitBound = true;
+			var searchTimer = 0;
+
+			form.addEventListener( 'submit', function ( event ) {
+				if ( submitFilter( form, false ) ) {
+					event.preventDefault();
+				}
+			} );
 
 			form.addEventListener( 'change', function ( event ) {
 				var target = event.target;
@@ -193,10 +222,217 @@
 					paged.value = '1';
 				}
 
-				form.submit();
+				if ( ! submitFilter( form, false ) ) {
+					form.submit();
+				}
+			} );
+
+			var search = form.querySelector( 'input[type="search"], input[name="url"]' );
+
+			if ( search ) {
+				search.addEventListener( 'input', function () {
+					window.clearTimeout( searchTimer );
+					searchTimer = window.setTimeout( function () {
+						var paged = form.querySelector( 'input[name="paged"]' );
+
+						if ( paged ) {
+							paged.value = '1';
+						}
+
+						submitFilter( form, true );
+					}, 320 );
+				} );
+			}
+		} );
+	} );
+
+	/* ---------------------------------------------------------------------
+	 * AJAX settings forms
+	 * ------------------------------------------------------------------ */
+
+	function notify( message, tone ) {
+		var toast = document.getElementById( 'lp-console-toast' );
+
+		if ( ! toast ) {
+			toast = document.createElement( 'div' );
+			toast.id = 'lp-console-toast';
+			toast.className = 'lp-toast';
+			toast.setAttribute( 'role', 'status' );
+			document.body.appendChild( toast );
+		}
+
+		window.clearTimeout( toast.__lpTimer );
+		toast.className = 'lp-toast lp-toast--' + ( tone || 'success' ) + ' is-visible';
+		toast.textContent = message;
+		toast.__lpTimer = window.setTimeout( function () {
+			toast.classList.remove( 'is-visible' );
+		}, 3200 );
+	}
+
+	ui.notify = notify;
+
+	ui.register( 'ajax-settings', function ( scope ) {
+		LocalizePilot.findAll( '.lp-settings-form', scope ).forEach( function ( form ) {
+			if ( form.__lpAjaxSaveBound || ! window.fetch || ! window.FormData ) {
+				return;
+			}
+
+			form.__lpAjaxSaveBound = true;
+
+			form.addEventListener( 'submit', function ( event ) {
+				if ( event.defaultPrevented || form.getAttribute( 'aria-busy' ) === 'true' ) {
+					return;
+				}
+
+				event.preventDefault();
+
+				var button = event.submitter || form.querySelector( 'button[type="submit"]' );
+				var original = button ? button.textContent : '';
+				var body = new FormData( form );
+				var fallback = false;
+
+				body.set( 'action', 'localizepilot_save_settings' );
+				body.set( 'nonce', LocalizePilot.settings.nonce || '' );
+				form.setAttribute( 'aria-busy', 'true' );
+
+				if ( button ) {
+					button.disabled = true;
+					button.textContent = LocalizePilot.text( 'saving', 'Saving…' );
+				}
+
+				window.fetch( LocalizePilot.settings.ajaxUrl, {
+					method: 'POST',
+					credentials: 'same-origin',
+					body: body,
+				} )
+					.then( function ( response ) {
+						fallback = ! response.ok && response.status >= 500;
+						return response.json();
+					} )
+					.then( function ( response ) {
+						if ( ! response || ! response.success ) {
+							var message = response && response.data && response.data.message
+								? response.data.message
+								: LocalizePilot.text( 'saveFailed', 'Changes could not be saved.' );
+
+							notify( message, 'error' );
+							return;
+						}
+
+						notify(
+							response.data.message || LocalizePilot.text( 'saved', 'Changes saved.' ),
+							'success'
+						);
+
+						document.dispatchEvent( new CustomEvent( 'localizepilot:saved', { detail: response.data } ) );
+
+						if ( LocalizePilot.router && LocalizePilot.router.refresh ) {
+							LocalizePilot.router.refresh( { preservePosition: true } );
+						}
+					} )
+					.catch( function () {
+						/* Network and invalid-response failures retain the native Settings
+						 * API path as a reliable progressive-enhancement fallback. */
+						fallback = true;
+					} )
+					.finally( function () {
+						form.removeAttribute( 'aria-busy' );
+
+						if ( button ) {
+							button.disabled = false;
+							button.textContent = original;
+						}
+
+						if ( fallback ) {
+							HTMLFormElement.prototype.submit.call( form );
+						}
+					} );
 			} );
 		} );
 	} );
+
+	/* ---------------------------------------------------------------------
+	 * Top-bar command search
+	 * ------------------------------------------------------------------ */
+
+	var commandReturnFocus = null;
+	var commandTimer = 0;
+	var commandSequence = 0;
+
+	function commandElement() {
+		return LocalizePilot.find( '[data-lp-command]' );
+	}
+
+	function loadCommandResults( query ) {
+		var command = commandElement();
+		var results = command ? LocalizePilot.find( '[data-lp-command-results]', command ) : null;
+		var sequence = ++commandSequence;
+
+		if ( ! results ) {
+			return;
+		}
+
+		results.setAttribute( 'aria-busy', 'true' );
+
+		LocalizePilot.request( 'search', { q: query } )
+			.then( function ( response ) {
+				if ( sequence !== commandSequence || ! response || ! response.success || ! response.data ) {
+					return;
+				}
+
+				results.innerHTML = response.data.html || '';
+			} )
+			.catch( function () {
+				if ( sequence === commandSequence ) {
+					results.innerHTML = '<p class="lp-command__error">' +
+						LocalizePilot.text( 'searchFailed', 'Search is temporarily unavailable.' ) + '</p>';
+				}
+			} )
+			.finally( function () {
+				if ( sequence === commandSequence ) {
+					results.removeAttribute( 'aria-busy' );
+				}
+			} );
+	}
+
+	function openCommand( trigger ) {
+		var command = commandElement();
+
+		if ( ! command || ! command.hidden ) {
+			return;
+		}
+
+		commandReturnFocus = trigger || document.activeElement;
+		command.hidden = false;
+		lockScroll();
+
+		var input = LocalizePilot.find( '[data-lp-command-input]', command );
+
+		if ( input ) {
+			input.value = '';
+			input.focus();
+		}
+
+		loadCommandResults( '' );
+	}
+
+	function closeCommand() {
+		var command = commandElement();
+
+		if ( ! command || command.hidden ) {
+			return;
+		}
+
+		command.hidden = true;
+		commandSequence++;
+		releaseScroll();
+
+		if ( commandReturnFocus && commandReturnFocus.focus ) {
+			commandReturnFocus.focus();
+		}
+
+		commandReturnFocus = null;
+	}
 
 	/* ---------------------------------------------------------------------
 	 * Overlay body scroll
@@ -308,27 +544,84 @@
 	 * Overflow menus
 	 * ------------------------------------------------------------------ */
 
+	function menuList( menu ) {
+		return menu ? ( menu.__lpMenuList || LocalizePilot.find( '[data-lp-menu-list]', menu ) ) : null;
+	}
+
+	function restoreMenuList( menu, list ) {
+		if ( ! menu || ! list ) {
+			return;
+		}
+
+		list.classList.remove( 'is-ported' );
+		list.removeAttribute( 'style' );
+
+		if ( list.parentNode !== menu ) {
+			menu.appendChild( list );
+		}
+	}
+
+	function positionMenu( menu ) {
+		var list = menuList( menu );
+		var trigger = LocalizePilot.find( '[data-lp-menu-trigger]', menu );
+
+		if ( ! list || ! trigger ) {
+			return;
+		}
+
+		/*
+		 * Tables need horizontal overflow, but CSS then also clips vertical
+		 * overflow. Port the open popup to <body> and anchor it to the trigger;
+		 * the menu is restored to its row when it closes.
+		 */
+		list.__lpMenu = menu;
+		menu.__lpMenuList = list;
+		list.classList.add( 'is-ported' );
+		list.style.visibility = 'hidden';
+		document.body.appendChild( list );
+
+		var anchor = trigger.getBoundingClientRect();
+		var popup = list.getBoundingClientRect();
+		var gap = 4;
+		var edge = 8;
+		var top = anchor.bottom + gap;
+		var left = anchor.right - popup.width;
+
+		if ( top + popup.height > window.innerHeight - edge ) {
+			top = Math.max( edge, anchor.top - popup.height - gap );
+		}
+
+		left = Math.max( edge, Math.min( left, window.innerWidth - popup.width - edge ) );
+
+		list.style.top = Math.round( top ) + 'px';
+		list.style.left = Math.round( left ) + 'px';
+		list.style.visibility = '';
+	}
+
 	function closeMenus( except, restoreFocus ) {
 		LocalizePilot.findAll( '[data-lp-menu]' ).forEach( function ( menu ) {
 			if ( menu === except ) {
 				return;
 			}
 
-			var list = LocalizePilot.find( '[data-lp-menu-list]', menu );
+			var list = menuList( menu );
 			var trigger = LocalizePilot.find( '[data-lp-menu-trigger]', menu );
 
 			if ( ! list || list.hidden ) {
 				return;
 			}
 
+			var hadFocus = menu.contains( document.activeElement ) || list.contains( document.activeElement );
+
 			list.hidden = true;
+			restoreMenuList( menu, list );
 
 			if ( trigger ) {
 				trigger.setAttribute( 'aria-expanded', 'false' );
 
 				// Closing with a key must not drop focus to the document, or
 				// the next Tab starts over at the top of the page.
-				if ( restoreFocus && menu.contains( document.activeElement ) ) {
+				if ( restoreFocus && hadFocus ) {
 					trigger.focus();
 				}
 			}
@@ -342,7 +635,9 @@
 	 * @return {Element[]} Menu items.
 	 */
 	function menuItems( menu ) {
-		return LocalizePilot.findAll( '[role="menuitem"]', menu );
+		var list = menuList( menu );
+
+		return list ? LocalizePilot.findAll( '[role="menuitem"]', list ) : [];
 	}
 
 	/**
@@ -380,7 +675,7 @@
 	}
 
 	function openMenu( menu, focusFirst ) {
-		var list = LocalizePilot.find( '[data-lp-menu-list]', menu );
+		var list = menuList( menu );
 		var trigger = LocalizePilot.find( '[data-lp-menu-trigger]', menu );
 
 		if ( ! list ) {
@@ -389,6 +684,7 @@
 
 		closeMenus( menu, false );
 		list.hidden = false;
+		positionMenu( menu );
 
 		if ( trigger ) {
 			trigger.setAttribute( 'aria-expanded', 'true' );
@@ -403,6 +699,8 @@
 		// Delegated once from the document; nothing to bind per fragment.
 		return;
 	} );
+
+	ui.closeMenus = closeMenus;
 
 	/* ---------------------------------------------------------------------
 	 * Drawer
@@ -521,6 +819,59 @@
 	}
 
 	function bindGlobalHandlers() {
+		LocalizePilot.on( 'click', '[data-lp-command-open]', function ( event, trigger ) {
+			event.preventDefault();
+			openCommand( trigger );
+		} );
+
+		LocalizePilot.on( 'click', '[data-lp-command-close]', function ( event ) {
+			event.preventDefault();
+			closeCommand();
+		} );
+
+		LocalizePilot.on( 'input', '[data-lp-command-input]', function ( event, input ) {
+			window.clearTimeout( commandTimer );
+			commandTimer = window.setTimeout( function () {
+				loadCommandResults( input.value.trim() );
+			}, 180 );
+		} );
+
+		LocalizePilot.on( 'keydown', '[data-lp-command-input]', function ( event, input ) {
+			if ( event.key !== 'ArrowDown' ) {
+				return;
+			}
+
+			var command = input.closest( '[data-lp-command]' );
+			var first = command ? LocalizePilot.find( '.lp-command__result', command ) : null;
+
+			if ( first ) {
+				event.preventDefault();
+				first.focus();
+			}
+		} );
+
+		LocalizePilot.on( 'keydown', '.lp-command__result', function ( event, result ) {
+			if ( event.key !== 'ArrowDown' && event.key !== 'ArrowUp' ) {
+				return;
+			}
+
+			var items = LocalizePilot.findAll( '.lp-command__result', result.closest( '[data-lp-command]' ) );
+			var index = items.indexOf( result );
+			var next = index + ( event.key === 'ArrowDown' ? 1 : -1 );
+
+			event.preventDefault();
+
+			if ( next < 0 ) {
+				LocalizePilot.find( '[data-lp-command-input]', result.closest( '[data-lp-command]' ) ).focus();
+			} else {
+				items[ Math.min( next, items.length - 1 ) ].focus();
+			}
+		} );
+
+		LocalizePilot.on( 'click', '.lp-command__result', function () {
+			closeCommand();
+		} );
+
 		LocalizePilot.on( 'click', '[data-lp-copy]', function ( event, button ) {
 			event.preventDefault();
 
@@ -530,17 +881,33 @@
 				return;
 			}
 
-			var value = target.textContent || '';
-			var original = button.getAttribute( 'data-lp-copy-label' ) || button.textContent;
+			// Form controls hold their text in value, everything else in the node.
+			var value = 'value' in target ? target.value : ( target.textContent || '' );
 
-			button.setAttribute( 'data-lp-copy-label', original );
+			/*
+			 * An icon-only button has no text to swap, and overwriting it would
+			 * remove the icon. Those confirm with a class alone.
+			 */
+			var label = button.querySelector( '[data-lp-copy-text]' ) ||
+				( button.firstElementChild ? null : button );
+			var original = label ? ( button.getAttribute( 'data-lp-copy-label' ) || label.textContent ) : '';
+
+			if ( label ) {
+				button.setAttribute( 'data-lp-copy-label', original );
+			}
 
 			function complete() {
-				button.textContent = LocalizePilot.text( 'copied', 'Copied' );
+				if ( label ) {
+					label.textContent = LocalizePilot.text( 'copied', 'Copied' );
+				}
+
 				button.classList.add( 'is-copied' );
 
 				window.setTimeout( function () {
-					button.textContent = original;
+					if ( label ) {
+						label.textContent = original;
+					}
+
 					button.classList.remove( 'is-copied' );
 				}, 1600 );
 			}
@@ -581,7 +948,7 @@
 			event.preventDefault();
 
 			var menu = trigger.closest( '[data-lp-menu]' );
-			var list = LocalizePilot.find( '[data-lp-menu-list]', menu );
+			var list = menuList( menu );
 
 			if ( ! list ) {
 				return;
@@ -606,7 +973,7 @@
 		} );
 
 		LocalizePilot.on( 'keydown', '[data-lp-menu-list]', function ( event, list ) {
-			var menu = list.closest( '[data-lp-menu]' );
+			var menu = list.__lpMenu || list.closest( '[data-lp-menu]' );
 			var handled = true;
 
 			switch ( event.key ) {
@@ -685,15 +1052,30 @@
 		} );
 
 		document.addEventListener( 'click', function ( event ) {
-			if ( ! event.target.closest || ! event.target.closest( '[data-lp-menu]' ) ) {
+			if ( ! event.target.closest || ! event.target.closest( '[data-lp-menu], [data-lp-menu-list]' ) ) {
 				closeMenus( null, false );
 			}
 		} );
 
+		window.addEventListener( 'resize', function () {
+			closeMenus( null, false );
+		} );
+
+		window.addEventListener( 'scroll', function () {
+			closeMenus( null, false );
+		}, true );
+
 		document.addEventListener( 'keydown', function ( event ) {
+			if ( ( event.ctrlKey || event.metaKey ) && event.key.toLowerCase() === 'k' ) {
+				event.preventDefault();
+				openCommand( LocalizePilot.find( '[data-lp-command-open]' ) );
+				return;
+			}
+
 			if ( event.key === 'Escape' ) {
 				closeMenus( null, true );
 				closeNav();
+				closeCommand();
 
 				LocalizePilot.findAll( '[data-lp-drawer]' ).forEach( function ( drawer ) {
 					closeDrawer( drawer );
@@ -703,6 +1085,13 @@
 			}
 
 			if ( event.key !== 'Tab' ) {
+				return;
+			}
+
+			var command = commandElement();
+
+			if ( command && ! command.hidden ) {
+				trapFocus( event, LocalizePilot.find( '.lp-command__panel', command ) || command );
 				return;
 			}
 

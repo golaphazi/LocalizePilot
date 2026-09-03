@@ -29,11 +29,10 @@ final class Media_Screen extends Abstract_Screen {
 		return array(
 			$this->view_site_action(),
 			array(
-				'label'   => __( 'Upload Media', 'localizepilot' ),
-				'url'     => '',
-				'style'   => 'primary',
-				'icon'    => 'plus',
-				'feature' => 'media',
+				'label' => __( 'Upload Media', 'localizepilot' ),
+				'url'   => admin_url( 'media-new.php' ),
+				'style' => 'primary',
+				'icon'  => 'plus',
 			),
 		);
 	}

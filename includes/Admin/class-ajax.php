@@ -20,6 +20,67 @@ final class Ajax {
 	public function hooks(): void {
 		add_action( 'wp_ajax_localizepilot_screen', array( $this, 'screen' ) );
 		add_action( 'wp_ajax_localizepilot_url_drawer', array( $this, 'url_drawer' ) );
+		add_action( 'wp_ajax_localizepilot_search', array( $this, 'search' ) );
+		add_action( 'wp_ajax_localizepilot_save_settings', array( $this, 'save_settings' ) );
+	}
+
+	/** Return the command-palette result list. */
+	public function search(): void {
+		check_ajax_referer( self::NONCE, 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => __( 'You do not have permission to search that.', 'localizepilot' ) ), 403 );
+		}
+
+		$query   = sanitize_text_field( wp_unslash( $_POST['q'] ?? '' ) );
+		$results = ( new Data\Global_Search() )->results( $query );
+
+		wp_send_json_success(
+			array(
+				'html' => Template::capture(
+					'parts/global-search-results',
+					array( 'query' => $query, 'results' => $results )
+				),
+			)
+		);
+	}
+
+	/** Save any console Settings API form without reloading the admin page. */
+	public function save_settings(): void {
+		check_ajax_referer( self::NONCE, 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => __( 'You do not have permission to change those settings.', 'localizepilot' ) ), 403 );
+		}
+
+		$input = wp_unslash( $_POST[ \LocalizePilot\Plugin::OPTION ] ?? array() );
+
+		if ( ! is_array( $input ) ) {
+			wp_send_json_error( array( 'message' => __( 'The settings payload was invalid.', 'localizepilot' ) ), 400 );
+		}
+
+		$tab = sanitize_key( (string) ( $input['settings_tab'] ?? '' ) );
+
+		if ( ! in_array( $tab, array( 'providers', 'languages', 'translation', 'cache', 'performance', 'analytics', 'switcher', 'language-switcher', 'settings', 'dashboard' ), true ) ) {
+			wp_send_json_error( array( 'message' => __( 'That settings section could not be saved.', 'localizepilot' ) ), 400 );
+		}
+
+		$input['settings_tab'] = $tab;
+		$before                = get_option( \LocalizePilot\Plugin::OPTION, array() );
+
+		// register_setting() attaches Settings::sanitize() to update_option(), so
+		// AJAX and options.php pass through exactly the same validation path.
+		update_option( \LocalizePilot\Plugin::OPTION, $input );
+		$after = get_option( \LocalizePilot\Plugin::OPTION, array() );
+
+		wp_send_json_success(
+			array(
+				'changed' => $before !== $after,
+				'message' => $before !== $after
+					? __( 'Changes saved.', 'localizepilot' )
+					: __( 'Settings are already up to date.', 'localizepilot' ),
+			)
+		);
 	}
 
 	/**
@@ -86,6 +147,8 @@ final class Ajax {
 			);
 		}
 
+		$this->apply_screen_query();
+
 		$class = (string) $config['class'];
 
 		if ( ! class_exists( $class ) || ! is_subclass_of( $class, Screens\Abstract_Screen::class ) ) {
@@ -113,5 +176,33 @@ final class Ajax {
 				'html'          => $screen->view(),
 			)
 		);
+	}
+
+	/**
+	 * Rehydrate a filtered screen's GET values from the SPA request.
+	 *
+	 * Only read-only screen arguments are accepted. The screen controllers still
+	 * apply their own type-specific sanitization before a repository sees them.
+	 */
+	private function apply_screen_query(): void {
+		$query = (string) wp_unslash( $_POST['query'] ?? '' );
+
+		if ( '' === $query || strlen( $query ) > 2048 ) {
+			return;
+		}
+
+		parse_str( ltrim( $query, '?' ), $values );
+		$allowed = array(
+			's', 'language', 'status', 'type', 'issues', 'order', 'paged',
+			'range', 'url', 'view', 'cache_type', 'cache_page', 'cache_item_type',
+		);
+
+		foreach ( $allowed as $key ) {
+			if ( ! isset( $values[ $key ] ) || is_array( $values[ $key ] ) ) {
+				continue;
+			}
+
+			$_GET[ $key ] = sanitize_text_field( (string) $values[ $key ] );
+		}
 	}
 }

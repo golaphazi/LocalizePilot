@@ -13,6 +13,7 @@
  *     @type string $label   Visible label.
  *     @type string $value   Current value.
  *     @type string $hint    Line under the control.
+ *     @type string $suffix  Unit printed beside the control, e.g. "hours".
  *     @type array  $options Select options, value => label.
  *     @type bool   $readonly
  *     @type string $feature Preview feature key that makes this inert.
@@ -61,6 +62,18 @@ $lp_ro    = ! empty( $args['readonly'] ) || ( ! empty( $args['feature'] ) && Pre
 		<code class="lp-field__code"><?php echo esc_html( $lp_value ); ?></code>
 
 	<?php else : ?>
+		<?php
+		/*
+		 * A unit printed beside the control rather than inside the label, which
+		 * is how the design shows "24 hours" on the cache lifetime.
+		 */
+		$lp_suffix = (string) ( $args['suffix'] ?? '' );
+
+		if ( '' !== $lp_suffix ) :
+			?>
+			<span class="lp-field__row">
+		<?php endif; ?>
+
 		<input
 			class="lp-field__control"
 			type="<?php echo esc_attr( $lp_type ); ?>"
@@ -75,6 +88,11 @@ $lp_ro    = ! empty( $args['readonly'] ) || ( ! empty( $args['feature'] ) && Pre
 			<?php echo $lp_ro ? ' readonly' : ''; ?>
 			<?php echo $lp_gate; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped literals. ?>
 		>
+
+		<?php if ( '' !== $lp_suffix ) : ?>
+				<span class="lp-field__suffix"><?php echo esc_html( $lp_suffix ); ?></span>
+			</span>
+		<?php endif; ?>
 	<?php endif; ?>
 
 	<?php if ( ! empty( $args['hint'] ) ) : ?>

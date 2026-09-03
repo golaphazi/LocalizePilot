@@ -123,7 +123,10 @@ final class Settings {
 		}
 
 		$output['source_language'] = 'en';
-		if ( $changed ) {
+		// A valid form submission is not necessarily a settings change. Avoid
+		// invalidating every rendered page when an administrator clicks Save
+		// without modifying anything (the AJAX UI reports that as a no-op).
+		if ( $changed && $output !== $old ) {
 			Plugin::instance()->bump_cache_version();
 			( new File_Cache( $old ) )->clear_all();
 		}
@@ -249,13 +252,24 @@ final class Settings {
 			$deleted = $cache->delete_history_item( $item_type, $key );
 			$message = $deleted ? __( 'Cache entry deleted.', 'localizepilot' ) : __( 'Cache entry was not found.', 'localizepilot' );
 		}
+		/*
+		 * Two console screens offer these actions, so the caller says which one
+		 * to return to. The value is checked against a fixed list rather than
+		 * trusted, since it arrives in the URL.
+		 */
+		$return_screen = sanitize_key( wp_unslash( $_GET['return_screen'] ?? '' ) );
+
+		if ( ! in_array( $return_screen, array( 'performance', 'cache-management' ), true ) ) {
+			$return_screen = 'cache-management';
+		}
+
 		$redirect = add_query_arg(
 			array(
 				'cache_type'                  => $filter_type,
 				'paged'                       => $cache_page,
 				'localizepilot_cache_message' => $message,
 			),
-			\LocalizePilot\Admin\Screen_Registry::url( 'performance' )
+			\LocalizePilot\Admin\Screen_Registry::url( $return_screen )
 		);
 
 		wp_safe_redirect( $redirect );

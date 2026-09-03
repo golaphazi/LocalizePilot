@@ -58,6 +58,16 @@ abstract class Abstract_Screen {
 	 *
 	 * @return array<string,mixed>
 	 */
+	/**
+	 * Status pill shown at the end of the page header, as the License screen
+	 * does. Empty on every screen that does not report one.
+	 *
+	 * @return array{label:string,tone:string}|array{}
+	 */
+	public function badge(): array {
+		return array();
+	}
+
 	public function data(): array {
 		return array();
 	}
@@ -94,6 +104,7 @@ abstract class Abstract_Screen {
 			'title'       => $this->title(),
 			'description' => $this->description(),
 			'actions'     => $this->actions(),
+			'badge'       => $this->badge(),
 			'navigation'  => Screen_Registry::grouped(),
 			'data'        => $this->data(),
 		);

@@ -19,8 +19,13 @@ $lp_body   = $lp_screen ? $lp_screen->template() : '';
 
 Template::render( 'parts/page-header', $args );
 
-if ( '' !== $lp_body && Template::exists( $lp_body ) ) {
-	Template::render( $lp_body, $args );
-} else {
-	Template::render( 'parts/placeholder', $args );
-}
+?>
+<div class="lp-screen-body">
+	<?php
+	if ( '' !== $lp_body && Template::exists( $lp_body ) ) {
+		Template::render( $lp_body, $args );
+	} else {
+		Template::render( 'parts/placeholder', $args );
+	}
+	?>
+</div>

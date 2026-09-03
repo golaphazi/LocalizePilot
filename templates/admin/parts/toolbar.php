@@ -111,7 +111,15 @@ $lp_filters = (array) ( $args['filters'] ?? array() );
 					class="lp-filter__select"
 					id="lp-filter-<?php echo esc_attr( $lp_name ); ?>"
 					name="<?php echo esc_attr( $lp_name ); ?>"
-					<?php echo '' !== $lp_gate ? ' disabled' : ''; ?>
+					<?php
+					/*
+					 * The marker goes on the control, not just its wrapper: a
+					 * disabled select needs to carry its own explanation, both
+					 * for assistive tech and so nothing is disabled silently.
+					 */
+					echo $lp_gate; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped literals in Preview::attributes().
+					echo '' !== $lp_gate ? ' disabled' : '';
+					?>
 				>
 					<?php foreach ( $lp_options as $lp_key => $lp_text ) : ?>
 						<option value="<?php echo esc_attr( (string) $lp_key ); ?>" <?php selected( (string) $lp_key, $lp_value ); ?>>

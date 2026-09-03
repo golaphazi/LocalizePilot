@@ -28,11 +28,24 @@ final class Preview {
 		$features = array(
 			'media'             => true,
 			'canonical_editing' => true,
-			'global_search'     => true,
 			'notifications'     => true,
 			'analytics_export'  => true,
 			'cache_hit_rate'    => true,
 			'bulk_actions'      => true,
+			'cache_automation'  => true,
+			'cache_filters'     => true,
+			'license'           => true,
+			'switcher_flags'    => true,
+			'switcher_order'    => true,
+			'switcher_placement'=> true,
+			'switcher_behavior' => true,
+			'switcher_block'    => true,
+			/*
+			 * The Performance screen's figures. Nothing in the plugin times a
+			 * render, a provider call, or a cache lookup, so every duration,
+			 * rate and score on that screen is unmeasured.
+			 */
+			'perf_metrics'      => true,
 		);
 
 		/**
