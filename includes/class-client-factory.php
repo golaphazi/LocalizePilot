@@ -26,21 +26,28 @@ final class Client_Factory {
 		$provider = sanitize_key( $provider );
 		switch ( $provider ) {
 			case 'google':
-				return new Google_Translate_Client( $settings );
+				$client = new Google_Translate_Client( $settings );
+				break;
 			case 'gemini':
-				return new Gemini_Client( $settings, $provider );
+				$client = new Gemini_Client( $settings, $provider );
+				break;
 			case 'anthropic':
-				return new Anthropic_Client( $settings, $provider );
+				$client = new Anthropic_Client( $settings, $provider );
+				break;
 			case 'openai':
 			case 'kimi':
 			case 'deepseek':
 			case 'mistral':
 			case 'groq':
 			case 'openrouter':
-				return new OpenAI_Compatible_Client( $settings, $provider );
+				$client = new OpenAI_Compatible_Client( $settings, $provider );
+				break;
 			case 'translatex':
 			default:
-				return new TranslateX_Client( $settings );
+				$client = new TranslateX_Client( $settings );
+				break;
 		}
+
+		return new Measured_Client( $client );
 	}
 }

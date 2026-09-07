@@ -15,6 +15,15 @@ final class Plugin {
 	private Translation_Manager $translations;
 	private array $settings = array();
 
+	/**
+	 * Whether the page cache answered this request: true, false, or null when
+	 * the request never got as far as consulting it. Reset per request.
+	 */
+	private ?bool $cache_hit = null;
+
+	/** Whether this response entered the translated-output path. */
+	private bool $translated_output = false;
+
 	public static function instance(): Plugin {
 		if ( null === self::$instance ) {
 			self::$instance = new self();
@@ -306,7 +315,71 @@ final class Plugin {
 		ob_start( array( $this, 'process_output' ) );
 	}
 
+	/**
+	 * Time the whole output pass and report it.
+	 *
+	 * The measurement wraps the method rather than living inside it because
+	 * that method has half a dozen early returns, and a timer threaded through
+	 * all of them would eventually miss one. Wrapping measures what a visitor
+	 * actually waited for.
+	 *
+	 * Nothing here records anything. LocalizePilot does not keep performance
+	 * history — it publishes the measurement, and whatever wants to keep it
+	 * listens. With no listener this costs two microtime() calls.
+	 */
 	public function process_output( string $html ): string {
+		$this->cache_hit        = null;
+		$this->translated_output = false;
+
+		$started    = microtime( true );
+		$translated = $this->translate_output( $html );
+		$duration   = ( microtime( true ) - $started ) * 1000;
+
+		/**
+		 * Fires once a front-end response has been through LocalizePilot.
+		 *
+		 * @param array<string,mixed> $measurement {
+		 *     @type float       $duration   Milliseconds spent in this pass.
+		 *     @type string      $language   Language served.
+		 *     @type string      $source     Source language.
+		 *     @type bool        $translated Whether translation work happened.
+		 *     @type bool|null   $cache_hit  Whether the page cache answered,
+		 *                                   or null when it was not consulted.
+		 *     @type string      $url        The request URL.
+		 * }
+		 */
+		do_action(
+			'localizepilot_page_processed',
+			array(
+				'duration'   => $duration,
+				'language'   => $this->router->current_language(),
+				'source'     => $this->router->source_language(),
+				'translated' => $this->translated_output,
+				'cache_hit'  => $this->cache_hit,
+				// The path only. A query string on a translated page view can
+				// carry anything a visitor typed, and this is handed to
+				// whatever is listening.
+				'url'        => $this->request_path(),
+			)
+		);
+
+		return $translated;
+	}
+
+	/**
+	 * The path of the current request, without its query string.
+	 */
+	private function request_path(): string {
+		$uri = isset( $_SERVER['REQUEST_URI'] )
+			? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) )
+			: '';
+
+		$path = (string) wp_parse_url( $uri, PHP_URL_PATH );
+
+		return '' !== $path ? $path : '/';
+	}
+
+	private function translate_output( string $html ): string {
 		if ( '' === trim( $html ) || false === stripos( $html, '<html' ) ) {
 			return $html;
 		}
@@ -326,6 +399,8 @@ final class Plugin {
 				return $switcher->inject( $html );
 			}
 
+			$this->translated_output = true;
+
 			$cache       = new File_Cache( $this->settings );
 			$identity    = $this->router->language_url( $source );
 			$fingerprint = $this->cache_fingerprint();
@@ -335,9 +410,21 @@ final class Plugin {
 				? $cache->make_post_key( $post_id, $current )
 				: $cache->make_key( $identity, $current, $fingerprint );
 			$cacheable   = $this->can_use_page_cache( $html );
-			$cached      = $cacheable ? $cache->get( $cache_key, $source_hash ) : null;
+			$cached      = $cacheable
+				? $cache->get(
+					$cache_key,
+					$source_hash,
+					array(
+						'language' => $current,
+						'url'      => $this->request_path(),
+					)
+				)
+				: null;
 
-			if ( is_string( $cached ) && '' !== $cached ) {
+			// Null means this response was not eligible for a cache lookup.
+			$this->cache_hit = $cacheable ? ( is_string( $cached ) && '' !== $cached ) : null;
+
+			if ( $this->cache_hit ) {
 				$processed = $cached;
 			} else {
 				$limit_enabled    = ! empty( $this->settings['daily_limit_enabled'] );

@@ -64,10 +64,11 @@ final class Addons {
 	private static array $active = array();
 
 	/**
-	 * Add-ons that asked to register and were refused, keyed by slug, each
-	 * with the reason. An add-on reads its own entry to explain itself.
+	 * Add-ons that asked to register and were refused, keyed by slug. The
+	 * structured record lets registration remain safe on plugins_loaded while
+	 * the human message is translated later, after WordPress permits it.
 	 *
-	 * @var array<string,string>
+	 * @var array<string,array<string,mixed>>
 	 */
 	private static array $refused = array();
 
@@ -111,24 +112,22 @@ final class Addons {
 		$current  = self::api_version();
 
 		if ( $requires > $current ) {
-			self::$refused[ $slug ] = sprintf(
-				/* translators: 1: add-on name, 2: API version the add-on needs, 3: API version LocalizePilot provides. */
-				__( '%1$s needs LocalizePilot add-on API %2$d, and this copy of LocalizePilot provides %3$d. Update LocalizePilot.', 'localizepilot' ),
-				(string) ( $addon['name'] ?? $slug ),
-				$requires,
-				$current
+			self::$refused[ $slug ] = array(
+				'type'     => 'newer',
+				'name'     => (string) ( $addon['name'] ?? $slug ),
+				'requires' => $requires,
+				'current'  => $current,
 			);
 
 			return false;
 		}
 
 		if ( $requires < self::MIN_API ) {
-			self::$refused[ $slug ] = sprintf(
-				/* translators: 1: add-on name, 2: API version the add-on was built against, 3: oldest API version still supported. */
-				__( '%1$s was built for LocalizePilot add-on API %2$d, which this release no longer supports (the oldest is %3$d). Update %1$s.', 'localizepilot' ),
-				(string) ( $addon['name'] ?? $slug ),
-				$requires,
-				self::MIN_API
+			self::$refused[ $slug ] = array(
+				'type'     => 'older',
+				'name'     => (string) ( $addon['name'] ?? $slug ),
+				'requires' => $requires,
+				'minimum'  => self::MIN_API,
 			);
 
 			return false;
@@ -183,7 +182,9 @@ final class Addons {
 	 * Why an add-on was refused, or an empty string if it was not.
 	 */
 	public static function refusal( string $slug ): string {
-		return self::$refused[ sanitize_key( $slug ) ] ?? '';
+		$refusal = self::$refused[ sanitize_key( $slug ) ] ?? array();
+
+		return empty( $refusal ) ? '' : self::format_refusal( $refusal );
 	}
 
 	/**
@@ -192,6 +193,47 @@ final class Addons {
 	 * @return array<string,string>
 	 */
 	public static function refusals(): array {
-		return self::$refused;
+		$messages = array();
+
+		foreach ( self::$refused as $slug => $refusal ) {
+			$messages[ $slug ] = self::format_refusal( $refusal );
+		}
+
+		return $messages;
+	}
+
+	/**
+	 * Turn a refusal record into user-facing copy at the moment it is read.
+	 *
+	 * Add-ons register on plugins_loaded. Calling __() there triggers a
+	 * WordPress 6.7+ doing-it-wrong notice, so an unusually early reader gets
+	 * the same English fallback; normal admin notices run after init and are
+	 * translated.
+	 *
+	 * @param array<string,mixed> $refusal Stored refusal facts.
+	 */
+	private static function format_refusal( array $refusal ): string {
+		$name     = (string) ( $refusal['name'] ?? '' );
+		$requires = (int) ( $refusal['requires'] ?? 0 );
+
+		if ( 'older' === (string) ( $refusal['type'] ?? '' ) ) {
+			if ( did_action( 'init' ) ) {
+				/* translators: 1: add-on name, 2: its API version, 3: oldest supported API version. */
+				$format = __( '%1$s was built for LocalizePilot add-on API %2$d, which this release no longer supports (the oldest is %3$d). Update %1$s.', 'localizepilot' );
+			} else {
+				$format = '%1$s was built for LocalizePilot add-on API %2$d, which this release no longer supports (the oldest is %3$d). Update %1$s.';
+			}
+
+			return sprintf( $format, $name, $requires, (int) ( $refusal['minimum'] ?? self::MIN_API ) );
+		}
+
+		if ( did_action( 'init' ) ) {
+			/* translators: 1: add-on name, 2: required API version, 3: provided API version. */
+			$format = __( '%1$s needs LocalizePilot add-on API %2$d, and this copy of LocalizePilot provides %3$d. Update LocalizePilot.', 'localizepilot' );
+		} else {
+			$format = '%1$s needs LocalizePilot add-on API %2$d, and this copy of LocalizePilot provides %3$d. Update LocalizePilot.';
+		}
+
+		return sprintf( $format, $name, $requires, (int) ( $refusal['current'] ?? self::api_version() ) );
 	}
 }

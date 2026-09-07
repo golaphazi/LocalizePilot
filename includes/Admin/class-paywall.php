@@ -56,12 +56,26 @@ final class Paywall {
 		 * it is precisely the person who has not installed that add-on. An
 		 * add-on cannot describe itself to someone who does not have it.
 		 *
-		 * It is empty because nothing is being sold yet. Performance
-		 * monitoring and the media language and status filters each get an
-		 * entry when the add-on genuinely ships them, and not one release
-		 * earlier.
+		 * Performance monitoring is here because the add-on measures it: the
+		 * render timer, cache outcome and provider stopwatch are published as
+		 * actions, and something is listening. The media
+		 * language and status filters get an entry when they land, and not
+		 * one release earlier.
 		 */
-		$features = array();
+		$features = array(
+			'performance' => array(
+				'title'   => __( 'Performance monitoring', 'localizepilot' ),
+				'promise' => __( 'Measure what your translated pages actually cost your visitors, from real requests rather than estimates.', 'localizepilot' ),
+				'points'  => array(
+					__( 'Render time for translated pages: fastest, average and slowest', 'localizepilot' ),
+					__( 'Cache hit rate, measured on real page views', 'localizepilot' ),
+					__( 'Response time for each translation provider you use', 'localizepilot' ),
+					__( 'A breakdown by language, so you can see which one is slow', 'localizepilot' ),
+					__( 'The specific pages running behind, with their timings', 'localizepilot' ),
+					__( 'Thirty days of history', 'localizepilot' ),
+				),
+			),
+		);
 
 		if ( self::is_component_gallery() ) {
 			$features['__gallery'] = array(

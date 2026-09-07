@@ -141,9 +141,18 @@ final class File_Cache {
 		return $count;
 	}
 
-	public function get( string $key, string $source_hash = '' ): ?string {
+	/**
+	 * Read one rendered page from cache.
+	 *
+	 * The optional context marks a visitor-facing lookup that should publish a
+	 * hit or miss measurement. Internal existence checks omit it, so a cache
+	 * warm-up probe cannot quietly lower the reported hit rate.
+	 *
+	 * @param array<string,string> $context Optional language and request URL.
+	 */
+	public function get( string $key, string $source_hash = '', array $context = array() ): ?string {
 		if ( ! $this->is_enabled() ) {
-			return null;
+			return $this->finish_lookup( null, $key, $context, 'disabled' );
 		}
 
 		$ttl = max( HOUR_IN_SECONDS, absint( $this->settings['cache_hours'] ?? 24 ) * HOUR_IN_SECONDS );
@@ -154,40 +163,76 @@ final class File_Cache {
 			if ( $found && is_array( $cached ) && ! empty( $cached['html'] ) ) {
 				$cached_hash = (string) ( $cached['source_hash'] ?? '' );
 				if ( empty( $this->settings['refresh_on_source_change'] ) || '' === $source_hash || '' === $cached_hash || hash_equals( $cached_hash, $source_hash ) ) {
-					return (string) $cached['html'];
+					return $this->finish_lookup( (string) $cached['html'], $key, $context, 'object-cache' );
 				}
 			}
 		}
 
 		$filesystem = $this->filesystem();
 		if ( null === $filesystem ) {
-			return null;
+			return $this->finish_lookup( null, $key, $context, 'filesystem-unavailable' );
 		}
 
 		$paths = $this->paths( $key );
 		if ( ! $filesystem->is_file( $paths['html'] ) ) {
-			return null;
+			return $this->finish_lookup( null, $key, $context, 'missing' );
 		}
 
 		$modified = $filesystem->mtime( $paths['html'] );
 		if ( false === $modified || ( time() - (int) $modified ) >= $ttl ) {
-			return null;
+			return $this->finish_lookup( null, $key, $context, 'expired' );
 		}
 
 		if ( ! empty( $this->settings['refresh_on_source_change'] ) && '' !== $source_hash ) {
 			$meta = $this->read_metadata( $paths['meta'] );
 			if ( ! empty( $meta['source_hash'] ) && ! hash_equals( (string) $meta['source_hash'], $source_hash ) ) {
-				return null;
+				return $this->finish_lookup( null, $key, $context, 'source-changed' );
 			}
 		}
 
 		$html = $this->read_file( $paths['html'] );
 		if ( null === $html || '' === $html ) {
-			return null;
+			return $this->finish_lookup( null, $key, $context, 'unreadable' );
 		}
 
 		if ( ! empty( $this->settings['object_cache_enabled'] ) ) {
 			wp_cache_set( $key, array( 'html' => $html, 'source_hash' => $source_hash ), $this->group, $ttl );
+		}
+
+		return $this->finish_lookup( $html, $key, $context, 'file-cache' );
+	}
+
+	/**
+	 * Publish exactly one result for a measured page-cache lookup.
+	 *
+	 * LocalizePilot does not retain this event. The Pro add-on may aggregate it,
+	 * while sites running only the free plugin pay only for the action dispatch.
+	 *
+	 * @param array<string,string> $context Lookup context supplied by the caller.
+	 */
+	private function finish_lookup( ?string $html, string $key, array $context, string $reason ): ?string {
+		if ( ! empty( $context ) ) {
+			/**
+			 * Fires after a visitor-facing rendered-page cache lookup.
+			 *
+			 * @param array<string,mixed> $measurement {
+			 *     @type bool   $hit      Whether usable cached HTML was returned.
+			 *     @type string $key      The sanitized cache key.
+			 *     @type string $language Language requested.
+			 *     @type string $url      Request path, without its query string.
+			 *     @type string $reason   Where the lookup ended.
+			 * }
+			 */
+			do_action(
+				'localizepilot_cache_lookup',
+				array(
+					'hit'      => is_string( $html ) && '' !== $html,
+					'key'      => substr( preg_replace( '/[^a-z0-9_-]/i', '', $key ) ?: hash( 'sha256', $key ), 0, 128 ),
+					'language' => sanitize_key( (string) ( $context['language'] ?? '' ) ),
+					'url'      => (string) ( $context['url'] ?? '' ),
+					'reason'   => sanitize_key( $reason ),
+				)
+			);
 		}
 
 		return $html;

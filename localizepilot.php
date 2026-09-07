@@ -23,8 +23,13 @@ define( 'LOCALIZEPILOT_VERSION', '1.0.3' );
  * Deliberately separate from the release version above. This moves only when
  * the seams an add-on hooks into change shape, so an add-on can state exactly
  * what it needs without pinning itself to a bug-fix release.
+ *
+ *   1  The console seams: screens, templates, scripts, payload, media data.
+ *   2  Adds localizepilot_page_processed, localizepilot_cache_lookup and
+ *      localizepilot_provider_request. Additive, so an add-on built for 1
+ *      still registers — Addons::MIN_API is what would end that.
  */
-define( 'LOCALIZEPILOT_API', 1 );
+define( 'LOCALIZEPILOT_API', 2 );
 
 define( 'LOCALIZEPILOT_FILE', __FILE__ );
 define( 'LOCALIZEPILOT_PATH', plugin_dir_path( __FILE__ ) );

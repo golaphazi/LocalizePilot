@@ -4818,6 +4818,15 @@
 	line-height: 28px;
 }
 
+/* Missing measurements are prose, not a mysterious placeholder glyph. */
+.localizepilot-console .lp-metric.is-empty .lp-metric__value {
+	font-family: var(--lp-font-body);
+	font-size: var(--lp-text-sm);
+	font-weight: 600;
+	letter-spacing: 0;
+	line-height: 20px;
+}
+
 .localizepilot-console .lp-metric--inline {
 	color: var(--lp-ink-faint);
 	font-size: var(--lp-text-md);

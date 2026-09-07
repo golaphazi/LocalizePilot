@@ -48,12 +48,6 @@ final class Preview {
 			'switcher_order'    => true,
 			'switcher_placement'=> true,
 			'switcher_behavior' => true,
-			/*
-			 * The Performance screen's figures. Nothing in the plugin times a
-			 * render, a provider call, or a cache lookup, so every duration,
-			 * rate and score on that screen is unmeasured.
-			 */
-			'perf_metrics'      => true,
 		);
 
 		/**
