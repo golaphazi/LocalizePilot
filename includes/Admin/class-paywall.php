@@ -30,6 +30,16 @@ namespace LocalizePilot\Admin;
 defined( 'ABSPATH' ) || exit;
 
 final class Paywall {
+	/** The element carrying the explanation every locked control points at. */
+	public const HINT_ID = 'lp-paywall-hint';
+
+	/**
+	 * What a locked control is described as, for assistive technology.
+	 */
+	public static function hint(): string {
+		return __( 'This control belongs to the paid add-on. Activating it opens a description of what the add-on includes instead of performing the action.', 'localizepilot' );
+	}
+
 	/**
 	 * Where someone who does not have the add-on goes to get it.
 	 *
@@ -187,8 +197,14 @@ final class Paywall {
 		$entry = self::get( $feature );
 		$title = null !== $entry ? (string) $entry['title'] : '';
 
+		/*
+		 * aria-describedby carries the reason. A shared description rather
+		 * than a per-feature one: it supplements the control's own label,
+		 * which already says what the control is, so naming the feature twice
+		 * would only make it longer to listen to.
+		 */
 		$attributes = sprintf(
-			' data-lp-paywall="%1$s" aria-disabled="true" title="%2$s"',
+			' data-lp-paywall="%1$s" aria-disabled="true" aria-describedby="%3$s" title="%2$s"',
 			esc_attr( $feature ),
 			esc_attr(
 				sprintf(
@@ -196,7 +212,8 @@ final class Paywall {
 					__( '%s is part of the paid add-on. Select to see what it includes.', 'localizepilot' ),
 					$title
 				)
-			)
+			),
+			esc_attr( self::HINT_ID )
 		);
 
 		return $focusable ? $attributes . ' role="button" tabindex="0"' : $attributes;

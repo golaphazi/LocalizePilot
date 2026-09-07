@@ -7,6 +7,8 @@
  * @var array<string,mixed> $args Layout data supplied by Abstract_Screen::render().
  */
 
+use LocalizePilot\Admin\Paywall;
+use LocalizePilot\Admin\Preview;
 use LocalizePilot\Admin\Template;
 
 defined( 'ABSPATH' ) || exit;
@@ -37,6 +39,21 @@ $lp_slug = (string) ( $args['slug'] ?? '' );
 				 */
 				?>
 				<p class="screen-reader-text" id="lp-announcer" role="status" data-lp-announcer></p>
+
+				<?php
+				/*
+				 * The explanations every gated control points at with
+				 * aria-describedby. Rendered once for the whole console, and
+				 * outside #lp-view so a client-side navigation cannot swap
+				 * away the text a control on the new screen refers to.
+				 */
+				?>
+				<span class="screen-reader-text" id="<?php echo esc_attr( Preview::HINT_ID ); ?>">
+					<?php echo esc_html( Preview::hint() ); ?>
+				</span>
+				<span class="screen-reader-text" id="<?php echo esc_attr( Paywall::HINT_ID ); ?>">
+					<?php echo esc_html( Paywall::hint() ); ?>
+				</span>
 
 				<?php
 				/*
