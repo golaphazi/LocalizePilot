@@ -555,6 +555,14 @@
 	appearance: none;
 }
 
+/* WordPress adds its own repeating SVG background to disabled selects. The
+   console already supplies one inline chevron, so suppress only that core
+   background while preserving the control's disabled state. */
+.localizepilot-console .lp-filter__select:disabled {
+	background-image: none;
+	background-repeat: no-repeat;
+}
+
 .localizepilot-console .lp-filter__chevron {
 	position: absolute;
 	inset-inline-end: 10px;

@@ -58,9 +58,9 @@ final class Paywall {
 		 *
 		 * Performance monitoring is here because the add-on measures it: the
 		 * render timer, cache outcome and provider stopwatch are published as
-		 * actions, and something is listening. The media
-		 * language and status filters get an entry when they land, and not
-		 * one release earlier.
+		 * actions, and something is listening. Media filters are here because
+		 * the add-on now owns a real attachment-variant model and fills the
+		 * query, row and counter seams from that data.
 		 */
 		$features = array(
 			'performance' => array(
@@ -73,6 +73,16 @@ final class Paywall {
 					__( 'A breakdown by language, so you can see which one is slow', 'localizepilot' ),
 					__( 'The specific pages running behind, with their timings', 'localizepilot' ),
 					__( 'Thirty days of history', 'localizepilot' ),
+				),
+			),
+			'media_filters' => array(
+				'title'   => __( 'Media language and status filters', 'localizepilot' ),
+				'promise' => __( 'See which source files have real language-specific variants and which variants are older than their source.', 'localizepilot' ),
+				'points'  => array(
+					__( 'Filter the Media screen by target language', 'localizepilot' ),
+					__( 'Filter by localized, needs update or not localized', 'localizepilot' ),
+					__( 'Show real language chips and derived status on every source file', 'localizepilot' ),
+					__( 'Count source media and language-specific variants accurately', 'localizepilot' ),
 				),
 			),
 		);

@@ -6,8 +6,8 @@
  * @package LocalizePilot
  *
  * @var array<string,mixed> $args {
- *     @type array  $primary Visible action {label, url, style: link|solid, drawer, external}.
- *     @type array  $menu    Overflow items, each {label, url, destructive, external, drawer}.
+ *     @type array  $primary Visible action {label, url, style: link|solid, drawer, external, feature}.
+ *     @type array  $menu    Overflow items, each {label, url, destructive, external, drawer, feature}.
  *     @type string $label   Row name, for the menu's accessible name.
  *     @type string $feature Preview feature key gating both.
  * }
@@ -21,6 +21,9 @@ defined( 'ABSPATH' ) || exit;
 $lp_primary = (array) ( $args['primary'] ?? array() );
 $lp_menu    = (array) ( $args['menu'] ?? array() );
 $lp_gate    = ! empty( $args['feature'] ) ? Preview::attributes( (string) $args['feature'] ) : '';
+$lp_primary_gate = ! empty( $lp_primary['feature'] )
+	? Preview::attributes( (string) $lp_primary['feature'] )
+	: $lp_gate;
 $lp_solid   = 'solid' === ( $lp_primary['style'] ?? 'link' );
 ?>
 <div class="lp-row-actions">
@@ -41,7 +44,7 @@ $lp_solid   = 'solid' === ( $lp_primary['style'] ?? 'link' );
 				data-lp-drawer-remote="<?php echo esc_attr( (string) $lp_drawer ); ?>"
 				aria-haspopup="dialog"
 			<?php endif; ?>
-			<?php echo $lp_gate; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped literals. ?>
+			<?php echo $lp_primary_gate; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped literals. ?>
 		>
 			<?php echo esc_html( (string) $lp_primary['label'] ); ?>
 		</a>
@@ -81,7 +84,12 @@ $lp_solid   = 'solid' === ( $lp_primary['style'] ?? 'link' );
 
 			<div class="lp-menu__list" id="<?php echo esc_attr( $lp_menu_id ); ?>" role="menu" data-lp-menu-list hidden>
 				<?php foreach ( $lp_menu as $lp_item ) : ?>
-					<?php $lp_item_drawer = (int) ( $lp_item['drawer'] ?? 0 ); ?>
+					<?php
+					$lp_item_drawer = (int) ( $lp_item['drawer'] ?? 0 );
+					$lp_item_gate   = ! empty( $lp_item['feature'] )
+						? Preview::attributes( (string) $lp_item['feature'] )
+						: $lp_gate;
+					?>
 					<a
 						class="lp-menu__item<?php echo ! empty( $lp_item['destructive'] ) ? ' is-destructive' : ''; ?>"
 						href="<?php echo esc_url( (string) ( $lp_item['url'] ?? '#' ) ); ?>"
@@ -92,7 +100,7 @@ $lp_solid   = 'solid' === ( $lp_primary['style'] ?? 'link' );
 							data-lp-drawer-remote="<?php echo esc_attr( (string) $lp_item_drawer ); ?>"
 							aria-haspopup="dialog"
 						<?php endif; ?>
-						<?php echo $lp_gate; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped literals. ?>
+						<?php echo $lp_item_gate; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped literals. ?>
 					>
 						<?php echo esc_html( (string) ( $lp_item['label'] ?? '' ) ); ?>
 					</a>

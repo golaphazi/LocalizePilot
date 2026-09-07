@@ -3,16 +3,16 @@
  * Media screen.
  *
  * The library is this site's own attachments. The language columns report
- * what LocalizePilot currently does with media, which is serve the source
- * file everywhere — see Media_Repository. Every control that would change
- * that is gated through Preview's media_filters, media_bulk and
- * media_localize features.
+ * what LocalizePilot currently knows about each source file. A paid add-on
+ * may fill the language/status read seams; controls that write variants stay
+ * gated independently through media_bulk and media_localize.
  *
  * @package LocalizePilot
  *
  * @var array<string,mixed> $args Layout data.
  */
 
+use LocalizePilot\Admin\Paywall;
 use LocalizePilot\Admin\Preview;
 use LocalizePilot\Admin\Template;
 
@@ -122,9 +122,10 @@ $lp_cell = static function ( array $row ) use ( $lp_data ): array {
 			array(
 				'label'   => (string) $row['title'],
 				'primary' => array(
-					'label' => __( 'Localize', 'localizepilot' ),
-					'style' => 'solid',
-					'url'   => (string) $row['edit_url'],
+					'label'   => __( 'Localize', 'localizepilot' ),
+					'style'   => 'solid',
+					'url'     => (string) $row['edit_url'],
+					'feature' => 'media_localize',
 				),
 				'menu'    => array(
 					array( 'label' => __( 'Edit in Media Library', 'localizepilot' ), 'url' => (string) $row['edit_url'] ),
@@ -146,20 +147,20 @@ $lp_table = Template::capture(
 			'placeholder' => __( 'Search media, filename, or URL…', 'localizepilot' ),
 		),
 		'filters' => array(
-			// Nothing records a language or a localization state per
-			// attachment yet, so these two render but cannot be operated.
+			// The add-on owns these read-only filters. Free keeps them visible
+			// and opens the shared feature explanation when selected.
 			array(
 				'name'    => 'language',
 				'label'   => __( 'Language', 'localizepilot' ),
 				'value'   => (string) ( $lp_filters['language'] ?? '' ),
-				'feature' => 'media_filters',
+				'paywall' => 'media_filters',
 				'options' => (array) ( $lp_data['languages'] ?? array() ),
 			),
 			array(
 				'name'    => 'status',
 				'label'   => __( 'Status', 'localizepilot' ),
 				'value'   => (string) ( $lp_filters['status'] ?? '' ),
-				'feature' => 'media_filters',
+				'paywall' => 'media_filters',
 				'options' => array(
 					''              => __( 'All Status', 'localizepilot' ),
 					'localized'     => __( 'Localized', 'localizepilot' ),
@@ -253,6 +254,7 @@ if ( ! empty( $lp_items ) ) {
 						's'        => $lp_filters['search'] ?? '',
 						'language' => $lp_filters['language'] ?? '',
 						'status'   => $lp_filters['status'] ?? '',
+						'order'    => $lp_filters['order'] ?? '',
 					)
 				),
 				(string) ( $lp_data['base_url'] ?? '' )
@@ -277,8 +279,12 @@ Template::render(
 );
 ?>
 
-<?php if ( Preview::any( array( 'media_filters', 'media_bulk', 'media_localize' ) ) ) : ?>
+<?php if ( Preview::any( array( 'media_bulk', 'media_localize' ) ) ) : ?>
 	<p class="lp-filtered-note">
-		<?php esc_html_e( 'Media localization is not connected yet — this library is real, its language columns describe what LocalizePilot does today.', 'localizepilot' ); ?>
+		<?php if ( Paywall::is_unlocked( 'media_filters' ) ) : ?>
+			<?php esc_html_e( 'Language and status filters use real media variants. Creating variants and bulk media actions are not connected yet.', 'localizepilot' ); ?>
+		<?php else : ?>
+			<?php esc_html_e( 'Media localization actions are not connected yet. Pro adds read-only language and status filtering from real media variants.', 'localizepilot' ); ?>
+		<?php endif; ?>
 	</p>
 <?php endif; ?>

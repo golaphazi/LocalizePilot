@@ -5,13 +5,12 @@
  * The media library itself is real: every row is an attachment from this
  * site, with its real thumbnail, filename, type, parent and modified date.
  *
- * The localization columns are not invented either. LocalizePilot stores no
- * per-attachment language data — there is no meta key to read — so every
- * attachment really is served in its source form, which is exactly what the
- * Languages and Status columns say. When media localization ships,
- * localization() starts returning real values and no template changes.
+ * The localization columns are not invented either. LocalizePilot itself
+ * stores no per-attachment language data, so every attachment is served in
+ * its source form. An add-on can supply real variants through the query, row
+ * and count filters without coupling this repository to that add-on.
  *
- * The screen's controls stay inert through Preview's media_filters,
+ * Filtering is a paid seam; write operations stay inert through Preview's
  * media_bulk and media_localize features.
  *
  * @package LocalizePilot
@@ -56,8 +55,8 @@ final class Media_Repository {
 		 * Filter the attachment query behind the Media screen.
 		 *
 		 * The language and status filters arrive in $filters but are not
-		 * applied here, because nothing in LocalizePilot records either one
-		 * per attachment. Whatever does record them adds the meta_query.
+		 * applied here, because LocalizePilot does not own attachment variants.
+		 * Whatever records them constrains this query through this seam.
 		 *
 		 * @param array<string,mixed> $args    WP_Query arguments.
 		 * @param array<string,mixed> $filters The screen's request filters.

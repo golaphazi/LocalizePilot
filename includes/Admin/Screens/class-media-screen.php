@@ -2,9 +2,9 @@
 /**
  * Media console screen.
  *
- * The library is real; the localization of it is not built yet, so every
- * control on this screen is gated through Preview's media_filters,
- * media_bulk and media_localize features.
+ * The library is real. LocalizePilot supplies source attachment data and an
+ * add-on seam for language/status filtering; write operations remain gated
+ * independently as media_bulk and media_localize previews.
  *
  * @package LocalizePilot
  */
@@ -71,11 +71,9 @@ final class Media_Screen extends Abstract_Screen {
 	 */
 	private function filters(): array {
 		/*
-		 * language and status are read but not acted on: nothing here records
-		 * either one per attachment, so the repository has no meta to match.
-		 * They are read anyway so the values survive a round trip — the
-		 * controls stay selected, pagination keeps them, and whatever starts
-		 * recording that data only has to supply a meta_query.
+		 * LocalizePilot does not act on language or status itself. They survive
+		 * the round trip and are passed to the repository seam, where an add-on
+		 * that owns attachment variants can apply them.
 		 */
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only list filters with no side effects.
 		return array(

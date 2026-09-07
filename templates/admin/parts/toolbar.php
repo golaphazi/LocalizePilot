@@ -17,10 +17,12 @@
  *     @type array  $hidden  Hidden fields, name => value.
  *     @type array  $search  {name, value, placeholder}.
  *     @type array  $filters Each {type: select|toggle, name, label, value,
- *                           options, icon, checked, divider_before, feature}.
+ *                           options, icon, checked, divider_before, feature,
+ *                           paywall}.
  * }
  */
 
+use LocalizePilot\Admin\Paywall;
 use LocalizePilot\Admin\Preview;
 use LocalizePilot\Admin\Template;
 
@@ -58,9 +60,22 @@ $lp_filters = (array) ( $args['filters'] ?? array() );
 				continue;
 			}
 
-			// A control for something the plugin does not record yet renders,
-			// but cannot be operated.
-			$lp_gate = ! empty( $lp_filter['feature'] ) ? Preview::attributes( (string) $lp_filter['feature'] ) : '';
+			/*
+			 * Preview and paid controls share the same disabled native control,
+			 * but they must remain distinct states. The paid wrapper is focusable
+			 * so it can open the explanation modal; the disabled select itself is
+			 * only marked for assistive technology.
+			 */
+			$lp_gate         = '';
+			$lp_control_gate = '';
+
+			if ( ! empty( $lp_filter['paywall'] ) ) {
+				$lp_gate         = Paywall::attributes( (string) $lp_filter['paywall'] );
+				$lp_control_gate = Paywall::attributes( (string) $lp_filter['paywall'], false );
+			} elseif ( ! empty( $lp_filter['feature'] ) ) {
+				$lp_gate         = Preview::attributes( (string) $lp_filter['feature'] );
+				$lp_control_gate = $lp_gate;
+			}
 
 			if ( ! empty( $lp_filter['divider_before'] ) ) :
 				?>
@@ -72,7 +87,7 @@ $lp_filters = (array) ( $args['filters'] ?? array() );
 				?>
 				<label
 					class="lp-chip-toggle<?php echo ! empty( $lp_filter['checked'] ) ? ' is-active' : ''; ?>"
-					<?php echo $lp_gate; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped literals in Preview::attributes(). ?>
+					<?php echo $lp_gate; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built by the central gate helpers from escaped literals. ?>
 				>
 					<input
 						type="checkbox"
@@ -103,7 +118,7 @@ $lp_filters = (array) ( $args['filters'] ?? array() );
 			$lp_default = (string) array_key_first( $lp_options );
 			$lp_active  = $lp_value !== $lp_default;
 			?>
-			<span class="lp-filter<?php echo $lp_active ? ' is-active' : ''; ?>" <?php echo $lp_gate; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped literals in Preview::attributes(). ?>>
+			<span class="lp-filter<?php echo $lp_active ? ' is-active' : ''; ?>" <?php echo $lp_gate; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built by the central gate helpers from escaped literals. ?>>
 				<label class="screen-reader-text" for="lp-filter-<?php echo esc_attr( $lp_name ); ?>">
 					<?php echo esc_html( (string) ( $lp_filter['label'] ?? $lp_name ) ); ?>
 				</label>
@@ -117,7 +132,7 @@ $lp_filters = (array) ( $args['filters'] ?? array() );
 					 * disabled select needs to carry its own explanation, both
 					 * for assistive tech and so nothing is disabled silently.
 					 */
-					echo $lp_gate; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped literals in Preview::attributes().
+					echo $lp_control_gate; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built by the central gate helpers from escaped literals.
 					echo '' !== $lp_gate ? ' disabled' : '';
 					?>
 				>

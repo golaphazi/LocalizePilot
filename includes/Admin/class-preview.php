@@ -34,7 +34,6 @@ final class Preview {
 			 * mean unlocking the ones that are not built to unlock the one
 			 * that is.
 			 */
-			'media_filters'     => true,
 			'media_bulk'        => true,
 			'media_localize'    => true,
 			'canonical_editing' => true,
