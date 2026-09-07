@@ -29,6 +29,7 @@ final class Translation_Manager {
 		add_action( 'init', array( $this, 'migrate_translation_parents' ), 20 );
 		add_action( 'add_meta_boxes_post', array( $this, 'add_source_meta_box' ) );
 		add_action( 'add_meta_boxes_page', array( $this, 'add_source_meta_box' ) );
+		add_action( 'add_meta_boxes_product', array( $this, 'add_source_meta_box' ) );
 		add_action( 'add_meta_boxes_' . self::POST_TYPE, array( $this, 'add_translation_meta_box' ) );
 		add_action( 'admin_post_next_translate_create_translation', array( $this, 'create_translation_action' ) );
 		add_action( 'admin_post_next_translate_refresh_translation', array( $this, 'refresh_translation_action' ) );
@@ -343,7 +344,7 @@ final class Translation_Manager {
 		$this->settings = Plugin::instance()->get_settings();
 		$source         = get_post( $source_id );
 
-		if ( ! $source instanceof \WP_Post || ! in_array( $source->post_type, array( 'post', 'page' ), true ) ) {
+		if ( ! $source instanceof \WP_Post || ! in_array( $source->post_type, array( 'post', 'page', 'product' ), true ) ) {
 			throw new \RuntimeException( esc_html__( 'The source post or page was not found.', 'localizepilot' ) );
 		}
 		if ( ! Language_Catalog::exists( $language ) || $language === (string) $this->settings['source_language'] ) {
@@ -609,7 +610,7 @@ final class Translation_Manager {
 	}
 
 	public function current_translation(): ?\WP_Post {
-		if ( ! $this->router->is_translated_request() || ! is_singular( array( 'post', 'page' ) ) ) {
+		if ( ! $this->router->is_translated_request() || ! is_singular( array( 'post', 'page', 'product' ) ) ) {
 			return null;
 		}
 		$source_id = get_queried_object_id();
@@ -617,7 +618,7 @@ final class Translation_Manager {
 	}
 
 	public function filter_content( string $content ): string {
-		if ( is_admin() || ! $this->router->is_translated_request() || ! is_singular( array( 'post', 'page' ) ) || ! in_the_loop() || ! is_main_query() ) {
+		if ( is_admin() || ! $this->router->is_translated_request() || ! is_singular( array( 'post', 'page', 'product' ) ) || ! in_the_loop() || ! is_main_query() ) {
 			return $content;
 		}
 		$source_id = get_the_ID();
@@ -629,7 +630,7 @@ final class Translation_Manager {
 	}
 
 	public function filter_title( string $title, int $post_id ): string {
-		if ( is_admin() || ! $this->router->is_translated_request() || ! is_singular( array( 'post', 'page' ) ) || $post_id !== get_queried_object_id() ) {
+		if ( is_admin() || ! $this->router->is_translated_request() || ! is_singular( array( 'post', 'page', 'product' ) ) || $post_id !== get_queried_object_id() ) {
 			return $title;
 		}
 		$translation = $this->get_translation( $post_id, $this->router->current_language() );
@@ -638,7 +639,7 @@ final class Translation_Manager {
 
 	public function filter_excerpt( string $excerpt, $post ): string {
 		$post = get_post( $post );
-		if ( is_admin() || ! $post instanceof \WP_Post || ! $this->router->is_translated_request() || ! is_singular( array( 'post', 'page' ) ) || $post->ID !== get_queried_object_id() ) {
+		if ( is_admin() || ! $post instanceof \WP_Post || ! $this->router->is_translated_request() || ! is_singular( array( 'post', 'page', 'product' ) ) || $post->ID !== get_queried_object_id() ) {
 			return $excerpt;
 		}
 		$translation = $this->get_translation( $post->ID, $this->router->current_language() );
