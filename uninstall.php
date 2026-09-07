@@ -24,7 +24,11 @@ defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 	delete_option( 'localizepilot_analytics_db_version' );
 
 	wp_clear_scheduled_hook( 'localizepilot_daily_analytics_cleanup' );
-	wp_clear_scheduled_hook( 'localizepilot_warm_page_cache' );
+
+	// Cache-warm events carry a post id and a language, and clearing a hook
+	// only removes events whose arguments match the ones given — so these have
+	// to be unscheduled by hook rather than cleared with no arguments.
+	wp_unschedule_hook( 'localizepilot_warm_page_cache' );
 
 	global $wpdb;
 	$localizepilot_analytics_table = $wpdb->prefix . 'localizepilot_visits';

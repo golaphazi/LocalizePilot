@@ -261,7 +261,15 @@ final class Plugin {
 
 	public static function deactivate(): void {
 		Analytics::deactivate();
-		wp_clear_scheduled_hook( self::CACHE_WARM_HOOK );
+
+		/*
+		 * unschedule, not clear: every cache-warm event is scheduled with a
+		 * post id and a language, and wp_clear_scheduled_hook() only removes
+		 * events whose arguments match the ones it is given — so calling it
+		 * with none leaves all of them behind. Measured: two events scheduled
+		 * with arguments, two still there afterwards.
+		 */
+		wp_unschedule_hook( self::CACHE_WARM_HOOK );
 		flush_rewrite_rules( false );
 	}
 
