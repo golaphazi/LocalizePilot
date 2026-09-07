@@ -21,6 +21,7 @@ defined( 'ABSPATH' ) || exit;
 $lp_preview   = (string) ( $args['preview'] ?? '' );
 $lp_languages = (array) ( $args['languages'] ?? array() );
 $lp_labels    = array();
+$lp_flags     = array();
 
 foreach ( $lp_languages as $lp_language ) {
 	$lp_code = sanitize_key( (string) ( $lp_language['code'] ?? '' ) );
@@ -28,6 +29,8 @@ foreach ( $lp_languages as $lp_language ) {
 	if ( '' === $lp_code ) {
 		continue;
 	}
+
+	$lp_flags[ $lp_code ] = (string) ( $lp_language['flag'] ?? '' );
 
 	$lp_labels[ $lp_code ] = array(
 		'native'  => (string) ( $lp_language['native'] ?? strtoupper( $lp_code ) ),
@@ -40,6 +43,7 @@ foreach ( $lp_languages as $lp_language ) {
 	class="lp-card lp-switcher-preview"
 	data-lp-switcher-preview
 	data-lp-switcher-labels="<?php echo esc_attr( (string) wp_json_encode( $lp_labels ) ); ?>"
+	data-lp-switcher-flags="<?php echo esc_attr( (string) wp_json_encode( $lp_flags ) ); ?>"
 >
 	<header class="lp-card__head">
 		<div>

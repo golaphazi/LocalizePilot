@@ -146,11 +146,10 @@ Template::render(
 					Template::render(
 						'parts/toggle',
 						array(
-							'name'        => 'localizepilot_switcher_flags',
+							'name'        => Plugin::OPTION . '[show_flags]',
 							'label'       => __( 'Show flags', 'localizepilot' ),
-							'description' => __( 'Display a flag beside each language.', 'localizepilot' ),
-							'checked'     => true,
-							'feature'     => 'switcher_flags',
+							'description' => __( 'Display a flag beside each language name. Windows shows a two-letter code instead of a flag.', 'localizepilot' ),
+							'checked'     => ! empty( $lp_settings['show_flags'] ),
 						)
 					);
 					?>

@@ -21,6 +21,7 @@ final class Language_Switcher {
 	 * - style: inherit, dropdown, inline
 	 * - labels: inherit, native, english, code
 	 * - alignment: inherit, start, center, end
+	 * - flags: inherit, yes, no
 	 * - class: additional CSS classes
 	 */
 	public function render( array $overrides = array() ): string {
@@ -46,12 +47,41 @@ final class Language_Switcher {
 			$position = (string) ( $this->settings['menu_position'] ?? 'end' );
 		}
 
+		$flags = sanitize_key( (string) ( $overrides['flags'] ?? 'inherit' ) );
+		if ( 'inherit' === $flags || ! in_array( $flags, array( 'yes', 'no' ), true ) ) {
+			$show_flags = ! empty( $this->settings['show_flags'] );
+		} else {
+			$show_flags = 'yes' === $flags;
+		}
+
+		/*
+		 * A flag decorates the label, it never replaces it: on Windows the flag
+		 * glyphs do not exist and fall back to two letters, and a flag alone is
+		 * not a language. So this is always emitted alongside the real label and
+		 * hidden from assistive tech, which reads the label instead.
+		 */
+		$flag = static function ( string $code ) use ( $show_flags ): string {
+			if ( ! $show_flags ) {
+				return '';
+			}
+
+			$emoji = Language_Catalog::flag( $code );
+
+			return '' === $emoji
+				? ''
+				: '<span class="next-translate-flag" aria-hidden="true">' . esc_html( $emoji ) . '</span>';
+		};
+
 		$classes = array(
 			'next-translate-switcher',
 			'localizepilot-language-switcher',
 			'is-' . $style,
 			'is-' . $position,
 		);
+
+		if ( $show_flags ) {
+			$classes[] = 'has-flags';
+		}
 
 		$custom_class = trim( (string) ( $overrides['class'] ?? '' ) );
 		if ( '' !== $custom_class ) {
@@ -86,11 +116,12 @@ final class Language_Switcher {
 			$items = '';
 			foreach ( $languages as $language ) {
 				$items .= sprintf(
-					'<a class="next-translate-link%1$s" href="%2$s" hreflang="%3$s" lang="%3$s"%4$s>%5$s</a>',
+					'<a class="next-translate-link%1$s" href="%2$s" hreflang="%3$s" lang="%3$s"%4$s>%5$s<span class="next-translate-name">%6$s</span></a>',
 					$language === $current ? ' is-active' : '',
 					esc_url( $this->router->language_url( $language ) ),
 					esc_attr( $language ),
 					$language === $current ? ' aria-current="page"' : '',
+					$flag( $language ),
 					esc_html( Language_Catalog::label( $language, $format ) )
 				);
 			}
@@ -101,18 +132,20 @@ final class Language_Switcher {
 		$items = '';
 		foreach ( $languages as $language ) {
 			$items .= sprintf(
-				'<li><a class="next-translate-link%1$s" href="%2$s" hreflang="%3$s" lang="%3$s"%4$s>%5$s</a></li>',
+				'<li><a class="next-translate-link%1$s" href="%2$s" hreflang="%3$s" lang="%3$s"%4$s>%5$s<span class="next-translate-name">%6$s</span></a></li>',
 				$language === $current ? ' is-active' : '',
 				esc_url( $this->router->language_url( $language ) ),
 				esc_attr( $language ),
 				$language === $current ? ' aria-current="page"' : '',
+				$flag( $language ),
 				esc_html( Language_Catalog::label( $language, $format ) )
 			);
 		}
 
 		return sprintf(
-			'<nav %1$s><details><summary>%2$s</summary><ul>%3$s</ul></details></nav>',
+			'<nav %1$s><details><summary>%2$s<span class="next-translate-name">%3$s</span></summary><ul>%4$s</ul></details></nav>',
 			$attributes,
+			$flag( $current ),
 			esc_html( Language_Catalog::label( $current, $format ) ),
 			$items
 		);

@@ -62,6 +62,7 @@ final class Plugin {
 			'menu_style'               => 'dropdown',
 			'menu_position'            => 'end',
 			'language_label'           => 'native',
+			'show_flags'               => 1,
 			'translate_attributes'     => 1,
 			'translate_internal_links' => 1,
 			'analytics_enabled'         => 0,
@@ -175,6 +176,7 @@ final class Plugin {
 				'style'     => 'inherit',
 				'labels'    => 'inherit',
 				'alignment' => 'inherit',
+				'flags'     => 'inherit',
 				'class'     => '',
 			),
 			is_array( $attributes ) ? $attributes : array(),
@@ -195,6 +197,7 @@ final class Plugin {
 				'style'     => (string) ( $attributes['style'] ?? 'inherit' ),
 				'labels'    => (string) ( $attributes['labels'] ?? 'inherit' ),
 				'alignment' => (string) ( $attributes['alignment'] ?? 'inherit' ),
+				'flags'     => (string) ( $attributes['flags'] ?? 'inherit' ),
 				'class'     => (string) ( $attributes['className'] ?? '' ),
 			)
 		);

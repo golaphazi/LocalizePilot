@@ -108,6 +108,7 @@ final class Settings {
 			$output['menu_style']       = in_array( $input['menu_style'] ?? '', array( 'dropdown', 'inline' ), true ) ? sanitize_key( $input['menu_style'] ) : 'dropdown';
 			$output['menu_position']    = in_array( $input['menu_position'] ?? '', array( 'start', 'center', 'end' ), true ) ? sanitize_key( $input['menu_position'] ) : 'end';
 			$output['language_label']   = in_array( $input['language_label'] ?? '', array( 'native', 'english', 'code' ), true ) ? sanitize_key( $input['language_label'] ) : 'native';
+			$output['show_flags']       = empty( $input['show_flags'] ) ? 0 : 1;
 			$changed = true;
 		} elseif ( 'settings' === $tab ) {
 			$output['enabled']                  = empty( $input['enabled'] ) ? 0 : 1;

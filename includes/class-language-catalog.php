@@ -63,4 +63,60 @@ final class Language_Catalog {
 
 		return $languages[ $code ]['native'];
 	}
+
+	/**
+	 * Flag emoji for a language, or an empty string when there is no sensible
+	 * one.
+	 *
+	 * A language is not a country: English is not only Britain, Arabic is not
+	 * only Saudi Arabia, and Spanish is spoken by far more people outside Spain
+	 * than in it. These pairings are a display convention, nothing more, which
+	 * is why the switcher only shows them alongside a real language label and
+	 * never instead of one.
+	 *
+	 * Codes with no single defensible flag are deliberately absent and fall
+	 * back to no flag rather than a misleading one.
+	 */
+	public static function flag( string $code ): string {
+		$flags = array(
+			'ar' => '🇸🇦',
+			'bn' => '🇧🇩',
+			'da' => '🇩🇰',
+			'de' => '🇩🇪',
+			'en' => '🇬🇧',
+			'es' => '🇪🇸',
+			'fr' => '🇫🇷',
+			'hi' => '🇮🇳',
+			'id' => '🇮🇩',
+			'it' => '🇮🇹',
+			'ja' => '🇯🇵',
+			'ko' => '🇰🇷',
+			'nl' => '🇳🇱',
+			'no' => '🇳🇴',
+			'pl' => '🇵🇱',
+			'pt' => '🇵🇹',
+			'ru' => '🇷🇺',
+			'sv' => '🇸🇪',
+			'tr' => '🇹🇷',
+			'uk' => '🇺🇦',
+			'vi' => '🇻🇳',
+			'zh' => '🇨🇳',
+		);
+
+		/**
+		 * Filter the flag shown for a language.
+		 *
+		 * The pairings above are one reasonable convention among several. A site
+		 * serving American English, Brazilian Portuguese or Latin American
+		 * Spanish will want different ones.
+		 *
+		 * @param string $flag Emoji, or an empty string for no flag.
+		 * @param string $code Language code.
+		 */
+		return (string) apply_filters(
+			'localizepilot_language_flag',
+			$flags[ strtolower( $code ) ] ?? '',
+			strtolower( $code )
+		);
+	}
 }

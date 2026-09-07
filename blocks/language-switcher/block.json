@@ -1,37 +1,45 @@
 {
-  "$schema": "https://schemas.wp.org/trunk/block.json",
-  "apiVersion": 3,
-  "name": "localizepilot/language-switcher",
-  "version": "1.0.1",
-  "title": "Language Switcher",
-  "category": "widgets",
-  "icon": "translation",
-  "description": "Display the LocalizePilot language switcher anywhere in your content or templates.",
-  "keywords": ["language", "translation", "multilingual"],
-  "textdomain": "localizepilot",
-  "attributes": {
-    "style": {
-      "type": "string",
-      "default": "inherit"
-    },
-    "labels": {
-      "type": "string",
-      "default": "inherit"
-    },
-    "alignment": {
-      "type": "string",
-      "default": "inherit"
-    }
-  },
-  "supports": {
-    "html": false,
-    "customClassName": true,
-    "anchor": true,
-    "spacing": {
-      "margin": true,
-      "padding": true
-    }
-  },
-  "editorScript": "localizepilot-language-switcher-block",
-  "editorStyle": "localizepilot-language-switcher-block-editor"
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "localizepilot/language-switcher",
+	"version": "1.0.1",
+	"title": "Language Switcher",
+	"category": "widgets",
+	"icon": "translation",
+	"description": "Display the LocalizePilot language switcher anywhere in your content or templates.",
+	"keywords": [
+		"language",
+		"translation",
+		"multilingual"
+	],
+	"textdomain": "localizepilot",
+	"attributes": {
+		"style": {
+			"type": "string",
+			"default": "inherit"
+		},
+		"labels": {
+			"type": "string",
+			"default": "inherit"
+		},
+		"alignment": {
+			"type": "string",
+			"default": "inherit"
+		},
+		"flags": {
+			"type": "string",
+			"default": "inherit"
+		}
+	},
+	"supports": {
+		"html": false,
+		"customClassName": true,
+		"anchor": true,
+		"spacing": {
+			"margin": true,
+			"padding": true
+		}
+	},
+	"editorScript": "localizepilot-language-switcher-block",
+	"editorStyle": "localizepilot-language-switcher-block-editor"
 }

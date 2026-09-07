@@ -78,7 +78,8 @@
         attributes: {
             style: { type: 'string', default: 'inherit' },
             labels: { type: 'string', default: 'inherit' },
-            alignment: { type: 'string', default: 'inherit' }
+            alignment: { type: 'string', default: 'inherit' },
+            flags: { type: 'string', default: 'inherit' }
         },
         supports: {
             html: false,
@@ -131,6 +132,17 @@
                                 { label: __('End', 'localizepilot'), value: 'end' }
                             ],
                             onChange: function (value) { setAttributes({ alignment: value }); }
+                        }),
+                        el(SelectControl, {
+                            label: __('Flags', 'localizepilot'),
+                            value: attributes.flags,
+                            help: __('Flags decorate the language name; they never replace it.', 'localizepilot'),
+                            options: [
+                                { label: __('Use plugin setting', 'localizepilot'), value: 'inherit' },
+                                { label: __('Show flags', 'localizepilot'), value: 'yes' },
+                                { label: __('Hide flags', 'localizepilot'), value: 'no' }
+                            ],
+                            onChange: function (value) { setAttributes({ flags: value }); }
                         })
                     )
                 ),
