@@ -80,5 +80,6 @@ $lp_slug = (string) ( $args['slug'] ?? '' );
 	 * position:fixed descendant, which would confine this to the header.
 	 */
 	Template::render( 'layout/command-palette', $args );
+	Template::render( 'layout/paywall', $args );
 	?>
 </div>

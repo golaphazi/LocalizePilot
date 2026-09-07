@@ -5142,3 +5142,187 @@
 	gap: 12px;
 	margin-block-end: 20px;
 }
+
+/* -------------------------------------------------------------------------
+ * The paywall
+ *
+ * A locked control keeps its own look — greying it out would say "broken"
+ * where the truth is "not yours yet" — and reads as pressable, because it is:
+ * activating it opens the modal.
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console [data-lp-paywall] {
+	cursor: pointer;
+}
+
+.localizepilot-console [data-lp-paywall]:focus-visible {
+	outline: 2px solid var(--lp-brand);
+	outline-offset: 2px;
+	border-radius: var(--lp-radius-sm);
+}
+
+/* A disabled control inside a locked wrapper must not swallow the pointer,
+   or the wrapper never sees the click that opens the modal. */
+.localizepilot-console [data-lp-paywall] select,
+.localizepilot-console [data-lp-paywall] input,
+.localizepilot-console [data-lp-paywall] button {
+	pointer-events: none;
+}
+
+.localizepilot-console .lp-modal[hidden] {
+	display: none;
+}
+
+.localizepilot-console .lp-modal {
+	position: fixed;
+	inset: 0;
+	z-index: 100300;
+	display: grid;
+	place-items: center;
+	padding: 20px;
+}
+
+.localizepilot-console .lp-modal__backdrop {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	padding: 0;
+	border: 0;
+	background: rgba(15, 23, 42, 0.46);
+	cursor: default;
+}
+
+.localizepilot-console .lp-modal__panel {
+	position: relative;
+	z-index: 1;
+	display: flex;
+	flex-direction: column;
+	width: min(520px, 100%);
+	max-height: min(640px, 88vh);
+	overflow: hidden;
+	border: 1px solid var(--lp-border);
+	border-radius: var(--lp-radius-lg);
+	background: var(--lp-surface);
+	box-shadow: 0 24px 64px rgba(15, 23, 42, 0.22);
+}
+
+.localizepilot-console .lp-modal__head {
+	display: flex;
+	align-items: flex-start;
+	gap: 12px;
+	padding: 20px 20px 0;
+}
+
+.localizepilot-console .lp-modal__heading {
+	display: grid;
+	gap: 6px;
+	min-width: 0;
+	flex: 1 1 auto;
+}
+
+.localizepilot-console .lp-modal__eyebrow {
+	color: var(--lp-brand-ink);
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.88px;
+	line-height: 1;
+	text-transform: uppercase;
+}
+
+.localizepilot-console .lp-modal__title {
+	margin: 0;
+	color: var(--lp-ink);
+	font-size: var(--lp-text-lg);
+	font-weight: 600;
+	line-height: 1.3;
+}
+
+.localizepilot-console .lp-modal__body {
+	overflow-y: auto;
+	padding: 12px 20px 0;
+}
+
+.localizepilot-console .lp-modal__promise {
+	margin: 0;
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-md);
+	line-height: 20px;
+}
+
+.localizepilot-console .lp-modal__promise[hidden] {
+	display: none;
+}
+
+/* One promise per line here: the two-column grid the cards use is too narrow
+   to read inside a 520px dialog.
+
+   The margin is restated rather than inherited from .lp-feature-list, whose
+   own `margin: 16px 0 0` never applies: base.css resets `.lp-app ul` at
+   (0,2,1), which out-specifies that component rule at (0,2,0). Three classes
+   clear it. */
+.localizepilot-console .lp-modal .lp-feature-list {
+	grid-template-columns: minmax(0, 1fr);
+	gap: 10px;
+	margin-top: 14px;
+}
+
+.localizepilot-console .lp-modal .lp-feature-list li {
+	align-items: flex-start;
+	line-height: 20px;
+}
+
+.localizepilot-console .lp-modal .lp-feature-list__icon {
+	margin-top: 1px;
+}
+
+.localizepilot-console .lp-modal__foot {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 8px 16px;
+	margin-top: 20px;
+	padding: 16px 20px;
+	border-top: 1px solid var(--lp-border);
+	background: var(--lp-surface-2);
+}
+
+.localizepilot-console .lp-modal__note {
+	color: var(--lp-ink-3);
+	font-size: var(--lp-text-sm);
+	line-height: 16px;
+}
+
+/* -------------------------------------------------------------------------
+ * The upsell card, for a screen that belongs wholly to the add-on
+ * ---------------------------------------------------------------------- */
+
+.localizepilot-console .lp-upsell__eyebrow {
+	display: block;
+	margin-bottom: 10px;
+	color: var(--lp-brand-ink);
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.88px;
+	line-height: 1;
+	text-transform: uppercase;
+}
+
+/* Same specificity problem as the modal's list; see the note there. */
+.localizepilot-console .lp-upsell .lp-feature-list {
+	margin-top: 16px;
+}
+
+.localizepilot-console .lp-upsell__foot {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 8px 16px;
+	margin-top: 24px;
+}
+
+.localizepilot-console .lp-upsell__note {
+	color: var(--lp-ink-3);
+	font-size: var(--lp-text-sm);
+	line-height: 16px;
+}

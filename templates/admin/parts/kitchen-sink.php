@@ -14,6 +14,7 @@
  * @var array<string,mixed> $args Layout data.
  */
 
+use LocalizePilot\Admin\Paywall;
 use LocalizePilot\Admin\Template;
 
 defined( 'ABSPATH' ) || exit;
@@ -341,6 +342,38 @@ $lp_columns = array(
 				)
 			)
 		. '</div>'
+	);
+
+	$lp_section(
+		__( 'Paywall — locked control and full-screen upsell', 'localizepilot' ),
+		'<p class="lp-sink__note">'
+			. esc_html__( 'Activating either locked control opens the shared paywall modal. The catalogue entry behind them exists only in this gallery — nothing is being sold yet.', 'localizepilot' )
+			. '</p>'
+			. '<p class="lp-toolbar__filters">'
+			. '<span class="lp-filter"' . Paywall::attributes( '__gallery' ) . '>'
+			. '<select class="lp-filter__select" disabled><option>' . esc_html__( 'All Languages', 'localizepilot' ) . '</option></select>'
+			. Template::icon( 'chevron-down', 'lp-icon lp-filter__chevron' )
+			. '</span>'
+			/*
+			 * A button can stay enabled and carry the marker itself, so it
+			 * needs neither the role nor the tabindex a wrapper does.
+			 */
+			. '<button type="button" class="lp-btn lp-btn--ghost"' . Paywall::attributes( '__gallery', false ) . '>'
+			. esc_html__( 'Export report', 'localizepilot' )
+			. '</button>'
+			. '</p>'
+			. Template::capture(
+				'parts/upsell',
+				array(
+					'title'   => __( 'Sample locked screen', 'localizepilot' ),
+					'promise' => __( 'What a screen shows when the whole thing belongs to the add-on, rather than one control on it.', 'localizepilot' ),
+					'points'  => array(
+						__( 'Says what the screen would do', 'localizepilot' ),
+						__( 'Never renders controls that cannot be operated', 'localizepilot' ),
+						__( 'One button, going one place', 'localizepilot' ),
+					),
+				)
+			)
 	);
 
 	$lp_section(

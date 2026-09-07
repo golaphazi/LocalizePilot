@@ -818,7 +818,170 @@
 		}
 	}
 
+	/* ---------------------------------------------------------------------
+	 * The paywall modal
+	 *
+	 * One dialog for the whole console, filled in from the catalogue in the
+	 * payload. A screen with a dozen locked controls costs one dialog.
+	 *
+	 * The trigger is whatever carries data-lp-paywall. On a control that has
+	 * to stay operable-looking but inert — a disabled <select> — the marker
+	 * sits on the wrapper instead, because a disabled control emits no
+	 * events at all and could never open this.
+	 * ------------------------------------------------------------------ */
+
+	var paywallReturnFocus = null;
+
+	function paywallElement() {
+		return LocalizePilot.find( '[data-lp-paywall-modal]' );
+	}
+
+	function paywallIsOpen() {
+		var modal = paywallElement();
+
+		return !! modal && ! modal.hidden;
+	}
+
+	/**
+	 * The catalogue entry for a feature, or null when the payload has none.
+	 *
+	 * @param {string} feature Feature key.
+	 * @return {Object|null} Entry.
+	 */
+	function paywallEntry( feature ) {
+		var paywall = LocalizePilot.settings.paywall || {};
+		var features = paywall.features || {};
+
+		return features[ feature ] || null;
+	}
+
+	function openPaywall( feature, trigger ) {
+		var modal = paywallElement();
+
+		if ( ! modal ) {
+			return;
+		}
+
+		var entry = paywallEntry( feature );
+		var title = LocalizePilot.find( '[data-lp-paywall-title]', modal );
+		var promise = LocalizePilot.find( '[data-lp-paywall-promise]', modal );
+		var points = LocalizePilot.find( '[data-lp-paywall-points]', modal );
+
+		// textContent, never innerHTML: these strings are translated and can
+		// carry anything a translator wrote.
+		if ( title ) {
+			title.textContent = ( entry && entry.title ) || LocalizePilot.text( 'paywallFallback', '' );
+		}
+
+		if ( promise ) {
+			promise.textContent = ( entry && entry.promise ) || '';
+			promise.hidden = ! promise.textContent;
+		}
+
+		if ( points ) {
+			points.textContent = '';
+
+			var template = LocalizePilot.find( '[data-lp-paywall-point]', modal );
+
+			( ( entry && entry.points ) || [] ).forEach( function ( point ) {
+				var item;
+
+				if ( template && template.content ) {
+					item = template.content.firstElementChild.cloneNode( true );
+
+					// Named, not positional: the first span in the clone is
+					// the icon's own wrapper, and writing the text into that
+					// replaces the icon with the text.
+					var label = item.querySelector( '[data-lp-point-label]' );
+
+					if ( label ) {
+						label.textContent = point;
+					}
+				} else {
+					item = document.createElement( 'li' );
+					item.textContent = point;
+				}
+
+				points.appendChild( item );
+			} );
+
+			points.hidden = ! points.children.length;
+		}
+
+		paywallReturnFocus = trigger || document.activeElement;
+		modal.hidden = false;
+		lockScroll();
+
+		// Focus the way out before the way to pay: the first thing a keyboard
+		// user meets should not be a purchase.
+		var close = LocalizePilot.find( '[data-lp-paywall-close]:not([tabindex="-1"])', modal );
+
+		if ( close ) {
+			close.focus();
+		}
+	}
+
+	function closePaywall() {
+		var modal = paywallElement();
+
+		if ( ! modal || modal.hidden ) {
+			return;
+		}
+
+		modal.hidden = true;
+		releaseScroll();
+
+		if ( paywallReturnFocus && paywallReturnFocus.focus ) {
+			paywallReturnFocus.focus();
+		}
+
+		paywallReturnFocus = null;
+	}
+
+	/**
+	 * Locked controls render fully and do nothing, exactly as preview-gated
+	 * ones do — but where a preview control simply swallows its activation,
+	 * this one has something to say, so it opens the modal instead.
+	 */
+	function bindPaywallControls() {
+		function intercept( event ) {
+			var target = event.target;
+
+			if ( ! target || ! target.closest ) {
+				return;
+			}
+
+			var locked = target.closest( '[data-lp-paywall]' );
+
+			if ( ! locked ) {
+				return;
+			}
+
+			// A keypress that is not an activation is left alone, so Tab and
+			// the arrow keys still move.
+			if ( event.type === 'keydown' && event.key !== 'Enter' && event.key !== ' ' ) {
+				return;
+			}
+
+			event.preventDefault();
+			event.stopPropagation();
+
+			if ( event.type !== 'submit' ) {
+				openPaywall( locked.getAttribute( 'data-lp-paywall' ) || '', locked );
+			}
+		}
+
+		document.addEventListener( 'click', intercept, true );
+		document.addEventListener( 'keydown', intercept, true );
+		document.addEventListener( 'submit', intercept, true );
+	}
+
 	function bindGlobalHandlers() {
+		LocalizePilot.on( 'click', '[data-lp-paywall-close]', function ( event ) {
+			event.preventDefault();
+			closePaywall();
+		} );
+
 		LocalizePilot.on( 'click', '[data-lp-command-open]', function ( event, trigger ) {
 			event.preventDefault();
 			openCommand( trigger );
@@ -1076,6 +1239,7 @@
 				closeMenus( null, true );
 				closeNav();
 				closeCommand();
+				closePaywall();
 
 				LocalizePilot.findAll( '[data-lp-drawer]' ).forEach( function ( drawer ) {
 					closeDrawer( drawer );
@@ -1085,6 +1249,12 @@
 			}
 
 			if ( event.key !== 'Tab' ) {
+				return;
+			}
+
+			if ( paywallIsOpen() ) {
+				var paywall = paywallElement();
+				trapFocus( event, LocalizePilot.find( '.lp-modal__panel', paywall ) || paywall );
 				return;
 			}
 
@@ -1118,6 +1288,7 @@
 		}
 
 		guardPreviewControls();
+		bindPaywallControls();
 		bindGlobalHandlers();
 		ui.init();
 	} );
