@@ -26,7 +26,17 @@ final class Preview {
 	 */
 	public static function features(): array {
 		$features = array(
-			'media'             => true,
+			/*
+			 * Media localization, split three ways rather than gated as one.
+			 * Filtering a library by language, acting on a selection, and
+			 * producing a localized variant are three separate pieces of
+			 * work that will not land together — one key for all three would
+			 * mean unlocking the ones that are not built to unlock the one
+			 * that is.
+			 */
+			'media_filters'     => true,
+			'media_bulk'        => true,
+			'media_localize'    => true,
 			'canonical_editing' => true,
 			'notifications'     => true,
 			'analytics_export'  => true,
@@ -35,11 +45,9 @@ final class Preview {
 			'cache_automation'  => true,
 			'cache_filters'     => true,
 			'license'           => true,
-			'switcher_flags'    => true,
 			'switcher_order'    => true,
 			'switcher_placement'=> true,
 			'switcher_behavior' => true,
-			'switcher_block'    => true,
 			/*
 			 * The Performance screen's figures. Nothing in the plugin times a
 			 * render, a provider call, or a cache lookup, so every duration,
@@ -69,6 +77,25 @@ final class Preview {
 	 */
 	public static function is_live( string $feature ): bool {
 		return ! self::is_preview( $feature );
+	}
+
+	/**
+	 * True when any one of several features is still preview-only.
+	 *
+	 * For the note a screen prints about itself when its capabilities landed
+	 * piecemeal: as long as one piece is unbuilt, the screen still has
+	 * something to disclose.
+	 *
+	 * @param array<int,string> $features Feature keys.
+	 */
+	public static function any( array $features ): bool {
+		foreach ( $features as $feature ) {
+			if ( self::is_preview( (string) $feature ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**

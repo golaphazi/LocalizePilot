@@ -27,12 +27,64 @@ final class Template {
 	private const DIRECTIONAL = array( 'arrow-right', 'arrow-right-sm' );
 
 	/**
+	 * Directories searched for templates, in order.
+	 *
+	 * LocalizePilot's own directory is always last, so an add-on can both add
+	 * templates the console does not have and override ones it does. Roots are
+	 * supplied by code, never by input, so they are trusted; the template name
+	 * is what gets sanitized, in path() below.
+	 *
+	 * @return array<int,string> Absolute directory paths, each trailing-slashed.
+	 */
+	public static function roots(): array {
+		/**
+		 * Filter the template search path.
+		 *
+		 * Add-ons prepend or append their own directory. The directory should
+		 * hold the same layout/, parts/ and screens/ structure LocalizePilot
+		 * uses, so a template name resolves the same way in either root.
+		 *
+		 * @param array<int,string> $roots Absolute directory paths.
+		 */
+		$roots = (array) apply_filters( 'localizepilot_template_roots', array() );
+
+		$roots[] = LOCALIZEPILOT_PATH . self::BASE;
+
+		return array_values(
+			array_unique(
+				array_filter(
+					array_map(
+						static function ( $root ): string {
+							return is_string( $root ) ? trailingslashit( $root ) : '';
+						},
+						$roots
+					)
+				)
+			)
+		);
+	}
+
+	/**
 	 * Absolute path for a template name such as "layout/sidebar".
+	 *
+	 * Returns the first root that actually has the file. When no root does,
+	 * returns the path it would occupy in LocalizePilot's own directory — so
+	 * exists() reports false and render() no-ops, exactly as before.
 	 */
 	public static function path( string $name ): string {
 		$name = ltrim( str_replace( array( '..', "\0" ), '', $name ), '/' );
 
-		return LOCALIZEPILOT_PATH . self::BASE . $name . '.php';
+		$fallback = LOCALIZEPILOT_PATH . self::BASE . $name . '.php';
+
+		foreach ( self::roots() as $root ) {
+			$file = $root . $name . '.php';
+
+			if ( is_readable( $file ) ) {
+				return $file;
+			}
+		}
+
+		return $fallback;
 	}
 
 	public static function exists( string $name ): bool {

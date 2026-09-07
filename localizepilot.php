@@ -16,6 +16,16 @@
 defined( 'ABSPATH' ) || exit;
 
 define( 'LOCALIZEPILOT_VERSION', '1.0.3' );
+
+/*
+ * The add-on API version — see includes/class-addons.php.
+ *
+ * Deliberately separate from the release version above. This moves only when
+ * the seams an add-on hooks into change shape, so an add-on can state exactly
+ * what it needs without pinning itself to a bug-fix release.
+ */
+define( 'LOCALIZEPILOT_API', 1 );
+
 define( 'LOCALIZEPILOT_FILE', __FILE__ );
 define( 'LOCALIZEPILOT_PATH', plugin_dir_path( __FILE__ ) );
 define( 'LOCALIZEPILOT_URL', plugin_dir_url( __FILE__ ) );
@@ -45,6 +55,13 @@ spl_autoload_register(
 		}
 	}
 );
+
+/*
+ * Loaded eagerly rather than left to the autoloader: an add-on checks
+ * class_exists() on it to decide whether LocalizePilot is present at all, and
+ * that check must not depend on autoload timing.
+ */
+require_once LOCALIZEPILOT_PATH . 'includes/class-addons.php';
 
 require_once LOCALIZEPILOT_PATH . 'includes/class-language-catalog.php';
 require_once LOCALIZEPILOT_PATH . 'includes/class-usage-limiter.php';

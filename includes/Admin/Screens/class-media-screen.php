@@ -3,7 +3,8 @@
  * Media console screen.
  *
  * The library is real; the localization of it is not built yet, so every
- * control on this screen is gated through Preview's "media" feature.
+ * control on this screen is gated through Preview's media_filters,
+ * media_bulk and media_localize features.
  *
  * @package LocalizePilot
  */
@@ -48,7 +49,10 @@ final class Media_Screen extends Abstract_Screen {
 
 		return array(
 			'filters'     => $filters,
-			'filtered'    => '' !== $filters['search'] || '' !== $filters['type'],
+			'filtered'    => '' !== $filters['search']
+				|| '' !== $filters['type']
+				|| '' !== $filters['language']
+				|| '' !== $filters['status'],
 			'results'     => $repository->query( $filters ),
 			'counts'      => $repository->counts(),
 			'types'       => $repository->type_options(),
@@ -66,12 +70,21 @@ final class Media_Screen extends Abstract_Screen {
 	 * @return array<string,mixed>
 	 */
 	private function filters(): array {
+		/*
+		 * language and status are read but not acted on: nothing here records
+		 * either one per attachment, so the repository has no meta to match.
+		 * They are read anyway so the values survive a round trip — the
+		 * controls stay selected, pagination keeps them, and whatever starts
+		 * recording that data only has to supply a meta_query.
+		 */
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only list filters with no side effects.
 		return array(
-			'search' => sanitize_text_field( wp_unslash( $_GET['s'] ?? '' ) ),
-			'type'   => sanitize_key( wp_unslash( $_GET['type'] ?? '' ) ),
-			'order'  => 'oldest' === sanitize_key( wp_unslash( $_GET['order'] ?? '' ) ) ? 'oldest' : 'newest',
-			'paged'  => max( 1, (int) ( $_GET['paged'] ?? 1 ) ),
+			'search'   => sanitize_text_field( wp_unslash( $_GET['s'] ?? '' ) ),
+			'type'     => sanitize_key( wp_unslash( $_GET['type'] ?? '' ) ),
+			'language' => sanitize_key( wp_unslash( $_GET['language'] ?? '' ) ),
+			'status'   => sanitize_key( wp_unslash( $_GET['status'] ?? '' ) ),
+			'order'    => 'oldest' === sanitize_key( wp_unslash( $_GET['order'] ?? '' ) ) ? 'oldest' : 'newest',
+			'paged'    => max( 1, (int) ( $_GET['paged'] ?? 1 ) ),
 		);
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 	}

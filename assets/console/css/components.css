@@ -5132,3 +5132,13 @@
 		align-items: flex-start;
 	}
 }
+
+/* Console-wide messages, printed through the localizepilot_console_notices
+   action. Sits above the swappable view and outside it, so a message about
+   the console as a whole survives client-side navigation. */
+.localizepilot-console .lp-notices {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	margin-block-end: 20px;
+}

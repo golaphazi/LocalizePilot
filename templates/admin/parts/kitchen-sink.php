@@ -337,7 +337,7 @@ $lp_columns = array(
 					'body' =>
 						Template::capture( 'parts/toggle', array( 'name' => 'demo_toggle_a', 'label' => __( 'Enable translation', 'localizepilot' ), 'description' => __( 'Serve translated pages to visitors.', 'localizepilot' ), 'checked' => true ) )
 						. Template::capture( 'parts/toggle', array( 'name' => 'demo_toggle_b', 'label' => __( 'Translate attributes', 'localizepilot' ), 'description' => __( 'Include alt text and titles.', 'localizepilot' ) ) )
-						. Template::capture( 'parts/toggle', array( 'name' => 'demo_toggle_c', 'label' => __( 'Media localization', 'localizepilot' ), 'description' => __( 'Gated behind Preview, so it renders but does nothing.', 'localizepilot' ), 'feature' => 'media' ) ),
+						. Template::capture( 'parts/toggle', array( 'name' => 'demo_toggle_c', 'label' => __( 'Media localization', 'localizepilot' ), 'description' => __( 'Gated behind Preview, so it renders but does nothing.', 'localizepilot' ), 'feature' => 'media_localize' ) ),
 				)
 			)
 		. '</div>'

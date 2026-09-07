@@ -49,6 +49,7 @@ final class Assets {
 				array( $previous ),
 				self::version( 'assets/console/css/rtl.css' )
 			);
+			$previous = self::HANDLE . '-rtl';
 		}
 
 		/*
@@ -64,6 +65,7 @@ final class Assets {
 				array( $previous ),
 				self::version( 'assets/frontend.css' )
 			);
+			$previous = self::HANDLE . '-switcher-preview';
 		}
 
 		wp_enqueue_script(
@@ -90,10 +92,7 @@ final class Assets {
 			true
 		);
 
-		wp_localize_script(
-			self::HANDLE . '-core',
-			'localizePilotConsole',
-			array(
+		$data = array(
 				'screen'     => $screen_slug,
 				'ajaxUrl'    => admin_url( 'admin-ajax.php' ),
 				'nonce'      => wp_create_nonce( Ajax::NONCE ),
@@ -120,10 +119,42 @@ final class Assets {
 					'testConnection' => __( 'Test connection', 'localizepilot' ),
 					'unknownResponse' => __( 'The provider returned an unknown response.', 'localizepilot' ),
 				),
-			)
 		);
 
+		/**
+		 * Filter the console's client-side payload.
+		 *
+		 * Add-ons merge in their own nonces and strings here. Merge — the
+		 * console's own keys, i18n included, are relied on by every screen, so
+		 * a filter that replaces the array instead of adding to it breaks the
+		 * console rather than extending it.
+		 *
+		 * @param array<string,mixed> $data        The payload.
+		 * @param string              $screen_slug Console screen being loaded.
+		 */
+		$data = (array) apply_filters( 'localizepilot_console_data', $data, $screen_slug );
+
+		wp_localize_script( self::HANDLE . '-core', 'localizePilotConsole', $data );
+
 		$this->enqueue_screen_script( $screen_slug );
+
+		/**
+		 * Fires once the console's own assets are enqueued.
+		 *
+		 * Add-ons enqueue here with the standard WordPress functions, and are
+		 * handed the handles to depend on so their CSS lands after the console
+		 * cascade and their JavaScript after the console runtime.
+		 *
+		 * @param string $screen_slug  Console screen being loaded.
+		 * @param string $style_handle Last console stylesheet handle.
+		 * @param string $script_handle Last console script handle.
+		 */
+		do_action(
+			'localizepilot_console_assets',
+			$screen_slug,
+			$previous,
+			self::HANDLE . '-router'
+		);
 	}
 
 	/**
@@ -151,34 +182,80 @@ final class Assets {
 	}
 
 	/**
+	 * A screen's own script, or null when that screen ships none.
+	 *
+	 * One resolver for both delivery paths — the enqueue on a full page load
+	 * and the URL the client fetches on a navigation — so a screen cannot end
+	 * up with behaviour one way and not the other. That symmetry is why the
+	 * filter lives here rather than on either call site: an add-on screen gets
+	 * its script in both cases, or in neither.
+	 *
+	 * @return array{url:string,version:string}|null
+	 */
+	private static function screen_script( string $screen_slug ): ?array {
+		$relative = 'assets/console/js/screen-' . sanitize_key( $screen_slug ) . '.js';
+
+		$script = is_readable( LOCALIZEPILOT_PATH . $relative )
+			? array(
+				'url'     => LOCALIZEPILOT_URL . $relative,
+				'version' => self::version( $relative ),
+			)
+			: null;
+
+		/**
+		 * Filter the script backing one console screen.
+		 *
+		 * Add-ons return their own {url, version} pair for a screen they
+		 * registered, or null to leave a screen without behaviour.
+		 *
+		 * @param array{url:string,version:string}|null $script      Resolved script.
+		 * @param string                                $screen_slug Console screen slug.
+		 */
+		$script = apply_filters( 'localizepilot_screen_script', $script, $screen_slug );
+
+		if ( ! is_array( $script ) || empty( $script['url'] ) ) {
+			return null;
+		}
+
+		return array(
+			'url'     => (string) $script['url'],
+			'version' => (string) ( $script['version'] ?? LOCALIZEPILOT_VERSION ),
+		);
+	}
+
+	/**
 	 * The URL of a screen's own script, or an empty string when it has none.
 	 *
 	 * Client-side navigation uses this to pull in a screen's behaviour the
 	 * first time that screen is visited.
 	 */
 	public static function screen_script_url( string $screen_slug ): string {
-		$relative = 'assets/console/js/screen-' . $screen_slug . '.js';
+		$script = self::screen_script( $screen_slug );
 
-		return is_readable( LOCALIZEPILOT_PATH . $relative )
-			? LOCALIZEPILOT_URL . $relative . '?ver=' . rawurlencode( self::version( $relative ) )
-			: '';
+		if ( null === $script ) {
+			return '';
+		}
+
+		return $script['url']
+			. ( false === strpos( $script['url'], '?' ) ? '?' : '&' )
+			. 'ver=' . rawurlencode( $script['version'] );
 	}
 
 	/**
 	 * Load a screen's own script only when that screen ships one.
 	 */
 	private function enqueue_screen_script( string $screen_slug ): void {
-		$relative = 'assets/console/js/screen-' . $screen_slug . '.js';
+		$script = self::screen_script( $screen_slug );
 
-		if ( ! is_readable( LOCALIZEPILOT_PATH . $relative ) ) {
+		if ( null === $script ) {
 			return;
 		}
 
 		wp_enqueue_script(
 			self::HANDLE . '-screen-' . $screen_slug,
-			LOCALIZEPILOT_URL . $relative,
+			$script['url'],
 			array( self::HANDLE . '-router' ),
-			self::version( $relative ),
+			$script['version'],
 			true
 		);
 	}

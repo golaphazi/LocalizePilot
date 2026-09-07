@@ -61,7 +61,21 @@ final class Ajax {
 
 		$tab = sanitize_key( (string) ( $input['settings_tab'] ?? '' ) );
 
-		if ( ! in_array( $tab, array( 'providers', 'languages', 'translation', 'cache', 'performance', 'analytics', 'switcher', 'language-switcher', 'settings', 'dashboard' ), true ) ) {
+		/**
+		 * Filter the settings sections this endpoint will save.
+		 *
+		 * The allowlist is what stops an arbitrary payload being written to
+		 * the settings option, so an add-on adds its own section name here
+		 * rather than the endpoint accepting anything.
+		 *
+		 * @param array<int,string> $tabs Section names.
+		 */
+		$tabs = (array) apply_filters(
+			'localizepilot_settings_tabs',
+			array( 'providers', 'languages', 'translation', 'cache', 'performance', 'analytics', 'switcher', 'language-switcher', 'settings', 'dashboard' )
+		);
+
+		if ( ! in_array( $tab, array_map( 'sanitize_key', $tabs ), true ) ) {
 			wp_send_json_error( array( 'message' => __( 'That settings section could not be saved.', 'localizepilot' ) ), 400 );
 		}
 
@@ -192,12 +206,26 @@ final class Ajax {
 		}
 
 		parse_str( ltrim( $query, '?' ), $values );
-		$allowed = array(
-			's', 'language', 'status', 'type', 'issues', 'order', 'paged',
-			'range', 'url', 'view', 'cache_type', 'cache_page', 'cache_item_type',
+
+		/**
+		 * Filter the GET arguments a navigation request may carry through.
+		 *
+		 * These are rehydrated into $_GET for the screen controller to read,
+		 * so the list must stay read-only view state: a filter, a sort, a page
+		 * number. Anything that acts belongs behind its own nonce-checked
+		 * endpoint, not here.
+		 *
+		 * @param array<int,string> $allowed Argument names.
+		 */
+		$allowed = (array) apply_filters(
+			'localizepilot_screen_query_args',
+			array(
+				's', 'language', 'status', 'type', 'issues', 'order', 'paged',
+				'range', 'url', 'view', 'cache_type', 'cache_page', 'cache_item_type',
+			)
 		);
 
-		foreach ( $allowed as $key ) {
+		foreach ( array_map( 'sanitize_key', $allowed ) as $key ) {
 			if ( ! isset( $values[ $key ] ) || is_array( $values[ $key ] ) ) {
 				continue;
 			}

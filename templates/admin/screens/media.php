@@ -5,7 +5,8 @@
  * The library is this site's own attachments. The language columns report
  * what LocalizePilot currently does with media, which is serve the source
  * file everywhere — see Media_Repository. Every control that would change
- * that is gated through Preview's "media" feature.
+ * that is gated through Preview's media_filters, media_bulk and
+ * media_localize features.
  *
  * @package LocalizePilot
  *
@@ -150,15 +151,15 @@ $lp_table = Template::capture(
 			array(
 				'name'    => 'language',
 				'label'   => __( 'Language', 'localizepilot' ),
-				'value'   => '',
-				'feature' => 'media',
+				'value'   => (string) ( $lp_filters['language'] ?? '' ),
+				'feature' => 'media_filters',
 				'options' => (array) ( $lp_data['languages'] ?? array() ),
 			),
 			array(
 				'name'    => 'status',
 				'label'   => __( 'Status', 'localizepilot' ),
-				'value'   => '',
-				'feature' => 'media',
+				'value'   => (string) ( $lp_filters['status'] ?? '' ),
+				'feature' => 'media_filters',
 				'options' => array(
 					''              => __( 'All Status', 'localizepilot' ),
 					'localized'     => __( 'Localized', 'localizepilot' ),
@@ -189,7 +190,7 @@ $lp_table = Template::capture(
 $lp_table .= Template::capture(
 	'parts/bulk-bar',
 	array(
-		'feature' => 'media',
+		'feature' => 'media_bulk',
 		'actions' => array(
 			array( 'action' => 'update', 'label' => __( 'Update', 'localizepilot' ) ),
 			array( 'action' => 'set-language', 'label' => __( 'Set Language', 'localizepilot' ) ),
@@ -248,8 +249,10 @@ if ( ! empty( $lp_items ) ) {
 			'base_url' => add_query_arg(
 				array_filter(
 					array(
-						'type' => $lp_filters['type'] ?? '',
-						's'    => $lp_filters['search'] ?? '',
+						'type'     => $lp_filters['type'] ?? '',
+						's'        => $lp_filters['search'] ?? '',
+						'language' => $lp_filters['language'] ?? '',
+						'status'   => $lp_filters['status'] ?? '',
 					)
 				),
 				(string) ( $lp_data['base_url'] ?? '' )
@@ -274,7 +277,7 @@ Template::render(
 );
 ?>
 
-<?php if ( Preview::is_preview( 'media' ) ) : ?>
+<?php if ( Preview::any( array( 'media_filters', 'media_bulk', 'media_localize' ) ) ) : ?>
 	<p class="lp-filtered-note">
 		<?php esc_html_e( 'Media localization is not connected yet — this library is real, its language columns describe what LocalizePilot does today.', 'localizepilot' ); ?>
 	</p>

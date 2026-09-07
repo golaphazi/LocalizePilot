@@ -11,7 +11,8 @@
  * Languages and Status columns say. When media localization ships,
  * localization() starts returning real values and no template changes.
  *
- * The screen's controls stay inert through Preview's "media" feature.
+ * The screen's controls stay inert through Preview's media_filters,
+ * media_bulk and media_localize features.
  *
  * @package LocalizePilot
  */
@@ -51,6 +52,18 @@ final class Media_Repository {
 			$args['post_mime_type'] = $type;
 		}
 
+		/**
+		 * Filter the attachment query behind the Media screen.
+		 *
+		 * The language and status filters arrive in $filters but are not
+		 * applied here, because nothing in LocalizePilot records either one
+		 * per attachment. Whatever does record them adds the meta_query.
+		 *
+		 * @param array<string,mixed> $args    WP_Query arguments.
+		 * @param array<string,mixed> $filters The screen's request filters.
+		 */
+		$args = (array) apply_filters( 'localizepilot_media_query_args', $args, $filters );
+
 		$query = new \WP_Query( $args );
 		$items = array();
 
@@ -88,11 +101,23 @@ final class Media_Repository {
 		$localized = 0;
 		$custom    = 0;
 
-		return array(
-			'total'     => $total,
-			'localized' => $localized,
-			'custom'    => $custom,
-			'needs'     => max( 0, $total - $localized - $custom ),
+		/**
+		 * Filter the Media screen's four summary figures.
+		 *
+		 * Counted, not assumed: with nothing recording a localized variant
+		 * both middle figures really are zero. Whatever starts recording them
+		 * replaces these with its own counts.
+		 *
+		 * @param array<string,int> $counts {total, localized, custom, needs}.
+		 */
+		return (array) apply_filters(
+			'localizepilot_media_counts',
+			array(
+				'total'     => $total,
+				'localized' => $localized,
+				'custom'    => $custom,
+				'needs'     => max( 0, $total - $localized - $custom ),
+			)
 		);
 	}
 
@@ -132,7 +157,7 @@ final class Media_Repository {
 		$group  = strtok( (string) $post->post_mime_type, '/' );
 		$parent = $post->post_parent > 0 ? get_post( $post->post_parent ) : null;
 
-		return array(
+		$row = array(
 			'id'         => $post->ID,
 			'title'      => get_the_title( $post ),
 			'filename'   => '' !== $file ? wp_basename( $file ) : '',
@@ -144,6 +169,19 @@ final class Media_Repository {
 			'edit_url'   => (string) get_edit_post_link( $post->ID, 'raw' ),
 			'view_url'   => (string) wp_get_attachment_url( $post->ID ),
 		) + $this->localization();
+
+		/**
+		 * Filter one attachment's row on the Media screen.
+		 *
+		 * The localization keys — languages, status, status_label — are the
+		 * ones worth replacing; see localization() for what they mean while
+		 * nothing records them. The rest describe the attachment itself and
+		 * are already true.
+		 *
+		 * @param array<string,mixed> $row  The row.
+		 * @param \WP_Post            $post The attachment.
+		 */
+		return (array) apply_filters( 'localizepilot_media_row', $row, $post );
 	}
 
 	/**

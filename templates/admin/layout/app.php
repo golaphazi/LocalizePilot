@@ -38,6 +38,34 @@ $lp_slug = (string) ( $args['slug'] ?? '' );
 				?>
 				<p class="screen-reader-text" id="lp-announcer" role="status" data-lp-announcer></p>
 
+				<?php
+				/*
+				 * The console discards WordPress admin notices, which is what
+				 * keeps other plugins from printing into it. That leaves
+				 * LocalizePilot and its add-ons with nowhere to speak, so this
+				 * is the one channel that survives — and it sits outside
+				 * #lp-view deliberately, so a message about the whole console
+				 * is not swept away by a client-side navigation.
+				 *
+				 * Render a .lp-banner here; the wrapper only appears when
+				 * something actually did.
+				 */
+				ob_start();
+
+				/**
+				 * Fires where console-wide messages are printed.
+				 *
+				 * Anything echoed here must be escaped by whoever echoes it.
+				 */
+				do_action( 'localizepilot_console_notices' );
+
+				$lp_notices = trim( (string) ob_get_clean() );
+
+				if ( '' !== $lp_notices ) {
+					echo '<div class="lp-notices">' . $lp_notices . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Markup from the action above, escaped at its source.
+				}
+				?>
+
 				<div class="lp-view" id="lp-view" data-lp-view aria-busy="false">
 					<?php Template::render( 'parts/view', $args ); ?>
 				</div>
