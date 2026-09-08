@@ -2,9 +2,9 @@
 Contributors: golammostafa95
 Tags: translation, multilingual, translate, ai translation, automatic translation
 Requires at least: 6.2
-Tested up to: 7.0
+Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.3
+Stable tag: 1.0.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -461,6 +461,18 @@ When analytics is enabled, anonymous visitors receive a random `localizepilot_vi
 Using WordPress's Delete action for the plugin runs `uninstall.php` and removes LocalizePilot settings, usage counters, translation records, analytics events, the analytics table, scheduled cleanup, and generated cache files. Deactivation alone does not delete data.
 
 == Changelog ==
+
+= 1.0.4 =
+* Replaced the tabbed settings page with a single-page admin console covering Overview, Translations, Languages, Media, SEO & URLs, Analytics, Performance, Providers, Cache Management, Language Switcher, Settings, and License.
+* Added client-side navigation between console screens, a searchable command palette, keyboard shortcuts, and right-to-left layout support throughout the console.
+* Added WooCommerce product translation. Products can be translated, edited per language, and served on language-prefixed URLs alongside posts and pages.
+* Added country flags beside each language in the frontend language switcher.
+* Added language and translation-status filters to the Media screen.
+* Added a Performance screen describing what translation monitoring measures, and a License screen for activating a LocalizePilot Pro license.
+* Added an add-on API so LocalizePilot Pro can extend the console. An add-on built for a newer API is refused with an explanation instead of failing at runtime.
+* Added the `localizepilot_page_processed`, `localizepilot_cache_lookup`, and `localizepilot_provider_request` actions so add-ons can measure translation, cache, and provider timings.
+* Improved accessibility: every control that is not connected yet now explains why to screen readers, rather than relying on a tooltip alone.
+* Fixed queued cache-warming jobs being left behind on deactivation and uninstall.
 
 = 1.0.3 =
 * Added the LocalizePilot brand icon to the admin menu, replacing the generic dashicon.
