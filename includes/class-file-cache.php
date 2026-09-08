@@ -1,5 +1,4 @@
 <?php
-
 namespace LocalizePilot;
 
 defined( 'ABSPATH' ) || exit;
