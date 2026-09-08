@@ -12,7 +12,7 @@ Translate WordPress with translation or AI providers, edit every language in Gut
 
 == Description ==
 
-LocalizePilot[https://localizepilot.com/] is a multilingual WordPress translation plugin for automatically translating posts and pages and managing each language version directly inside WordPress.
+[LocalizePilot](https://localizepilot.com/) is a multilingual WordPress translation plugin for automatically translating posts and pages and managing each language version directly inside WordPress.
 
 Choose a translation or AI provider, generate a language version, and edit the translated content directly in Gutenberg. Review and customize text, blocks, links, images, featured media, and other supported content without changing the original page.
 
