@@ -101,14 +101,24 @@ final class Router {
 		$this->detect();
 		$language = strtolower( $language );
 		$path     = (string) wp_parse_url( $this->original_request_uri, PHP_URL_PATH );
-		$query    = (string) wp_parse_url( $this->original_request_uri, PHP_URL_QUERY );
-		$relative = $this->relative_path( $path );
-		$had_trailing_slash = '/' === substr( $relative, -1 );
-		$segments = array_values( array_filter( explode( '/', trim( $relative, '/' ) ), 'strlen' ) );
-		$enabled  = $this->enabled_languages();
+		$query    = '';
+		$segments = array();
+		$had_trailing_slash = false;
 
-		if ( isset( $segments[0] ) && in_array( strtolower( $segments[0] ), $enabled, true ) ) {
-			array_shift( $segments );
+		// The current request path is only meaningful on the front end. On an
+		// admin/system request (e.g. the console's admin-ajax.php SPA calls),
+		// there is no real page to reflect, so build the URL from the site
+		// root instead of leaking wp-admin/admin-ajax.php into the result.
+		if ( ! $this->is_system_request( $this->original_request_uri ) ) {
+			$query    = (string) wp_parse_url( $this->original_request_uri, PHP_URL_QUERY );
+			$relative = $this->relative_path( $path );
+			$had_trailing_slash = '/' === substr( $relative, -1 );
+			$segments = array_values( array_filter( explode( '/', trim( $relative, '/' ) ), 'strlen' ) );
+			$enabled  = $this->enabled_languages();
+
+			if ( isset( $segments[0] ) && in_array( strtolower( $segments[0] ), $enabled, true ) ) {
+				array_shift( $segments );
+			}
 		}
 
 		if ( $language !== $this->source_language() ) {
