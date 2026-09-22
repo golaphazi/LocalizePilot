@@ -51,7 +51,14 @@ final class Cache_Management_Screen extends Abstract_Screen {
 		$model   = new Performance_Model();
 		$filters = $this->filters();
 		$stats   = $model->stats();
-		$history = $model->history( $filters['paged'], $filters['type'] );
+		$history = $model->history(
+			$filters['paged'],
+			$filters['type'],
+			array(
+				'language' => $filters['language'],
+				'status'   => $filters['status'],
+			)
+		);
 
 		foreach ( $history['items'] as &$item ) {
 			$item['delete_url'] = $this->cache_action_url(
@@ -150,9 +157,14 @@ final class Cache_Management_Screen extends Abstract_Screen {
 		$type = sanitize_key( wp_unslash( $_GET['cache_type'] ?? 'all' ) );
 		$type = in_array( $type, array( 'all', 'page', 'snapshot' ), true ) ? $type : 'all';
 
+		$language = sanitize_key( wp_unslash( is_scalar( $_GET['cache_language'] ?? '' ) ? (string) ( $_GET['cache_language'] ?? '' ) : '' ) );
+		$status   = sanitize_key( wp_unslash( is_scalar( $_GET['cache_status'] ?? '' ) ? (string) ( $_GET['cache_status'] ?? '' ) : '' ) );
+
 		return array(
-			'type'  => $type,
-			'paged' => max( 1, absint( wp_unslash( $_GET['paged'] ?? 1 ) ) ),
+			'type'     => $type,
+			'paged'    => max( 1, absint( wp_unslash( $_GET['paged'] ?? 1 ) ) ),
+			'language' => Language_Catalog::exists( $language ) ? $language : '',
+			'status'   => in_array( $status, array( 'active', 'expired' ), true ) ? $status : '',
 		);
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 	}
@@ -160,7 +172,7 @@ final class Cache_Management_Screen extends Abstract_Screen {
 	/**
 	 * URL for one of the existing cache-management actions.
 	 *
-	 * @param array{type:string,paged:int} $filters Current list state.
+	 * @param array{type:string,paged:int,language:string,status:string} $filters Current list state.
 	 */
 	private function cache_action_url( string $action, array $filters, string $key = '', string $type = 'page' ): string {
 		$args = array(

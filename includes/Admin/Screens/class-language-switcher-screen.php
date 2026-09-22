@@ -78,16 +78,32 @@ final class Language_Switcher_Screen extends Abstract_Screen {
 		$enabled   = array_values( array_filter( $languages, static fn( array $l ): bool => empty( $l['is_source'] ) ) );
 		$in_header = ! empty( $settings['header_switcher'] );
 
+		/*
+		 * Stored and effective can differ: a placement the add-on provided
+		 * stays stored after the add-on goes, and the switcher falls back to
+		 * the header meanwhile. The screen shows where it actually is.
+		 */
+		$stored    = sanitize_key( (string) ( $settings['switcher_placement'] ?? 'header' ) );
+		$effective = in_array( $stored, Language_Switcher::placements(), true ) ? $stored : 'header';
+
+		$labels = array(
+			'header'   => array( __( 'Header', 'localizepilot' ), __( 'Top navigation area', 'localizepilot' ) ),
+			'floating' => array( __( 'Floating', 'localizepilot' ), __( 'Pinned to the corner while scrolling', 'localizepilot' ) ),
+			'footer'   => array( __( 'Footer', 'localizepilot' ), __( 'At the bottom of every page', 'localizepilot' ) ),
+		);
+
 		return array(
 			'settings'   => $settings,
 			'languages'  => $languages,
 			'visitor_languages' => count( $languages ),
 			'enabled_count'     => count( $enabled ),
 			'in_header'  => $in_header,
+			'placement_stored'    => $stored,
+			'placement_effective' => $effective,
 			'placement'  => $in_header
 				? array(
-					'label' => __( 'Header', 'localizepilot' ),
-					'note'  => __( 'Top navigation area', 'localizepilot' ),
+					'label' => $labels[ $effective ][0] ?? $labels['header'][0],
+					'note'  => $labels[ $effective ][1] ?? $labels['header'][1],
 				)
 				: array(
 					'label' => __( 'Shortcode', 'localizepilot' ),

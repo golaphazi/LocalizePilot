@@ -116,7 +116,31 @@ final class Settings {
 			$changed = true;
 		} elseif ( in_array( $tab, array( 'switcher', 'language-switcher' ), true ) ) {
 			$output['header_switcher']  = empty( $input['header_switcher'] ) ? 0 : 1;
-			$output['menu_style']       = in_array( $input['menu_style'] ?? '', array( 'dropdown', 'inline' ), true ) ? sanitize_key( $input['menu_style'] ) : 'dropdown';
+			// Not sent when the stored layout is locked and nothing else was
+			// picked — keep it, so a renewed license brings it straight back.
+			if ( isset( $input['menu_style'] ) ) {
+				$output['menu_style'] = is_scalar( $input['menu_style'] ) && in_array( $input['menu_style'], Language_Switcher::styles(), true ) ? sanitize_key( (string) $input['menu_style'] ) : 'dropdown';
+			}
+
+			/*
+			 * Only what is available right now can be chosen; what is stored
+			 * and later becomes unavailable is kept, and the switcher falls
+			 * back to the header until it is available again.
+			 */
+			if ( isset( $input['switcher_placement'] ) ) {
+				$placement = is_scalar( $input['switcher_placement'] ) ? sanitize_key( (string) $input['switcher_placement'] ) : '';
+
+				if ( in_array( $placement, Language_Switcher::placements(), true ) ) {
+					$output['switcher_placement'] = $placement;
+				}
+			}
+
+			// The toggle is disabled while locked, and a disabled checkbox
+			// sends nothing — so the marker says whether it was live on the
+			// form, and a save while locked keeps what was chosen.
+			if ( ! empty( $input['switcher_detect_browser_field'] ) ) {
+				$output['switcher_detect_browser'] = empty( $input['switcher_detect_browser'] ) ? 0 : 1;
+			}
 			$output['menu_position']    = in_array( $input['menu_position'] ?? '', array( 'start', 'center', 'end' ), true ) ? sanitize_key( $input['menu_position'] ) : 'end';
 			$output['language_label']   = in_array( $input['language_label'] ?? '', array( 'native', 'english', 'code' ), true ) ? sanitize_key( $input['language_label'] ) : 'native';
 			$output['show_flags']       = empty( $input['show_flags'] ) ? 0 : 1;

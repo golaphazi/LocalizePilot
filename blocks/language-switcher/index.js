@@ -17,6 +17,8 @@
     data = data || {};
     var languages = Array.isArray(data.languages) ? data.languages : [];
     var defaults = data.defaults || {};
+    // Layouts an add-on provides, e.g. [{ value: 'button', label: 'Button' }].
+    var extraStyles = Array.isArray(data.styles) ? data.styles : [];
 
     function resolved(value, fallback) {
         return !value || value === 'inherit' ? fallback : value;
@@ -108,7 +110,7 @@
                                 { label: __('Use plugin setting', 'localizepilot'), value: 'inherit' },
                                 { label: __('Dropdown', 'localizepilot'), value: 'dropdown' },
                                 { label: __('Inline links', 'localizepilot'), value: 'inline' }
-                            ],
+                            ].concat(extraStyles),
                             onChange: function (value) { setAttributes({ style: value }); }
                         }),
                         el(SelectControl, {

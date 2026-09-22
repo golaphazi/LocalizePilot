@@ -69,6 +69,8 @@ final class Plugin {
 			'refresh_on_source_change' => 0,
 			'stale_cache_fallback'     => 1,
 			'header_switcher'          => 1,
+			'switcher_placement'       => 'header',
+			'switcher_detect_browser'  => 0,
 			'menu_style'               => 'dropdown',
 			'menu_position'            => 'end',
 			'language_label'           => 'native',
@@ -159,6 +161,12 @@ final class Plugin {
 			'LocalizePilotSwitcherBlock',
 			array(
 				'languages' => $languages,
+				// Layouts an add-on provides, so the block can offer them.
+				'styles'    => array_map(
+					static fn( $key, $label ) => array( 'value' => $key, 'label' => $label ),
+					array_keys( Language_Switcher::extra_styles() ),
+					array_values( Language_Switcher::extra_styles() )
+				),
 				'defaults'  => array(
 					'style'     => (string) ( $settings['menu_style'] ?? 'dropdown' ),
 					'labels'    => (string) ( $settings['language_label'] ?? 'native' ),

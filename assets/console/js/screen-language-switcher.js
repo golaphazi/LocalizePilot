@@ -127,19 +127,36 @@
 		var flagsInput = inputFor( form, 'show_flags', false );
 		var showFlags = !! flagsInput && flagsInput.checked;
 
-		LocalizePilot.findAll( '.lp-segmented__option', form ).forEach( function ( option ) {
-			var input = LocalizePilot.find( 'input[type="radio"]', option );
-
-			if ( input ) {
-				option.classList.toggle( 'is-active', input.checked );
+		LocalizePilot.findAll( '.lp-segmented', form ).forEach( function ( group ) {
+			// A group with nothing checked is showing a stored choice that is
+			// locked right now; the server marked what visitors actually get,
+			// so leave that alone until someone picks something.
+			if ( ! LocalizePilot.find( 'input[type="radio"]:checked', group ) ) {
+				return;
 			}
+
+			LocalizePilot.findAll( '.lp-segmented__option', group ).forEach( function ( option ) {
+				var input = LocalizePilot.find( 'input[type="radio"]', option );
+
+				if ( input ) {
+					option.classList.toggle( 'is-active', input.checked );
+				}
+			} );
 		} );
+
+		var placementInput = LocalizePilot.find( '[data-lp-switcher-placement-input]', form );
+		var chosen = placementInput ? placementInput.value : 'header';
+		var chosenCard = LocalizePilot.find( '[data-lp-switcher-placement="' + chosen + '"]', form );
+
+		// A locked placement is stored but not in use: the header is.
+		if ( ! chosenCard || chosenCard.hasAttribute( 'data-lp-paywall' ) ) {
+			chosen = 'header';
+		}
 
 		LocalizePilot.findAll( '[data-lp-switcher-placement]', form ).forEach( function ( placement ) {
 			var key = placement.getAttribute( 'data-lp-switcher-placement' );
-			var active = key === 'header'
-				? !! headerInput && headerInput.checked
-				: key === 'shortcode' && ( ! headerInput || ! headerInput.checked );
+			var automatic = !! headerInput && headerInput.checked;
+			var active = key === 'shortcode' ? ! automatic : automatic && key === chosen;
 
 			placement.classList.toggle( 'is-active', active );
 			placement.setAttribute( 'aria-pressed', active ? 'true' : 'false' );
@@ -181,12 +198,22 @@
 
 					var placement = event.target.closest( '[data-lp-switcher-placement]' );
 
-					if ( placement && ! placement.closest( '[data-lp-preview]' ) ) {
+					// Locked cards belong to the paywall, which has already
+					// answered the click.
+					if ( placement && ! placement.closest( '[data-lp-preview]' ) && ! placement.hasAttribute( 'data-lp-paywall' ) ) {
 						var header = inputFor( form, 'header_switcher', false );
+						var chosenInput = LocalizePilot.find( '[data-lp-switcher-placement-input]', form );
 						var key = placement.getAttribute( 'data-lp-switcher-placement' );
 
-						if ( header && ( key === 'header' || key === 'shortcode' ) ) {
-							header.checked = key === 'header';
+						if ( header ) {
+							// Shortcode means no automatic switcher; any other
+							// card turns it on and says where.
+							header.checked = key !== 'shortcode';
+
+							if ( chosenInput && key !== 'shortcode' ) {
+								chosenInput.value = key;
+							}
+
 							header.dispatchEvent( new Event( 'change', { bubbles: true } ) );
 						}
 					}

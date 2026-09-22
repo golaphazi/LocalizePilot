@@ -95,6 +95,45 @@ final class Paywall {
 					__( 'Count source media and language-specific variants accurately', 'localizepilot' ),
 				),
 			),
+			'switcher_layouts' => array(
+				'title'   => __( 'Button switcher layout', 'localizepilot' ),
+				'promise' => __( 'A compact language button that opens a list of your languages — the layout that fits best in a crowded or mobile header.', 'localizepilot' ),
+				'points'  => array(
+					__( 'Shows the current language as a flag and code on one small button', 'localizepilot' ),
+					__( 'Opens a panel listing every enabled language by name', 'localizepilot' ),
+					__( 'Works without JavaScript, and closes on Escape or a click elsewhere when it is available', 'localizepilot' ),
+					__( 'Available in the header, the shortcode and the Gutenberg block', 'localizepilot' ),
+				),
+			),
+			'switcher_placements' => array(
+				'title'   => __( 'Floating and footer switcher', 'localizepilot' ),
+				'promise' => __( 'Put the language switcher where visitors can always reach it, not only in the header.', 'localizepilot' ),
+				'points'  => array(
+					__( 'Floating: a switcher pinned to the corner of the screen while visitors scroll', 'localizepilot' ),
+					__( 'Footer: a switcher at the bottom of every page', 'localizepilot' ),
+					__( 'Uses the layout, labels and flags you have already chosen', 'localizepilot' ),
+					__( 'Falls back to the header if the add-on is ever switched off', 'localizepilot' ),
+				),
+			),
+			'browser_language' => array(
+				'title'   => __( 'Browser language suggestion', 'localizepilot' ),
+				'promise' => __( 'Offer visitors their own language when their browser says they would prefer it.', 'localizepilot' ),
+				'points'  => array(
+					__( 'Suggests the matching language version with one click to switch', 'localizepilot' ),
+					__( 'Never redirects: visitors and search engines always see the page they asked for', 'localizepilot' ),
+					__( 'Decided in the visitor\'s browser, so it works with every page cache', 'localizepilot' ),
+					__( 'Remembers when a visitor says no', 'localizepilot' ),
+				),
+			),
+			'cache_filters' => array(
+				'title'   => __( 'Cache language and status filters', 'localizepilot' ),
+				'promise' => __( 'Narrow the cache history to one language, or to the pages that have expired.', 'localizepilot' ),
+				'points'  => array(
+					__( 'Filter cached pages and snapshots by language', 'localizepilot' ),
+					__( 'Show only active or only expired entries', 'localizepilot' ),
+					__( 'Combine both with the type tabs', 'localizepilot' ),
+				),
+			),
 		);
 
 		if ( self::is_component_gallery() ) {

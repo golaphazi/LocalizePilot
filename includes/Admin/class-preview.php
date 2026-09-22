@@ -52,10 +52,8 @@ final class Preview {
 			'cache_hit_rate'    => true,
 			'bulk_actions'      => true,
 			'cache_automation'  => true,
-			'cache_filters'     => true,
 			'license'           => true,
 			'switcher_order'    => true,
-			'switcher_placement'=> true,
 			'switcher_behavior' => true,
 		);
 
