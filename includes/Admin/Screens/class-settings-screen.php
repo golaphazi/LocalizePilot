@@ -48,6 +48,7 @@ final class Settings_Screen extends Abstract_Screen {
 
 		return array(
 			'settings'          => $model->settings(),
+			'content'           => $model->content(),
 			'usage'             => $model->usage(),
 			'analytics_message' => $message,
 			'clear_analytics'    => $clear_url,

@@ -95,6 +95,103 @@ Template::render(
 	);
 	?>
 
+	<?php
+	$lp_content      = (array) ( $lp_data['content'] ?? array() );
+	$lp_translations = (int) ( $lp_content['translations'] ?? 0 );
+	?>
+	<section class="lp-card lp-settings-card lp-content-settings">
+		<header class="lp-card__head">
+			<div>
+				<h2 class="lp-card__title"><?php esc_html_e( 'Content and language', 'localizepilot' ); ?></h2>
+				<p class="lp-card__subtitle"><?php esc_html_e( 'The language your site is written in, and which kinds of content can be translated.', 'localizepilot' ); ?></p>
+			</div>
+		</header>
+		<div class="lp-card__body lp-content-settings__body">
+			<div class="lp-content-settings__language">
+				<?php
+				Template::render(
+					'parts/field',
+					array(
+						'type'    => 'select',
+						'name'    => Plugin::OPTION . '[source_language]',
+						'id'      => 'lp-source-language',
+						'label'   => __( 'Default language', 'localizepilot' ),
+						'value'   => (string) ( $lp_content['source'] ?? 'en' ),
+						'options' => (array) ( $lp_content['languages'] ?? array() ),
+						'hint'    => __( 'Pages without a language prefix are served in this language, and translations are made from it.', 'localizepilot' ),
+					)
+				);
+				?>
+
+				<?php if ( $lp_translations > 0 ) : ?>
+					<div class="lp-banner lp-banner--warning lp-content-settings__guard">
+						<p>
+							<?php
+							echo esc_html(
+								sprintf(
+									/* translators: 1: number of translations, 2: language name such as "English". */
+									_n(
+										'This site has %1$s translation made from %2$s. Changing the default language does not re-translate it: it will be treated as made from the new language, and search engines will see your main URLs change language.',
+										'This site has %1$s translations made from %2$s. Changing the default language does not re-translate them: they will be treated as made from the new language, and search engines will see your main URLs change language.',
+										$lp_translations,
+										'localizepilot'
+									),
+									number_format_i18n( $lp_translations ),
+									(string) ( $lp_content['source_name'] ?? '' )
+								)
+							);
+							?>
+						</p>
+						<label class="lp-content-settings__confirm">
+							<span class="lp-checkbox">
+								<input type="checkbox" name="<?php echo esc_attr( Plugin::OPTION ); ?>[source_language_confirm]" value="1">
+							</span>
+							<span><?php esc_html_e( 'Change the default language anyway', 'localizepilot' ); ?></span>
+						</label>
+					</div>
+				<?php endif; ?>
+			</div>
+
+			<fieldset class="lp-content-settings__types">
+				<legend class="lp-field__label"><?php esc_html_e( 'Translatable content', 'localizepilot' ); ?></legend>
+				<?php
+				/*
+				 * Tells the sanitizer this list was on the form. Unticked
+				 * boxes submit nothing, so without it "none ticked" and "not on
+				 * this form" would look identical.
+				 */
+				?>
+				<input type="hidden" name="<?php echo esc_attr( Plugin::OPTION ); ?>[translatable_post_types_field]" value="1">
+
+				<div class="lp-type-list">
+					<?php foreach ( (array) ( $lp_content['post_types'] ?? array() ) as $lp_type ) : ?>
+						<label class="lp-type-option<?php echo empty( $lp_type['registered'] ) ? ' is-unavailable' : ''; ?>">
+							<span class="lp-checkbox">
+								<input
+									type="checkbox"
+									name="<?php echo esc_attr( Plugin::OPTION ); ?>[translatable_post_types][]"
+									value="<?php echo esc_attr( (string) $lp_type['slug'] ); ?>"
+									<?php checked( ! empty( $lp_type['checked'] ) ); ?>
+									<?php disabled( empty( $lp_type['registered'] ) ); ?>
+								>
+							</span>
+							<span class="lp-type-option__text">
+								<strong><?php echo esc_html( (string) $lp_type['label'] ); ?></strong>
+								<?php if ( empty( $lp_type['registered'] ) ) : ?>
+									<span><?php esc_html_e( 'Not active on this site — kept for when it is.', 'localizepilot' ); ?></span>
+								<?php else : ?>
+									<code><?php echo esc_html( (string) $lp_type['slug'] ); ?></code>
+								<?php endif; ?>
+							</span>
+						</label>
+					<?php endforeach; ?>
+				</div>
+
+				<span class="lp-field__hint"><?php esc_html_e( 'Each ticked type gets a LocalizePilot panel in its editor and language URLs on your site. Turning one off keeps its existing translations.', 'localizepilot' ); ?></span>
+			</fieldset>
+		</div>
+	</section>
+
 	<div class="lp-cols lp-cols--equal">
 		<section class="lp-card lp-settings-card">
 			<header class="lp-card__head">
@@ -172,7 +269,7 @@ Template::render(
 					array(
 						'name'        => Plugin::OPTION . '[refresh_on_source_change]',
 						'label'       => __( 'Refresh when source changes', 'localizepilot' ),
-						'description' => __( 'Invalidate rendered HTML when the English source changes.', 'localizepilot' ),
+						'description' => __( 'Invalidate rendered HTML when the original page changes.', 'localizepilot' ),
 						'checked'     => ! empty( $lp_settings['refresh_on_source_change'] ),
 					)
 				);

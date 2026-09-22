@@ -35,8 +35,11 @@ unset( $localizepilot_headers );
  *   2  Adds localizepilot_page_processed, localizepilot_cache_lookup and
  *      localizepilot_provider_request. Additive, so an add-on built for 1
  *      still registers — Addons::MIN_API is what would end that.
+ *   3  Adds Translation_Service (translate one post from code) and
+ *      Post_Types with the localizepilot_translatable_post_types filter.
+ *      Additive again.
  */
-define( 'LOCALIZEPILOT_API', 2 );
+define( 'LOCALIZEPILOT_API', 3 );
 
 define( 'LOCALIZEPILOT_FILE', __FILE__ );
 define( 'LOCALIZEPILOT_PATH', plugin_dir_path( __FILE__ ) );

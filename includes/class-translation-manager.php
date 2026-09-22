@@ -30,9 +30,9 @@ final class Translation_Manager
 	{
 		add_action('init', array($this, 'register_post_type'), 5);
 		add_action('init', array($this, 'migrate_translation_parents'), 20);
-		add_action('add_meta_boxes_post', array($this, 'add_source_meta_box'));
-		add_action('add_meta_boxes_page', array($this, 'add_source_meta_box'));
-		add_action('add_meta_boxes_product', array($this, 'add_source_meta_box'));
+		// The generic hook, because which types are translatable is a setting
+		// that is not known yet when hooks are added.
+		add_action('add_meta_boxes', array($this, 'maybe_add_source_meta_box'), 10, 2);
 		add_action('add_meta_boxes_' . self::POST_TYPE, array($this, 'add_translation_meta_box'));
 		add_action('admin_post_next_translate_create_translation', array($this, 'create_translation_action'));
 		add_action('admin_post_next_translate_refresh_translation', array($this, 'refresh_translation_action'));
@@ -184,6 +184,17 @@ final class Translation_Manager
 			'reviewed'     => __('Reviewed', 'localizepilot'),
 			'needs_update' => __('Needs update', 'localizepilot'),
 		);
+	}
+
+	/**
+	 * @param string $post_type Screen post type.
+	 * @param mixed  $post      A WP_Post on post screens; a WP_Comment elsewhere.
+	 */
+	public function maybe_add_source_meta_box(string $post_type, $post = null): void
+	{
+		if ($post instanceof \WP_Post && Post_Types::is_translatable($post_type)) {
+			$this->add_source_meta_box($post);
+		}
 	}
 
 	public function add_source_meta_box(\WP_Post $post): void
@@ -353,13 +364,66 @@ final class Translation_Manager
 		}
 	}
 
+	/**
+	 * Create or refresh one translation, for code rather than a person.
+	 *
+	 * The admin-post handlers above check a nonce and a capability and end in
+	 * a redirect; a background job has none of those. Translation_Service is
+	 * the supported way in, and this is what it calls.
+	 *
+	 * @throws \RuntimeException When the translation cannot be produced.
+	 */
+	public function translate(int $source_id, string $language): int
+	{
+		$language = sanitize_key($language);
+		$existing = $this->find_translation($source_id, $language);
+
+		return $this->generate_translation($source_id, $language, $existing ? (int) $existing->ID : 0);
+	}
+
+	/**
+	 * The translation record for a source and language, in any live status.
+	 *
+	 * Not get_translation(): outside wp-admin that only sees published records,
+	 * so a cron job asking about a draft translation would be told there is
+	 * none and create a second one beside it.
+	 */
+	public function find_translation(int $source_id, string $language): ?\WP_Post
+	{
+		$language = sanitize_key($language);
+
+		$query = new \WP_Query(
+			array(
+				'post_type'              => self::POST_TYPE,
+				'post_status'            => array('publish', 'draft', 'pending', 'private', 'future'),
+				'post_parent'            => $source_id,
+				'posts_per_page'         => -1,
+				'no_found_rows'          => true,
+				'update_post_term_cache' => false,
+				'orderby'                => 'ID',
+				'order'                  => 'DESC',
+			)
+		);
+
+		foreach ($query->posts as $candidate) {
+			if ($candidate instanceof \WP_Post && $language === sanitize_key((string) get_post_meta($candidate->ID, self::META_LANGUAGE, true))) {
+				return $candidate;
+			}
+		}
+
+		return null;
+	}
+
 	private function generate_translation(int $source_id, string $language, int $translation_id = 0): int
 	{
 		$this->settings = Plugin::instance()->get_settings();
 		$source         = get_post($source_id);
 
-		if (! $source instanceof \WP_Post || ! in_array($source->post_type, array('post', 'page', 'product'), true)) {
+		if (! $source instanceof \WP_Post) {
 			throw new \RuntimeException(esc_html__('The source post or page was not found.', 'localizepilot'));
+		}
+		if (! Post_Types::is_translatable($source->post_type)) {
+			throw new \RuntimeException(esc_html__('This content type is not translatable. Turn it on under Settings, Translatable content.', 'localizepilot'));
 		}
 		if (! Language_Catalog::exists($language) || $language === (string) $this->settings['source_language']) {
 			throw new \RuntimeException(esc_html__('The selected target language is invalid.', 'localizepilot'));
@@ -371,7 +435,7 @@ final class Translation_Manager
 		$limit_enabled = ! empty($this->settings['daily_limit_enabled']);
 		$daily_limit   = max(1, absint($this->settings['daily_limit'] ?? 10));
 		if ($limit_enabled && ! $this->limiter->can_translate($daily_limit)) {
-			throw new \RuntimeException(esc_html__('The LocalizePilot daily automatic translation limit has been reached.', 'localizepilot'));
+			throw new Limit_Reached_Exception(esc_html__('The LocalizePilot daily automatic translation limit has been reached.', 'localizepilot'));
 		}
 
 		$client     = Client_Factory::make($this->settings);
@@ -495,7 +559,7 @@ final class Translation_Manager
 			return;
 		}
 
-		if (in_array($post->post_type, array('post', 'page'), true) && 'auto-draft' !== $post->post_status) {
+		if (Post_Types::is_translatable($post->post_type) && 'auto-draft' !== $post->post_status) {
 			$this->mark_translations_for_source_change($post);
 		}
 	}
@@ -577,7 +641,12 @@ final class Translation_Manager
 			$cache->delete_post_cache($source_id, $language);
 			$cache->delete_translation_snapshot($source_id, $language);
 			unset($this->runtime_cache[$this->runtime_key($source_id, $language)]);
-		} elseif (in_array($post->post_type, array('post', 'page'), true)) {
+		} elseif ('revision' !== $post->post_type) {
+			/*
+			 * Any type, not just the translatable ones: a type switched off
+			 * after it was translated still has translation records, and
+			 * deleting one of its posts must not strand them.
+			 */
 			$cache->delete_post_cache($post_id);
 			$translations = get_posts(
 				array(
@@ -630,7 +699,7 @@ final class Translation_Manager
 
 	public function current_translation(): ?\WP_Post
 	{
-		if (! $this->router->is_translated_request() || ! is_singular(array('post', 'page', 'product'))) {
+		if (! $this->router->is_translated_request() || ! Post_Types::is_singular()) {
 			return null;
 		}
 		$source_id = get_queried_object_id();
@@ -639,7 +708,7 @@ final class Translation_Manager
 
 	public function filter_content(string $content): string
 	{
-		if (is_admin() || ! $this->router->is_translated_request() || ! is_singular(array('post', 'page', 'product')) || ! in_the_loop() || ! is_main_query()) {
+		if (is_admin() || ! $this->router->is_translated_request() || ! Post_Types::is_singular() || ! in_the_loop() || ! is_main_query()) {
 			return $content;
 		}
 		$source_id = get_the_ID();
@@ -652,7 +721,7 @@ final class Translation_Manager
 
 	public function filter_title(string $title, int $post_id): string
 	{
-		if (is_admin() || ! $this->router->is_translated_request() || ! is_singular(array('post', 'page', 'product')) || $post_id !== get_queried_object_id()) {
+		if (is_admin() || ! $this->router->is_translated_request() || ! Post_Types::is_singular() || $post_id !== get_queried_object_id()) {
 			return $title;
 		}
 		$translation = $this->get_translation($post_id, $this->router->current_language());
@@ -662,7 +731,7 @@ final class Translation_Manager
 	public function filter_excerpt(string $excerpt, $post): string
 	{
 		$post = get_post($post);
-		if (is_admin() || ! $post instanceof \WP_Post || ! $this->router->is_translated_request() || ! is_singular(array('post', 'page', 'product')) || $post->ID !== get_queried_object_id()) {
+		if (is_admin() || ! $post instanceof \WP_Post || ! $this->router->is_translated_request() || ! Post_Types::is_singular() || $post->ID !== get_queried_object_id()) {
 			return $excerpt;
 		}
 		$translation = $this->get_translation($post->ID, $this->router->current_language());

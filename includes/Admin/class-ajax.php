@@ -87,6 +87,23 @@ final class Ajax {
 		update_option( \LocalizePilot\Plugin::OPTION, $input );
 		$after = get_option( \LocalizePilot\Plugin::OPTION, array() );
 
+		/*
+		 * The sanitizer refuses some changes outright — a new default language
+		 * on a site that already has translations, without confirmation — and
+		 * says why through add_settings_error(). The rest of the save still
+		 * stands, but the person has to hear about the part that did not.
+		 */
+		foreach ( get_settings_errors( \LocalizePilot\Plugin::OPTION ) as $error ) {
+			if ( 'error' === ( $error['type'] ?? '' ) ) {
+				wp_send_json_error(
+					array(
+						'changed' => $before !== $after,
+						'message' => (string) $error['message'],
+					)
+				);
+			}
+		}
+
 		wp_send_json_success(
 			array(
 				'changed' => $before !== $after,

@@ -9,6 +9,7 @@ namespace LocalizePilot\Admin\Data;
 
 use LocalizePilot\Admin\Screen_Registry;
 use LocalizePilot\Language_Catalog;
+use LocalizePilot\Post_Types;
 use LocalizePilot\Router;
 use LocalizePilot\Translation_Manager;
 
@@ -69,9 +70,17 @@ final class Global_Search {
 
 	/** @return array<int,array<string,mixed>> */
 	private function content( string $query ): array {
+		$types = Post_Types::translatable();
+
+		// get_posts() with no post type searches posts only, which would be a
+		// wrong answer rather than no answer.
+		if ( empty( $types ) ) {
+			return array();
+		}
+
 		$posts = get_posts(
 			array(
-				'post_type'      => array( 'post', 'page' ),
+				'post_type'      => $types,
 				'post_status'    => 'publish',
 				'posts_per_page' => 5,
 				's'              => $query,

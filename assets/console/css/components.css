@@ -5343,3 +5343,133 @@
 	font-size: var(--lp-text-sm);
 	line-height: 16px;
 }
+
+/* ------------------------------------------------------------------
+ * Settings: Content and language
+ * ------------------------------------------------------------------ */
+
+.localizepilot-console .lp-content-settings__body {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+	gap: 24px 32px;
+	align-items: start;
+}
+
+@media (max-width: 960px) {
+	.localizepilot-console .lp-content-settings__body {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+.localizepilot-console .lp-content-settings__language {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+.localizepilot-console .lp-content-settings .lp-banner {
+	margin: 0;
+	padding: 12px 14px;
+}
+
+.localizepilot-console .lp-content-settings .lp-banner p {
+	margin-top: 0;
+}
+
+.localizepilot-console .lp-content-settings__confirm {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-top: 10px;
+	color: var(--lp-ink);
+	font-size: var(--lp-text-md);
+	font-weight: 500;
+	cursor: pointer;
+}
+
+/* A fieldset for the grouping and the legend, without the browser's frame. */
+.localizepilot-console .lp-content-settings__types {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	min-width: 0;
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+
+.localizepilot-console .lp-content-settings__types legend {
+	margin-bottom: 8px;
+	padding: 0;
+}
+
+.localizepilot-console .lp-type-list {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+	gap: 8px;
+}
+
+.localizepilot-console .lp-type-option {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	padding: 10px 12px;
+	border: 1px solid var(--lp-border);
+	border-radius: var(--lp-radius);
+	background: var(--lp-surface);
+	cursor: pointer;
+	transition: border-color var(--lp-transition), background var(--lp-transition);
+}
+
+.localizepilot-console .lp-type-option .lp-checkbox {
+	padding-top: 2px;
+}
+
+.localizepilot-console .lp-type-option:hover {
+	border-color: var(--lp-brand);
+}
+
+.localizepilot-console .lp-type-option:has(input:checked) {
+	border-color: rgba(25, 199, 232, 0.45);
+	background: var(--lp-brand-wash);
+}
+
+/* Kept but dormant: must not read as switched on. :has(input:checked) above
+   is (0,3,1), so this repeats it to outrank it rather than relying on order. */
+.localizepilot-console .lp-type-option.is-unavailable,
+.localizepilot-console .lp-type-option.is-unavailable:has(input:checked) {
+	border-color: var(--lp-border);
+	border-style: dashed;
+	background: var(--lp-surface-2);
+	cursor: default;
+}
+
+.localizepilot-console .lp-type-option.is-unavailable:hover {
+	border-color: var(--lp-border);
+}
+
+.localizepilot-console .lp-type-option__text {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+
+.localizepilot-console .lp-type-option__text strong {
+	color: var(--lp-ink);
+	font-size: var(--lp-text-md);
+	font-weight: 500;
+}
+
+.localizepilot-console .lp-type-option__text code,
+.localizepilot-console .lp-type-option__text span {
+	overflow-wrap: anywhere;
+	color: var(--lp-ink-3);
+	font-size: var(--lp-text-sm);
+}
+
+.localizepilot-console .lp-type-option__text code {
+	padding: 0;
+	background: none;
+	font-family: var(--lp-font-mono);
+}

@@ -85,7 +85,8 @@ final class Settings {
 			$changed = true;
 		} elseif ( 'languages' === $tab ) {
 			$languages = array_map( 'sanitize_key', (array) ( $input['enabled_languages'] ?? array() ) );
-			$languages = array_values( array_filter( $languages, static fn( $code ) => 'en' !== $code && Language_Catalog::exists( $code ) ) );
+			$source    = (string) $output['source_language'];
+			$languages = array_values( array_filter( $languages, static fn( $code ) => $source !== $code && Language_Catalog::exists( $code ) ) );
 			$output['enabled_languages'] = array_values( array_unique( $languages ) );
 			$changed = true;
 		} elseif ( 'translation' === $tab ) {
@@ -120,10 +121,31 @@ final class Settings {
 			$output['stale_cache_fallback']     = empty( $input['stale_cache_fallback'] ) ? 0 : 1;
 			$output['analytics_enabled']        = empty( $input['analytics_enabled'] ) ? 0 : 1;
 			$output['analytics_retention_days'] = min( 3650, max( 7, absint( $input['analytics_retention_days'] ?? 365 ) ) );
+
+			/*
+			 * Only when the form actually carried the field. An unticked
+			 * checkbox sends nothing, so without the marker a Settings save
+			 * from anywhere that does not render this list would read as
+			 * "translate nothing".
+			 */
+			if ( ! empty( $input['translatable_post_types_field'] ) ) {
+				$output['translatable_post_types'] = Post_Types::sanitize(
+					(array) ( $input['translatable_post_types'] ?? array() ),
+					(array) ( $old['translatable_post_types'] ?? Post_Types::DEFAULTS )
+				);
+			}
+
+			if ( isset( $input['source_language'] ) ) {
+				$output = $this->sanitize_source_language( $output, $old, $input );
+			}
+
 			$changed = true;
 		}
 
-		$output['source_language'] = 'en';
+		// Whatever arrived, the source is always a language LocalizePilot knows.
+		if ( ! Language_Catalog::exists( (string) $output['source_language'] ) ) {
+			$output['source_language'] = Language_Catalog::exists( (string) $old['source_language'] ) ? (string) $old['source_language'] : 'en';
+		}
 		// A valid form submission is not necessarily a settings change. Avoid
 		// invalidating every rendered page when an administrator clicks Save
 		// without modifying anything (the AJAX UI reports that as a no-op).
@@ -132,6 +154,86 @@ final class Settings {
 			( new File_Cache( $old ) )->clear_all();
 		}
 		return $output;
+	}
+
+	/**
+	 * Change the source language, or explain why not.
+	 *
+	 * The source is what unprefixed URLs serve and what every translation was
+	 * made from. On a site with no translations, changing it is just a
+	 * setting. On a site with translations it re-labels all of them — German
+	 * text made from English stays German, but LocalizePilot now believes it
+	 * was made from whatever the new source is, and search engines see "/"
+	 * change language overnight. So that change needs a deliberate second
+	 * tick, and without one the old value stands and the screen says why.
+	 *
+	 * @param array<string,mixed> $output Settings being saved.
+	 * @param array<string,mixed> $old    Settings before this save.
+	 * @param array<string,mixed> $input  Submitted values.
+	 * @return array<string,mixed>
+	 */
+	private function sanitize_source_language( array $output, array $old, array $input ): array {
+		// Anything but a scalar is not a language code; it falls through to
+		// the "not supported" refusal below instead of a PHP warning.
+		$requested = is_scalar( $input['source_language'] ) ? sanitize_key( (string) $input['source_language'] ) : '';
+		$current   = (string) $old['source_language'];
+
+		if ( $requested === $current ) {
+			return $output;
+		}
+
+		if ( ! Language_Catalog::exists( $requested ) ) {
+			$this->report( 'localizepilot_source_unknown', __( 'That default language is not one LocalizePilot supports, so it was not changed.', 'localizepilot' ) );
+
+			return $output;
+		}
+
+		if ( self::translation_count() > 0 && empty( $input['source_language_confirm'] ) ) {
+			$this->report(
+				'localizepilot_source_unconfirmed',
+				__( 'The default language was not changed. This site already has translations made from the current default language — confirm the change to switch anyway.', 'localizepilot' )
+			);
+
+			return $output;
+		}
+
+		$output['source_language'] = $requested;
+
+		// A language cannot be both the source and a translation target.
+		$output['enabled_languages'] = array_values(
+			array_filter(
+				(array) $output['enabled_languages'],
+				static fn( $code ) => $requested !== $code
+			)
+		);
+
+		return $output;
+	}
+
+	/**
+	 * Translation records on this site, in any state an editor could see.
+	 */
+	public static function translation_count(): int {
+		$counts = wp_count_posts( Translation_Manager::POST_TYPE );
+		$total  = 0;
+
+		foreach ( array( 'publish', 'draft', 'pending', 'private', 'future' ) as $status ) {
+			$total += (int) ( $counts->$status ?? 0 );
+		}
+
+		return $total;
+	}
+
+	/**
+	 * Tell whoever saved why part of the save did not happen.
+	 *
+	 * Through WordPress's own settings errors, so options.php shows it with no
+	 * extra code and the console's AJAX save reads it back from the same place.
+	 */
+	private function report( string $code, string $message ): void {
+		if ( function_exists( 'add_settings_error' ) ) {
+			add_settings_error( Plugin::OPTION, $code, $message, 'error' );
+		}
 	}
 
 	private function sanitize_secret( array $input, array $old, string $field, string $clear_field ): string {
@@ -157,7 +259,7 @@ final class Settings {
 		}
 
 		$is_translation_screen = Translation_Manager::POST_TYPE === $screen->post_type;
-		$is_source_editor      = in_array( $screen->post_type, array( 'post', 'page' ), true )
+		$is_source_editor      = Post_Types::is_translatable( (string) $screen->post_type )
 			&& in_array( $hook, array( 'post.php', 'post-new.php' ), true );
 
 		if ( ! $is_translation_screen && ! $is_source_editor ) {

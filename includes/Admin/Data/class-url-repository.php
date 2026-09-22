@@ -22,6 +22,7 @@ namespace LocalizePilot\Admin\Data;
 use LocalizePilot\Admin\Screen_Registry;
 use LocalizePilot\Language_Catalog;
 use LocalizePilot\Plugin;
+use LocalizePilot\Post_Types;
 use LocalizePilot\Router;
 use LocalizePilot\Translation_Manager;
 
@@ -130,6 +131,18 @@ final class Url_Repository {
 	 */
 	public function query( array $filters = array() ): array {
 		$page   = max( 1, (int) ( $filters['paged'] ?? 1 ) );
+
+		// Nothing is translatable, so nothing has language URLs. An empty
+		// post_type would make WP_Query list blog posts instead.
+		if ( empty( $this->post_types() ) ) {
+			return array(
+				'items'    => array(),
+				'total'    => 0,
+				'page'     => $page,
+				'per_page' => self::PER_PAGE,
+			);
+		}
+
 		$type   = (string) ( $filters['type'] ?? '' );
 		$search = sanitize_text_field( (string) ( $filters['search'] ?? '' ) );
 
@@ -456,7 +469,7 @@ final class Url_Repository {
 	 * @return array<int,string>
 	 */
 	private function post_types(): array {
-		return array( 'page', 'post' );
+		return Post_Types::translatable();
 	}
 
 	private function translatable_total(): int {
@@ -484,7 +497,7 @@ final class Url_Repository {
 			return $url;
 		}
 
-		$pages = get_posts(
+		$pages = empty( $this->post_types() ) ? array() : get_posts(
 			array(
 				'post_type'      => $this->post_types(),
 				'post_status'    => 'publish',
