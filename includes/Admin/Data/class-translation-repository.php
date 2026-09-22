@@ -12,6 +12,7 @@ namespace LocalizePilot\Admin\Data;
 
 use LocalizePilot\Language_Catalog;
 use LocalizePilot\Plugin;
+use LocalizePilot\Post_Types;
 use LocalizePilot\Router;
 use LocalizePilot\Translation_Manager;
 
@@ -223,7 +224,7 @@ final class Translation_Repository {
 		}
 
 		$sources = 0;
-		foreach ( array( 'post', 'page' ) as $type ) {
+		foreach ( Post_Types::translatable() as $type ) {
 			$counts   = wp_count_posts( $type );
 			$sources += (int) ( $counts->publish ?? 0 );
 		}

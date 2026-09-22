@@ -34,6 +34,15 @@ $lp_history  = (array) ( $args['history'] ?? array() );
 $lp_filters  = (array) ( $args['filters'] ?? array() );
 $lp_base_url = (string) ( $args['base_url'] ?? '' );
 $lp_type     = (string) ( $lp_filters['type'] ?? 'all' );
+
+// The narrowing the add-on provides travels with the type tabs, so switching
+// tab does not quietly drop a language or status someone chose.
+$lp_narrowing = array_filter(
+	array(
+		'cache_language' => (string) ( $lp_filters['language'] ?? '' ),
+		'cache_status'   => (string) ( $lp_filters['status'] ?? '' ),
+	)
+);
 $lp_total    = (int) ( $lp_history['total'] ?? 0 );
 $lp_show_all = ! empty( $args['count'] );
 ?>
@@ -85,7 +94,7 @@ $lp_show_all = ! empty( $args['count'] );
 			?>
 			<a
 				class="lp-subnav__item<?php echo $lp_active ? ' is-active' : ''; ?>"
-				href="<?php echo esc_url( add_query_arg( 'cache_type', $lp_tab, $lp_base_url ) ); ?>"
+				href="<?php echo esc_url( add_query_arg( array( 'cache_type' => $lp_tab ) + $lp_narrowing, $lp_base_url ) ); ?>"
 				<?php echo $lp_active ? ' aria-current="page"' : ''; ?>
 			><?php echo esc_html( $lp_label ); ?></a>
 		<?php endforeach; ?>
@@ -119,21 +128,21 @@ $lp_show_all = ! empty( $args['count'] );
 						'type'    => 'select',
 						'name'    => 'cache_language',
 						'label'   => __( 'All languages', 'localizepilot' ),
-						'value'   => '',
+						'value'   => (string) ( $lp_filters['language'] ?? '' ),
 						'options' => array( '' => __( 'All languages', 'localizepilot' ) ) + (array) ( $args['languages'] ?? array() ),
-						'feature' => 'cache_filters',
+						'paywall' => 'cache_filters',
 					),
 					array(
 						'type'    => 'select',
 						'name'    => 'cache_status',
 						'label'   => __( 'All status', 'localizepilot' ),
-						'value'   => '',
+						'value'   => (string) ( $lp_filters['status'] ?? '' ),
 						'options' => array(
 							''        => __( 'All status', 'localizepilot' ),
 							'active'  => __( 'Active', 'localizepilot' ),
 							'expired' => __( 'Expired', 'localizepilot' ),
 						),
-						'feature' => 'cache_filters',
+						'paywall' => 'cache_filters',
 					),
 				),
 			)

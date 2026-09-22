@@ -13,7 +13,9 @@ namespace LocalizePilot\Admin\Data;
 
 use LocalizePilot\Language_Catalog;
 use LocalizePilot\Plugin;
+use LocalizePilot\Post_Types;
 use LocalizePilot\Provider_Catalog;
+use LocalizePilot\Settings;
 use LocalizePilot\Usage_Limiter;
 
 defined( 'ABSPATH' ) || exit;
@@ -47,6 +49,63 @@ final class Settings_Model {
 		}
 
 		return $settings;
+	}
+
+	/**
+	 * What the Settings screen's "Content and language" card needs.
+	 *
+	 * Post types stored in the setting but not registered right now — products
+	 * with WooCommerce switched off — are listed too, unticked and disabled,
+	 * so nobody wonders where they went and the saved choice is kept.
+	 *
+	 * @return array{source:string,source_name:string,languages:array<string,string>,translations:int,post_types:array<int,array<string,mixed>>}
+	 */
+	public function content(): array {
+		$source    = strtolower( (string) ( $this->settings['source_language'] ?? 'en' ) );
+		$languages = array();
+
+		foreach ( Language_Catalog::all() as $code => $language ) {
+			$languages[ $code ] = $language['name'] === $language['native']
+				? $language['name']
+				: $language['name'] . ' — ' . $language['native'];
+		}
+
+		asort( $languages );
+
+		$chosen = array_map( 'sanitize_key', (array) ( $this->settings['translatable_post_types'] ?? Post_Types::DEFAULTS ) );
+		$rows   = array();
+
+		foreach ( Post_Types::available() as $slug => $label ) {
+			$rows[] = array(
+				'slug'       => $slug,
+				'label'      => $label,
+				'checked'    => in_array( $slug, $chosen, true ),
+				'registered' => true,
+			);
+		}
+
+		// Nothing registered supplies a label for these, so name the ones a
+		// site is likely to have rather than showing a bare slug.
+		$known = array(
+			'product' => __( 'Products (WooCommerce)', 'localizepilot' ),
+		);
+
+		foreach ( array_diff( $chosen, array_keys( Post_Types::available() ) ) as $slug ) {
+			$rows[] = array(
+				'slug'       => $slug,
+				'label'      => $known[ $slug ] ?? $slug,
+				'checked'    => true,
+				'registered' => false,
+			);
+		}
+
+		return array(
+			'source'       => $source,
+			'source_name'  => Language_Catalog::label( $source, 'english' ),
+			'languages'    => $languages,
+			'translations' => Settings::translation_count(),
+			'post_types'   => $rows,
+		);
 	}
 
 	/**

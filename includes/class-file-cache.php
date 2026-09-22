@@ -626,7 +626,11 @@ final class File_Cache {
 	/**
 	 * @return array{items:array<int,array<string,mixed>>,total:int,pages:int,page:int,per_page:int}
 	 */
-	public function history( int $page = 1, int $per_page = 15, string $type = 'all' ): array {
+	/**
+	 * @param array<string,string> $criteria Narrowing an add-on applies, e.g.
+	 *                                       {language: 'de', status: 'expired'}.
+	 */
+	public function history( int $page = 1, int $per_page = 15, string $type = 'all', array $criteria = array() ): array {
 		$page     = max( 1, $page );
 		$per_page = min( 100, max( 1, $per_page ) );
 		$type     = in_array( $type, array( 'all', 'page', 'snapshot' ), true ) ? $type : 'all';
@@ -677,6 +681,18 @@ final class File_Cache {
 				);
 			}
 		}
+
+		/**
+		 * Narrow the cache history before it is sorted and paged.
+		 *
+		 * Part of add-on API 3. LocalizePilot passes the language and status
+		 * the screen asked for and filters nothing itself; the add-on that
+		 * provides those filters applies them here.
+		 *
+		 * @param array<int,array<string,mixed>> $items    Entries.
+		 * @param array<string,string>           $criteria Requested narrowing.
+		 */
+		$items = array_values( (array) apply_filters( 'localizepilot_cache_history_items', $items, $criteria ) );
 
 		usort( $items, static fn( array $a, array $b ): int => (int) $b['modified'] <=> (int) $a['modified'] );
 		$total = count( $items );

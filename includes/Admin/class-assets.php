@@ -120,6 +120,9 @@ final class Assets {
 				'testConnection' => __( 'Test connection', 'localizepilot' ),
 				'unknownResponse' => __( 'The provider returned an unknown response.', 'localizepilot' ),
 				'paywallFallback' => __( 'This feature is part of the paid add-on.', 'localizepilot' ),
+				'migrationFailed' => __( 'The migration could not continue. Press Continue to try again.', 'localizepilot' ),
+				'migrationDraftConfirm' => __( 'The old plugin’s translated posts will be moved to draft as they are imported. You can put them back from this screen. Continue?', 'localizepilot' ),
+				'migrationRestoreConfirm' => __( 'Put the posts the migration moved to draft back the way they were?', 'localizepilot' ),
 			),
 		);
 

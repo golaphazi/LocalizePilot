@@ -51,8 +51,11 @@ final class Performance_Model {
 	 *
 	 * @return array<string,mixed>
 	 */
-	public function history( int $page, string $type ): array {
-		$history          = $this->cache->history( $page, 15, $type );
+	/**
+	 * @param array<string,string> $criteria Language and status narrowing.
+	 */
+	public function history( int $page, string $type, array $criteria = array() ): array {
+		$history          = $this->cache->history( $page, 15, $type, $criteria );
 		$history['items'] = $this->analytics->attach_counts( (array) ( $history['items'] ?? array() ) );
 
 		return $history;

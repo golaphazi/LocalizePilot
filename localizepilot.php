@@ -3,7 +3,7 @@
  * Plugin Name: LocalizePilot – Multilingual Content & Media
  * Plugin URL: https://localizepilot.com/
  * Description: Create multilingual WordPress content, edit translations in Gutenberg, localize media, add language switchers, and cache translated HTML.
- * Version: 1.0.4
+ * Version: 1.0.5
  * Author: Golaphazi
  * Author URI: https://github.com/golaphazi/
  * Text Domain: localizepilot
@@ -35,8 +35,13 @@ unset( $localizepilot_headers );
  *   2  Adds localizepilot_page_processed, localizepilot_cache_lookup and
  *      localizepilot_provider_request. Additive, so an add-on built for 1
  *      still registers — Addons::MIN_API is what would end that.
+ *   3  Adds Translation_Service (translate one post from code) and
+ *      Post_Types with the localizepilot_translatable_post_types filter;
+ *      switcher layouts and placements (localizepilot_switcher_styles,
+ *      _render, _placements, _inject); and localizepilot_cache_history_items
+ *      for narrowing the cache history. Additive again.
  */
-define( 'LOCALIZEPILOT_API', 2 );
+define( 'LOCALIZEPILOT_API', 3 );
 
 define( 'LOCALIZEPILOT_FILE', __FILE__ );
 define( 'LOCALIZEPILOT_PATH', plugin_dir_path( __FILE__ ) );

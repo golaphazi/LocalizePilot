@@ -9,6 +9,7 @@ namespace LocalizePilot\Admin\Data;
 
 use LocalizePilot\Language_Catalog;
 use LocalizePilot\Plugin;
+use LocalizePilot\Post_Types;
 use LocalizePilot\Router;
 use LocalizePilot\Translation_Manager;
 
@@ -21,7 +22,7 @@ final class Language_Stats {
 	public function translatable_total(): int {
 		$total = 0;
 
-		foreach ( array( 'post', 'page' ) as $type ) {
+		foreach ( Post_Types::translatable() as $type ) {
 			$counts = wp_count_posts( $type );
 			$total += (int) ( $counts->publish ?? 0 );
 		}

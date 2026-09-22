@@ -36,6 +36,7 @@ final class Plugin {
 			'enabled'                  => 0,
 			'source_language'          => 'en',
 			'enabled_languages'        => array( 'de', 'fr', 'es', 'pt', 'ar', 'da' ),
+			'translatable_post_types'  => Post_Types::DEFAULTS,
 			'translation_provider'     => 'translatex',
 			'fallback_provider'        => '',
 			'translatex_api_key'       => '',
@@ -68,6 +69,8 @@ final class Plugin {
 			'refresh_on_source_change' => 0,
 			'stale_cache_fallback'     => 1,
 			'header_switcher'          => 1,
+			'switcher_placement'       => 'header',
+			'switcher_detect_browser'  => 0,
 			'menu_style'               => 'dropdown',
 			'menu_position'            => 'end',
 			'language_label'           => 'native',
@@ -158,6 +161,12 @@ final class Plugin {
 			'LocalizePilotSwitcherBlock',
 			array(
 				'languages' => $languages,
+				// Layouts an add-on provides, so the block can offer them.
+				'styles'    => array_map(
+					static fn( $key, $label ) => array( 'value' => $key, 'label' => $label ),
+					array_keys( Language_Switcher::extra_styles() ),
+					array_values( Language_Switcher::extra_styles() )
+				),
 				'defaults'  => array(
 					'style'     => (string) ( $settings['menu_style'] ?? 'dropdown' ),
 					'labels'    => (string) ( $settings['language_label'] ?? 'native' ),
@@ -271,6 +280,14 @@ final class Plugin {
 		 */
 		wp_unschedule_hook( self::CACHE_WARM_HOOK );
 		flush_rewrite_rules( false );
+	}
+
+	/**
+	 * The translation manager, for code that needs to act on translations
+	 * rather than read settings — Translation_Service, chiefly.
+	 */
+	public function translations(): Translation_Manager {
+		return $this->translations;
 	}
 
 	public function get_settings(): array {
@@ -413,7 +430,7 @@ final class Plugin {
 			$identity    = $this->router->language_url( $source );
 			$fingerprint = $this->cache_fingerprint();
 			$source_hash = hash( 'sha256', $html . '|' . $fingerprint );
-			$post_id     = is_singular( array( 'post', 'page' ) ) ? get_queried_object_id() : 0;
+			$post_id     = Post_Types::is_singular() ? get_queried_object_id() : 0;
 			$cache_key   = $post_id
 				? $cache->make_post_key( $post_id, $current )
 				: $cache->make_key( $identity, $current, $fingerprint );
@@ -573,7 +590,7 @@ final class Plugin {
 			|| empty( $settings['cache_enabled'] )
 			|| ! $post instanceof \WP_Post
 			|| 'publish' !== $post->post_status
-			|| ! in_array( $post->post_type, array( 'post', 'page' ), true )
+			|| ! Post_Types::is_translatable( $post->post_type )
 			|| $language === $source
 			|| ! in_array( $language, $enabled, true )
 		) {

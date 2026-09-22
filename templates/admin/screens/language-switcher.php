@@ -2,17 +2,19 @@
 /**
  * Language Switcher screen.
  *
- * Four controls are real and save through the Settings API: enable in header,
- * layout, label format and alignment. Flags, the Button layout, language
- * order, floating/footer placement, the block card and the Advanced Behavior
- * switches have no backend and are gated through Preview so they render as
- * designed but do nothing.
+ * Enable, layout, labels, flags, alignment and placement save through the
+ * Settings API. The Button layout, the Floating and Footer placements and
+ * browser language suggestion belong to the paid add-on and are locked behind
+ * the paywall until it provides them. Language order, the block card and the
+ * other Advanced Behaviour switches have no backend yet and are gated through
+ * Preview, so they render as designed but do nothing.
  *
  * @package LocalizePilot
  *
  * @var array<string,mixed> $args Screen arguments.
  */
 
+use LocalizePilot\Admin\Paywall;
 use LocalizePilot\Admin\Preview;
 use LocalizePilot\Admin\Template;
 use LocalizePilot\Plugin;
@@ -98,33 +100,50 @@ Template::render(
 						<div class="lp-segmented" role="group" aria-label="<?php esc_attr_e( 'Switcher layout', 'localizepilot' ); ?>">
 							<?php
 							/*
-							 * Dropdown and Inline are the two the renderer
-							 * understands. Button is in the design only, so it
-							 * renders as an option that cannot be chosen.
+							 * Dropdown and Inline are LocalizePilot's own.
+							 * Button comes with the paid add-on: until it is
+							 * unlocked the option opens the paywall instead —
+							 * the marker on the label, since the disabled radio
+							 * inside cannot be clicked.
 							 */
 							$lp_layouts = array(
-								'dropdown' => array( 'label' => __( 'Dropdown', 'localizepilot' ), 'feature' => '' ),
-								'inline'   => array( 'label' => __( 'Inline', 'localizepilot' ), 'feature' => '' ),
-								'button'   => array( 'label' => __( 'Button', 'localizepilot' ), 'feature' => 'switcher_placement' ),
+								'dropdown' => array( 'label' => __( 'Dropdown', 'localizepilot' ), 'paywall' => '' ),
+								'inline'   => array( 'label' => __( 'Inline', 'localizepilot' ), 'paywall' => '' ),
+								'button'   => array( 'label' => __( 'Button', 'localizepilot' ), 'paywall' => 'switcher_layouts' ),
 							);
 
+							/*
+							 * A stored layout that is locked right now — a
+							 * lapsed license — is kept, not overwritten: no
+							 * radio is checked, so saving leaves it alone, and
+							 * the layout visitors actually get is shown active.
+							 */
+							$lp_effective_style = in_array( $lp_style, LocalizePilot\Language_Switcher::styles(), true ) ? $lp_style : 'dropdown';
+
 							foreach ( $lp_layouts as $lp_value => $lp_layout ) :
-								$lp_gate = '' !== $lp_layout['feature'] ? Preview::attributes( $lp_layout['feature'] ) : '';
+								$lp_gate   = '' !== $lp_layout['paywall'] ? Paywall::attributes( $lp_layout['paywall'] ) : '';
+								$lp_locked = '' !== $lp_gate;
 								?>
-								<label class="lp-segmented__option<?php echo $lp_value === $lp_style ? ' is-active' : ''; ?>"<?php echo $lp_gate; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped literals. ?>>
+								<label class="lp-segmented__option<?php echo $lp_value === $lp_effective_style ? ' is-active' : ''; ?>"<?php echo $lp_gate; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped literals. ?>>
 									<input
 										type="radio"
 										name="<?php echo esc_attr( Plugin::OPTION . '[menu_style]' ); ?>"
 										value="<?php echo esc_attr( $lp_value ); ?>"
 										data-lp-switcher-style
-										<?php checked( $lp_value, $lp_style ); ?>
-										<?php disabled( '' !== $lp_layout['feature'] ); ?>
+										<?php checked( $lp_value === $lp_style && ! $lp_locked ); ?>
+										<?php disabled( $lp_locked ); ?>
 									>
 									<span><?php echo esc_html( $lp_layout['label'] ); ?></span>
 								</label>
 							<?php endforeach; ?>
 						</div>
 					</div>
+
+					<?php if ( $lp_effective_style !== $lp_style ) : ?>
+						<p class="lp-field__hint">
+							<?php esc_html_e( 'Your Button layout is saved and comes back as soon as the paid add-on is active again. Until then visitors see the Dropdown.', 'localizepilot' ); ?>
+						</p>
+					<?php endif; ?>
 
 					<?php
 					Template::render(
@@ -205,6 +224,8 @@ Template::render(
 		'parts/switcher-placement',
 		array(
 			'in_header' => $lp_in_header,
+			'stored'    => (string) ( $lp_data['placement_stored'] ?? 'header' ),
+			'effective' => (string) ( $lp_data['placement_effective'] ?? 'header' ),
 		)
 	);
 	?>
@@ -234,9 +255,20 @@ Template::render(
 		<div class="lp-card__body">
 			<?php
 			/*
-			 * None of these four exist as settings. They are shown because the
+			 * Browser language suggestion is a real setting, provided by the
+			 * paid add-on. The other three are not built yet: shown because the
 			 * design specifies them, and gated so nobody believes they work.
 			 */
+			$lp_detect_locked = Paywall::is_locked( 'browser_language' );
+
+			if ( ! $lp_detect_locked ) :
+				// Tells the sanitizer the toggle was live, so an unticked box
+				// means "off" rather than "locked, keep what was chosen".
+				?>
+				<input type="hidden" name="<?php echo esc_attr( Plugin::OPTION ); ?>[switcher_detect_browser_field]" value="1">
+				<?php
+			endif;
+
 			$lp_behaviour = array(
 				array(
 					'name'        => 'localizepilot_switcher_remember',
@@ -245,10 +277,11 @@ Template::render(
 					'checked'     => true,
 				),
 				array(
-					'name'        => 'localizepilot_switcher_detect',
+					'name'        => Plugin::OPTION . '[switcher_detect_browser]',
 					'label'       => __( 'Detect browser language', 'localizepilot' ),
 					'description' => __( 'Suggest a language based on the visitor\'s browser settings.', 'localizepilot' ),
-					'checked'     => false,
+					'checked'     => ! $lp_detect_locked && ! empty( $lp_settings['switcher_detect_browser'] ),
+					'paywall'     => 'browser_language',
 				),
 				array(
 					'name'        => 'localizepilot_switcher_same_page',
@@ -265,7 +298,7 @@ Template::render(
 			);
 
 			foreach ( $lp_behaviour as $lp_row ) {
-				Template::render( 'parts/toggle', $lp_row + array( 'feature' => 'switcher_behavior' ) );
+				Template::render( 'parts/toggle', empty( $lp_row['paywall'] ) ? $lp_row + array( 'feature' => 'switcher_behavior' ) : $lp_row );
 			}
 			?>
 		</div>

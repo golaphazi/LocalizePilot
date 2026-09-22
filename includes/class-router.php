@@ -5,7 +5,13 @@ namespace LocalizePilot;
 defined( 'ABSPATH' ) || exit;
 
 final class Router {
-	private string $current_language = 'en';
+	/**
+	 * Empty until detect() sets it; current_language() answers with the source
+	 * language meanwhile. Not 'en': with a French source, an English default
+	 * made every request that never reached detect() — admin, cron, AJAX —
+	 * look translated.
+	 */
+	private string $current_language = '';
 	private string $original_request_uri = '/';
 	private string $base_path = '/';
 	private array $settings = array();
@@ -76,11 +82,32 @@ final class Router {
 	}
 
 	public function current_language(): string {
+		if ( '' === $this->current_language ) {
+			return $this->source_language();
+		}
+
 		return $this->current_language;
 	}
 
 	public function source_language(): string {
-		return (string) ( $this->settings['source_language'] ?? 'en' );
+		return (string) ( $this->settings()['source_language'] ?? 'en' );
+	}
+
+	/**
+	 * Settings, loaded on first use.
+	 *
+	 * detect() only runs on a front-end request, so anything asking in admin or
+	 * cron used to read an empty array and get 'en' back whatever the site's
+	 * source language was.
+	 *
+	 * @return array<string,mixed>
+	 */
+	private function settings(): array {
+		if ( empty( $this->settings ) ) {
+			$this->settings = Plugin::instance()->get_settings();
+		}
+
+		return $this->settings;
 	}
 
 	public function is_translated_request(): bool {
@@ -91,8 +118,8 @@ final class Router {
 	 * @return string[]
 	 */
 	public function enabled_languages(): array {
-		$source   = (string) ( $this->settings['source_language'] ?? 'en' );
-		$selected = (array) ( $this->settings['enabled_languages'] ?? array() );
+		$source   = $this->source_language();
+		$selected = (array) ( $this->settings()['enabled_languages'] ?? array() );
 		$languages = array_values( array_unique( array_merge( array( $source ), $selected ) ) );
 		return array_values( array_filter( array_map( 'strtolower', $languages ), array( Language_Catalog::class, 'exists' ) ) );
 	}
