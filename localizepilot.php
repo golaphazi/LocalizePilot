@@ -3,7 +3,7 @@
  * Plugin Name: LocalizePilot – Multilingual Content & Media
  * Plugin URL: https://localizepilot.com/
  * Description: Create multilingual WordPress content, edit translations in Gutenberg, localize media, add language switchers, and cache translated HTML.
- * Version: 1.0.4
+ * Version: 1.0.5
  * Author: Golaphazi
  * Author URI: https://github.com/golaphazi/
  * Text Domain: localizepilot

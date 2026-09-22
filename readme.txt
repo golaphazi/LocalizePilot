@@ -4,7 +4,7 @@ Tags: translation, multilingual, translate, ai translation, automatic translatio
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.4
+Stable tag: 1.0.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -461,6 +461,17 @@ When analytics is enabled, anonymous visitors receive a random `localizepilot_vi
 Using WordPress's Delete action for the plugin runs `uninstall.php` and removes LocalizePilot settings, usage counters, translation records, analytics events, the analytics table, scheduled cleanup, and generated cache files. Deactivation alone does not delete data.
 
 == Changelog ==
+
+= 1.0.5 =
+* Added migration from WPML and Polylang. A new Migration screen brings existing translations into LocalizePilot — title, content, excerpt, address, featured image and status — and works even after the old plugin has been switched off.
+* The migration previews what it will do first, can turn on the languages being brought over, never replaces an existing LocalizePilot translation, and never calls a translation provider. Running it again is safe.
+* Added an option to move the old plugin's translated pages to draft after migrating, with one click to put them back.
+* Added a Translatable content setting to choose which content types can be translated. By default: posts, pages and WooCommerce products.
+* Added a Default language setting. Changing it on a site that already has translations asks for confirmation first.
+* Fixed WooCommerce products being only partly supported: deleting a product now removes its translations, editing a product marks its translations as needing an update, and translated product pages are refreshed in the cache after edits.
+* Fixed the default language being reset to English whenever settings were saved.
+* Fixed English not being selectable as a translation language on sites with another default language.
+* Renamed the translation records screen to Translation Pages.
 
 = 1.0.4 =
 * Replaced the tabbed settings page with a single-page admin console covering Overview, Translations, Languages, Media, SEO & URLs, Analytics, Performance, Providers, Cache Management, Language Switcher, Settings, and License.
