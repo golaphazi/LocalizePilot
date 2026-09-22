@@ -12,6 +12,8 @@ final class Translation_Manager
 	public const META_STATUS     = '_next_translate_status';
 	public const META_SOURCE_HASH = '_next_translate_source_hash';
 	public const META_PROVIDER   = '_next_translate_provider';
+	/** Where an imported translation came from, e.g. "wpml:123". Makes imports idempotent. */
+	public const META_MIGRATED_FROM = '_localizepilot_migrated_from';
 	private const PARENT_MIGRATION_OPTION = 'localizepilot_translation_parent_migrated';
 
 	private Router $router;
@@ -414,6 +416,81 @@ final class Translation_Manager
 		return null;
 	}
 
+	/**
+	 * Store a translation that already exists elsewhere — another plugin's,
+	 * during a migration — as a LocalizePilot record.
+	 *
+	 * Marked as a person's work ("edited"), so nothing machine-translates over
+	 * it, and given the source's current hash, so it does not start life
+	 * flagged out of date. Never replaces a record that already exists.
+	 *
+	 * @param array<string,mixed> $data {
+	 *     @type string $title        Translated title.
+	 *     @type string $content      Translated content.
+	 *     @type string $excerpt      Translated excerpt.
+	 *     @type string $slug         Translated slug.
+	 *     @type string $status       publish, draft, pending or private.
+	 *     @type int    $author       Author ID.
+	 *     @type int    $thumbnail_id Featured image, or 0 for the source's.
+	 *     @type string $origin       Where it came from, e.g. "wpml:123".
+	 * }
+	 * @throws \RuntimeException When the record cannot be created.
+	 */
+	public function import_translation(int $source_id, string $language, array $data): int
+	{
+		$language = sanitize_key($language);
+		$source   = get_post($source_id);
+
+		if (! $source instanceof \WP_Post || ! Post_Types::is_translatable($source->post_type)) {
+			throw new \RuntimeException(esc_html__('The source is not translatable content.', 'localizepilot'));
+		}
+		if (! Language_Catalog::exists($language) || $language === Plugin::instance()->get_settings()['source_language']) {
+			throw new \RuntimeException(esc_html__('The selected target language is invalid.', 'localizepilot'));
+		}
+		if ($this->find_translation($source_id, $language)) {
+			throw new \RuntimeException(esc_html__('A translation for this language already exists.', 'localizepilot'));
+		}
+
+		$status = (string) ($data['status'] ?? 'draft');
+		$status = in_array($status, array('publish', 'draft', 'pending', 'private'), true) ? $status : 'draft';
+
+		$post_data = array(
+			'post_type'    => self::POST_TYPE,
+			'post_status'  => $status,
+			'post_parent'  => $source_id,
+			'post_title'   => (string) ($data['title'] ?? ''),
+			'post_content' => (string) ($data['content'] ?? ''),
+			'post_excerpt' => (string) ($data['excerpt'] ?? ''),
+			'post_name'    => sanitize_title((string) ($data['slug'] ?? '')),
+			'post_author'  => absint($data['author'] ?? 0) ?: (int) $source->post_author,
+		);
+
+		$this->programmatic_update = true;
+		$saved_id = wp_insert_post(wp_slash($post_data), true);
+		$this->programmatic_update = false;
+
+		if (is_wp_error($saved_id)) {
+			throw new \RuntimeException(esc_html(sanitize_text_field($saved_id->get_error_message())));
+		}
+
+		update_post_meta($saved_id, self::META_SOURCE_ID, $source_id);
+		update_post_meta($saved_id, self::META_LANGUAGE, $language);
+		update_post_meta($saved_id, self::META_STATUS, 'edited');
+		update_post_meta($saved_id, self::META_SOURCE_HASH, $this->source_hash($source));
+		update_post_meta($saved_id, self::META_PROVIDER, 'migration');
+		update_post_meta($saved_id, self::META_MIGRATED_FROM, sanitize_text_field((string) ($data['origin'] ?? '')));
+
+		$thumbnail_id = absint($data['thumbnail_id'] ?? 0) ?: (int) get_post_thumbnail_id($source_id);
+		if ($thumbnail_id) {
+			set_post_thumbnail($saved_id, $thumbnail_id);
+		}
+
+		unset($this->runtime_cache[$this->runtime_key($source_id, $language)]);
+		$this->sync_translation_files((int) $saved_id, false);
+
+		return (int) $saved_id;
+	}
+
 	private function generate_translation(int $source_id, string $language, int $translation_id = 0): int
 	{
 		$this->settings = Plugin::instance()->get_settings();
@@ -591,7 +668,14 @@ final class Translation_Manager
 		}
 	}
 
-	private function sync_translation_files(int $translation_id): void
+	/**
+	 * @param bool $warm Schedule a rendered-page warm afterwards. Imports pass
+	 *                   false: warming renders the page, rendering can call the
+	 *                   provider for text a record does not cover, and a
+	 *                   migration of hundreds of pages must not become hundreds
+	 *                   of provider calls nobody asked for.
+	 */
+	private function sync_translation_files(int $translation_id, bool $warm = true): void
 	{
 		$translation = get_post($translation_id);
 		if (! $translation instanceof \WP_Post) {
@@ -624,7 +708,10 @@ final class Translation_Manager
 			)
 		);
 		$cache->delete_post_cache($source_id, $language);
-		do_action('localizepilot_schedule_cache_warm', $source_id, $language);
+
+		if ($warm) {
+			do_action('localizepilot_schedule_cache_warm', $source_id, $language);
+		}
 	}
 
 	public function before_delete_post(int $post_id): void

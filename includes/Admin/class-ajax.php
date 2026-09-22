@@ -22,6 +22,10 @@ final class Ajax {
 		add_action( 'wp_ajax_localizepilot_url_drawer', array( $this, 'url_drawer' ) );
 		add_action( 'wp_ajax_localizepilot_search', array( $this, 'search' ) );
 		add_action( 'wp_ajax_localizepilot_save_settings', array( $this, 'save_settings' ) );
+		add_action( 'wp_ajax_localizepilot_migration_start', array( $this, 'migration_start' ) );
+		add_action( 'wp_ajax_localizepilot_migration_step', array( $this, 'migration_step' ) );
+		add_action( 'wp_ajax_localizepilot_migration_cancel', array( $this, 'migration_cancel' ) );
+		add_action( 'wp_ajax_localizepilot_migration_restore', array( $this, 'migration_restore' ) );
 	}
 
 	/** Return the command-palette result list. */
@@ -112,6 +116,90 @@ final class Ajax {
 					: __( 'Settings are already up to date.', 'localizepilot' ),
 			)
 		);
+	}
+
+	/* ---------------------------------------------------------------------
+	 * Migration
+	 *
+	 * The screen drives a run one short step at a time and swaps in the card
+	 * each step renders — markup, like every other endpoint here.
+	 * ------------------------------------------------------------------ */
+
+	public function migration_start(): void {
+		$this->migration_guard();
+
+		$run = \LocalizePilot\Migration\Migrator::start(
+			self::posted_key( 'source' ),
+			array(
+				'enable_languages' => '' !== self::posted_key( 'enable_languages' ),
+				'draft_old'        => '' !== self::posted_key( 'draft_old' ),
+			)
+		);
+
+		if ( is_wp_error( $run ) ) {
+			wp_send_json_error( array( 'message' => $run->get_error_message() ) );
+		}
+
+		wp_send_json_success( self::migration_payload( $run ) );
+	}
+
+	public function migration_step(): void {
+		$this->migration_guard();
+
+		$run = \LocalizePilot\Migration\Migrator::step();
+
+		if ( is_wp_error( $run ) ) {
+			wp_send_json_error( array( 'message' => $run->get_error_message() ) );
+		}
+
+		wp_send_json_success( self::migration_payload( $run ) );
+	}
+
+	public function migration_cancel(): void {
+		$this->migration_guard();
+
+		$run = \LocalizePilot\Migration\Migrator::cancel();
+
+		wp_send_json_success( $run ? self::migration_payload( $run ) : array( 'status' => '', 'html' => '' ) );
+	}
+
+	public function migration_restore(): void {
+		$this->migration_guard();
+
+		wp_send_json_success( array( 'remaining' => \LocalizePilot\Migration\Migrator::restore_drafted( 100 ) ) );
+	}
+
+	private function migration_guard(): void {
+		check_ajax_referer( self::NONCE, 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => __( 'You do not have permission to migrate translations.', 'localizepilot' ) ), 403 );
+		}
+	}
+
+	/**
+	 * @param array<string,mixed> $run Migration run.
+	 * @return array<string,mixed>
+	 */
+	private static function migration_payload( array $run ): array {
+		return array(
+			'status' => (string) ( $run['status'] ?? '' ),
+			'busy'   => ! empty( $run['busy'] ),
+			'html'   => Template::capture( 'parts/migration-progress', array( 'run' => $run ) ),
+		);
+	}
+
+	/**
+	 * A key-shaped field from the request body, or '' for anything else.
+	 *
+	 * Checked for a scalar before the cast: (string) on an array emits a
+	 * warning, which lands in the response ahead of the JSON.
+	 */
+	private static function posted_key( string $field ): string {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Callers verify the nonce first.
+		$value = $_POST[ $field ] ?? '';
+
+		return is_scalar( $value ) ? sanitize_key( wp_unslash( (string) $value ) ) : '';
 	}
 
 	/**

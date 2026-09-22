@@ -120,6 +120,13 @@ final class Screen_Registry {
 				'group'       => 'configuration',
 				'class'       => Screens\Settings_Screen::class,
 			),
+			'migration'         => array(
+				'label'       => __( 'Migration', 'localizepilot' ),
+				'description' => __( 'Bring translations over from WPML or Polylang without retranslating them.', 'localizepilot' ),
+				'icon'        => 'nav-migration',
+				'group'       => 'configuration',
+				'class'       => Screens\Migration_Screen::class,
+			),
 			'license'           => array(
 				'label'       => __( 'License Activation', 'localizepilot' ),
 				'description' => __( 'Activate your LocalizePilot license to unlock premium features, updates, and support.', 'localizepilot' ),

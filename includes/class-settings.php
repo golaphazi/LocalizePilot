@@ -17,6 +17,12 @@ defined( 'ABSPATH' ) || exit;
 final class Settings {
 	private Analytics $analytics;
 
+	/**
+	 * Set only while enable_languages() writes values it has already checked,
+	 * so sanitize() passes them through instead of reading them as a form.
+	 */
+	private static bool $trusted_write = false;
+
 	public function __construct( Analytics $analytics ) {
 		$this->analytics = $analytics;
 	}
@@ -42,6 +48,10 @@ final class Settings {
 	}
 
 	public function sanitize( $input ): array {
+		if ( self::$trusted_write && is_array( $input ) ) {
+			return $input;
+		}
+
 		$old      = wp_parse_args( Plugin::instance()->get_settings(), Plugin::defaults() );
 		$input    = is_array( $input ) ? $input : array();
 		$output   = $old;
@@ -208,6 +218,52 @@ final class Settings {
 		);
 
 		return $output;
+	}
+
+	/**
+	 * Turn languages on from code — a migration bringing its languages with it.
+	 *
+	 * Not through the form sanitizer: without a section name it would read
+	 * the settings as a dashboard save and reset fields nobody touched. The
+	 * codes are checked here instead, and the rendered cache is cleared as a
+	 * form save that changed languages would clear it.
+	 *
+	 * @param array<int,string> $codes Language codes.
+	 * @return array<int,string> The codes actually turned on.
+	 */
+	public static function enable_languages( array $codes ): array {
+		$settings = Plugin::instance()->get_settings();
+		$source   = (string) $settings['source_language'];
+		$current  = array_map( 'strval', (array) $settings['enabled_languages'] );
+
+		$added = array_values(
+			array_unique(
+				array_filter(
+					array_map( 'sanitize_key', $codes ),
+					static fn( string $code ): bool => Language_Catalog::exists( $code ) && $source !== $code && ! in_array( $code, $current, true )
+				)
+			)
+		);
+
+		if ( empty( $added ) ) {
+			return array();
+		}
+
+		$old                           = $settings;
+		$settings['enabled_languages'] = array_values( array_merge( $current, $added ) );
+
+		self::$trusted_write = true;
+
+		try {
+			update_option( Plugin::OPTION, $settings );
+		} finally {
+			self::$trusted_write = false;
+		}
+
+		Plugin::instance()->bump_cache_version();
+		( new File_Cache( $old ) )->clear_all();
+
+		return $added;
 	}
 
 	/**

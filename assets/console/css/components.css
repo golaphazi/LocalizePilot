@@ -5473,3 +5473,246 @@
 	background: none;
 	font-family: var(--lp-font-mono);
 }
+
+/* ------------------------------------------------------------------
+ * Migration
+ * ------------------------------------------------------------------ */
+
+.localizepilot-console .lp-migration {
+	display: flex;
+	flex-direction: column;
+	gap: var(--lp-gap);
+}
+
+/* The slot is always rendered so the script has somewhere to put a run;
+   with nothing in it, it must not take a gap of its own. */
+.localizepilot-console .lp-migration__run:not(:has(*)) {
+	display: none;
+}
+
+.localizepilot-console .lp-migration .lp-banner {
+	margin: 0;
+}
+
+.localizepilot-console .lp-migration .lp-banner .lp-btn {
+	margin-top: 12px;
+}
+
+.localizepilot-console .lp-migration-source__body {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
+.localizepilot-console .lp-migration-source__grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 20px;
+	align-items: start;
+}
+
+@media (max-width: 960px) {
+	.localizepilot-console .lp-migration-source__grid {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+.localizepilot-console .lp-migration-source__grid h3 {
+	margin: 0 0 8px;
+}
+
+.localizepilot-console .lp-migration-source__grid .lp-table-wrap {
+	border: 1px solid var(--lp-border);
+	border-radius: var(--lp-radius-md);
+}
+
+.localizepilot-console .lp-migration-source__grid .lp-field__hint {
+	display: block;
+	margin-top: 8px;
+}
+
+.localizepilot-console .lp-migration-lang {
+	margin-inline-end: 8px;
+	color: var(--lp-ink);
+}
+
+.localizepilot-console .lp-migration-source__form {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	padding-top: 20px;
+	border-top: 1px solid var(--lp-border);
+}
+
+.localizepilot-console .lp-migration-option {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	cursor: pointer;
+}
+
+.localizepilot-console .lp-migration-option .lp-checkbox {
+	padding-top: 2px;
+}
+
+.localizepilot-console .lp-migration-option > span:last-child {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	max-width: 72ch;
+}
+
+.localizepilot-console .lp-migration-option strong {
+	color: var(--lp-ink);
+	font-size: var(--lp-text-md);
+	font-weight: 500;
+}
+
+.localizepilot-console .lp-migration-option span span {
+	color: var(--lp-ink-3);
+	font-size: var(--lp-text-sm);
+	line-height: 18px;
+}
+
+.localizepilot-console .lp-migration-source__actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 16px;
+	margin-top: 4px;
+}
+
+/* One class above .lp-app ul (0,2,1), which would otherwise win. */
+.localizepilot-console .lp-app .lp-migration-promises__list {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	max-width: 80ch;
+	margin: 0;
+	padding-inline-start: 18px;
+	list-style: disc;
+	color: var(--lp-ink-2);
+	font-size: var(--lp-text-md);
+	line-height: 20px;
+}
+
+/* A run in progress (parts/migration-progress) */
+
+.localizepilot-console .lp-migration-run__status {
+	margin-top: 6px;
+}
+
+.localizepilot-console .lp-migration-run__body {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+.localizepilot-console .lp-migration-run__groups,
+.localizepilot-console .lp-migration-run__note {
+	margin: 0;
+	color: var(--lp-ink-3);
+	font-size: var(--lp-text-sm);
+	font-variant-numeric: tabular-nums;
+}
+
+/* Six tiles: three across makes two even rows, two across on narrow screens. */
+.localizepilot-console .lp-migration-run__counts {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 8px;
+	margin: 0;
+}
+
+@media (max-width: 720px) {
+	.localizepilot-console .lp-migration-run__counts {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+.localizepilot-console .lp-migration-run__counts > div {
+	display: flex;
+	flex-direction: column-reverse;
+	gap: 2px;
+	padding: 10px 12px;
+	border: 1px solid var(--lp-border);
+	border-radius: var(--lp-radius);
+}
+
+.localizepilot-console .lp-migration-run__counts dt {
+	color: var(--lp-ink-3);
+	font-size: var(--lp-text-sm);
+	line-height: 16px;
+}
+
+.localizepilot-console .lp-migration-run__counts dd {
+	margin: 0;
+	color: var(--lp-ink);
+	font-size: 20px;
+	font-weight: 600;
+	line-height: 26px;
+	font-variant-numeric: tabular-nums;
+}
+
+.localizepilot-console .lp-migration-run__counts .is-zero dd {
+	color: var(--lp-ink-3);
+	font-weight: 500;
+}
+
+.localizepilot-console .lp-migration-run__counts .is-failed {
+	border-color: rgba(240, 68, 56, 0.3);
+	background: var(--lp-danger-wash);
+}
+
+.localizepilot-console .lp-migration-run__counts .is-failed dd {
+	color: var(--lp-danger-soft);
+}
+
+.localizepilot-console .lp-migration-run__errors summary {
+	cursor: pointer;
+	color: var(--lp-danger-soft);
+	font-size: var(--lp-text-sm);
+	font-weight: 500;
+}
+
+/* One class above .lp-app ul (0,2,1). */
+.localizepilot-console .lp-app .lp-migration-run__errors ul {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	max-height: 220px;
+	margin: 10px 0 0;
+	padding: 0;
+	overflow-y: auto;
+	list-style: none;
+}
+
+.localizepilot-console .lp-migration-run__errors li {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 8px 10px;
+	border-radius: var(--lp-radius-md);
+	background: var(--lp-danger-wash);
+	font-size: var(--lp-text-sm);
+}
+
+.localizepilot-console .lp-migration-run__errors li strong {
+	color: var(--lp-ink);
+	font-weight: 500;
+	overflow-wrap: anywhere;
+}
+
+.localizepilot-console .lp-migration-run__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	padding: 14px 20px;
+	border-top: 1px solid var(--lp-border);
+}
+
+.localizepilot-console .lp-migration-run__notice {
+	margin: 0;
+	color: var(--lp-danger-soft);
+	font-size: var(--lp-text-sm);
+}
