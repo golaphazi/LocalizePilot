@@ -2,18 +2,20 @@
 
 namespace LocalizePilot;
 
-defined( 'ABSPATH' ) || exit;
+defined('ABSPATH') || exit;
 
-final class Provider_Catalog {
+final class Provider_Catalog
+{
 	/**
 	 * @return array<string,array<string,mixed>>
 	 */
-	public static function all(): array {
+	public static function all(): array
+	{
 		return array(
 			'translatex' => array(
 				'label'         => 'TranslateX',
 				'mark'          => 'TX',
-				'description'   => __( 'Dedicated text batch translation API', 'localizepilot' ),
+				'description'   => __('Dedicated text batch translation API', 'localizepilot'),
 				'key_field'     => 'translatex_api_key',
 				'model_field'   => '',
 				'default_model' => '',
@@ -22,7 +24,7 @@ final class Provider_Catalog {
 			'google' => array(
 				'label'         => 'Google Translation',
 				'mark'          => 'GT',
-				'description'   => __( 'Google Cloud Translation Basic v2', 'localizepilot' ),
+				'description'   => __('Google Cloud Translation Basic v2', 'localizepilot'),
 				'key_field'     => 'google_api_key',
 				'model_field'   => '',
 				'default_model' => '',
@@ -31,7 +33,7 @@ final class Provider_Catalog {
 			'openai' => array(
 				'label'         => 'OpenAI',
 				'mark'          => 'AI',
-				'description'   => __( 'ChatGPT models through the OpenAI API', 'localizepilot' ),
+				'description'   => __('ChatGPT models through the OpenAI API', 'localizepilot'),
 				'key_field'     => 'openai_api_key',
 				'model_field'   => 'openai_model',
 				'default_model' => 'gpt-4.1-mini',
@@ -41,7 +43,7 @@ final class Provider_Catalog {
 			'gemini' => array(
 				'label'         => 'Google Gemini',
 				'mark'          => 'GM',
-				'description'   => __( 'Gemini generative language models', 'localizepilot' ),
+				'description'   => __('Gemini generative language models', 'localizepilot'),
 				'key_field'     => 'gemini_api_key',
 				'model_field'   => 'gemini_model',
 				'default_model' => 'gemini-3.6-flash',
@@ -50,7 +52,7 @@ final class Provider_Catalog {
 			'anthropic' => array(
 				'label'         => 'Anthropic Claude',
 				'mark'          => 'CL',
-				'description'   => __( 'Claude multilingual models', 'localizepilot' ),
+				'description'   => __('Claude multilingual models', 'localizepilot'),
 				'key_field'     => 'anthropic_api_key',
 				'model_field'   => 'anthropic_model',
 				'default_model' => 'claude-haiku-4-5',
@@ -59,7 +61,7 @@ final class Provider_Catalog {
 			'kimi' => array(
 				'label'         => 'Kimi',
 				'mark'          => 'KM',
-				'description'   => __( 'Moonshot AI Kimi models', 'localizepilot' ),
+				'description'   => __('Moonshot AI Kimi models', 'localizepilot'),
 				'key_field'     => 'kimi_api_key',
 				'model_field'   => 'kimi_model',
 				'default_model' => 'kimi-k2.5',
@@ -69,7 +71,7 @@ final class Provider_Catalog {
 			'deepseek' => array(
 				'label'         => 'DeepSeek',
 				'mark'          => 'DS',
-				'description'   => __( 'DeepSeek multilingual language models', 'localizepilot' ),
+				'description'   => __('DeepSeek multilingual language models', 'localizepilot'),
 				'key_field'     => 'deepseek_api_key',
 				'model_field'   => 'deepseek_model',
 				'default_model' => 'deepseek-v4-flash',
@@ -79,7 +81,7 @@ final class Provider_Catalog {
 			'mistral' => array(
 				'label'         => 'Mistral AI',
 				'mark'          => 'MI',
-				'description'   => __( 'Mistral multilingual chat models', 'localizepilot' ),
+				'description'   => __('Mistral multilingual chat models', 'localizepilot'),
 				'key_field'     => 'mistral_api_key',
 				'model_field'   => 'mistral_model',
 				'default_model' => 'mistral-small-latest',
@@ -87,9 +89,9 @@ final class Provider_Catalog {
 				'endpoint'      => 'https://api.mistral.ai/v1/chat/completions',
 			),
 			'groq' => array(
-				'label'         => 'Groq',
+				'label'         => 'Grok',
 				'mark'          => 'GQ',
-				'description'   => __( 'Fast OpenAI-compatible model inference', 'localizepilot' ),
+				'description'   => __('Fast OpenAI-compatible model inference', 'localizepilot'),
 				'key_field'     => 'groq_api_key',
 				'model_field'   => 'groq_model',
 				'default_model' => 'openai/gpt-oss-120b',
@@ -99,7 +101,7 @@ final class Provider_Catalog {
 			'openrouter' => array(
 				'label'         => 'OpenRouter',
 				'mark'          => 'OR',
-				'description'   => __( 'Use many popular AI models through one API', 'localizepilot' ),
+				'description'   => __('Use many popular AI models through one API', 'localizepilot'),
 				'key_field'     => 'openrouter_api_key',
 				'model_field'   => 'openrouter_model',
 				'default_model' => 'openai/gpt-4.1-mini',
@@ -109,31 +111,37 @@ final class Provider_Catalog {
 		);
 	}
 
-	public static function exists( string $provider ): bool {
-		return isset( self::all()[ sanitize_key( $provider ) ] );
+	public static function exists(string $provider): bool
+	{
+		return isset(self::all()[sanitize_key($provider)]);
 	}
 
 	/** @return array<string,mixed> */
-	public static function get( string $provider ): array {
+	public static function get(string $provider): array
+	{
 		$providers = self::all();
-		$provider  = sanitize_key( $provider );
-		return $providers[ $provider ] ?? $providers['translatex'];
+		$provider  = sanitize_key($provider);
+		return $providers[$provider] ?? $providers['translatex'];
 	}
 
-	public static function label( string $provider ): string {
-		$config = self::get( $provider );
+	public static function label(string $provider): string
+	{
+		$config = self::get($provider);
 		return (string) $config['label'];
 	}
 
-	public static function is_ai( string $provider ): bool {
-		return 'ai' === (string) ( self::get( $provider )['kind'] ?? '' );
+	public static function is_ai(string $provider): bool
+	{
+		return 'ai' === (string) (self::get($provider)['kind'] ?? '');
 	}
 
-	public static function key_field( string $provider ): string {
-		return (string) ( self::get( $provider )['key_field'] ?? '' );
+	public static function key_field(string $provider): string
+	{
+		return (string) (self::get($provider)['key_field'] ?? '');
 	}
 
-	public static function model_field( string $provider ): string {
-		return (string) ( self::get( $provider )['model_field'] ?? '' );
+	public static function model_field(string $provider): string
+	{
+		return (string) (self::get($provider)['model_field'] ?? '');
 	}
 }

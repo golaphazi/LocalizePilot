@@ -42,7 +42,7 @@ LocalizePilot supports multiple translation and AI providers:
 * Kimi
 * DeepSeek
 * Mistral AI
-* Groq
+* Grok
 * OpenRouter
 
 Administrators can configure the selected provider, test the connection, set an optional fallback provider, and control daily automatic translation usage.
@@ -221,7 +221,7 @@ This allows multilingual WordPress sites to provide appropriate language directi
 * Automatic WordPress translation
 * AI translation with multiple providers
 * TranslateX and Google Cloud Translation support
-* OpenAI, Gemini, Claude, Kimi, DeepSeek, Mistral, Groq, and OpenRouter support
+* OpenAI, Gemini, Claude, Kimi, DeepSeek, Mistral, Grok, and OpenRouter support
 * AI translation style and instruction controls
 * Optional fallback translation provider
 * Configurable daily automatic translation limit
@@ -273,7 +273,7 @@ Yes. LocalizePilot can generate automatic translations using the translation or 
 
 = Which translation and AI providers are supported? =
 
-LocalizePilot supports TranslateX, Google Cloud Translation, OpenAI, Google Gemini, Anthropic Claude, Kimi, DeepSeek, Mistral AI, Groq, and OpenRouter.
+LocalizePilot supports TranslateX, Google Cloud Translation, OpenAI, Google Gemini, Anthropic Claude, Kimi, DeepSeek, Mistral AI, Grok, and OpenRouter.
 
 Each provider requires its own configuration and may have separate pricing, quotas, terms, availability, and privacy practices.
 
@@ -376,7 +376,7 @@ Review important legal, medical, financial, product, technical, and marketing co
 == Screenshots ==
 
 1. LocalizePilot Dashboard & API with translation status, provider selection, API usage, fallback settings, and AI translation controls.
-2. Choose from translation and AI providers including TranslateX, Google Cloud Translation, OpenAI, Gemini, Claude, Kimi, DeepSeek, Mistral, Groq, and OpenRouter.
+2. Choose from translation and AI providers including TranslateX, Google Cloud Translation, OpenAI, Gemini, Claude, Kimi, DeepSeek, Mistral, Grok, and OpenRouter.
 3. Configure available languages and preview same-page language-prefixed URLs.
 4. Manage translation rules and Gutenberg workflow statuses including Automatic, Edited, Reviewed, and Needs Update.
 5. Edit translated WordPress content and language-specific images or media in Gutenberg.
@@ -440,7 +440,7 @@ Each provider controls its own billing, retention, model training, quotas, regio
 * Terms: https://legal.mistral.ai/terms/commercial-terms-of-service
 * Privacy: https://legal.mistral.ai/terms/privacy-policy
 
-= Groq =
+= Grok =
 
 * Documentation: https://console.groq.com/docs
 * Terms: https://console.groq.com/docs/legal/services-agreement
