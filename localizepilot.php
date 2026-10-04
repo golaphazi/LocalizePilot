@@ -38,8 +38,11 @@ unset( $localizepilot_headers );
  *   3  Adds Translation_Service (translate one post from code) and
  *      Post_Types with the localizepilot_translatable_post_types filter;
  *      switcher layouts and placements (localizepilot_switcher_styles,
- *      _render, _placements, _inject); and localizepilot_cache_history_items
- *      for narrowing the cache history. Additive again.
+ *      _render, _placements, _inject); localizepilot_cache_history_items for
+ *      narrowing the cache history; and page builders, with
+ *      localizepilot_builders for a new one and
+ *      localizepilot_builder_text_keys for a widget's own text settings.
+ *      Additive again.
  */
 define( 'LOCALIZEPILOT_API', 3 );
 
