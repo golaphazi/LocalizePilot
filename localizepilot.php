@@ -1,9 +1,10 @@
 <?php
+
 /**
  * Plugin Name: LocalizePilot – Multilingual Content & Media
  * Plugin URL: https://localizepilot.com/
  * Description: Create multilingual WordPress content, edit translations in Gutenberg, localize media, add language switchers, and cache translated HTML.
- * Version: 1.0.5
+ * Version: 1.0.6
  * Author: Golaphazi
  * Author URI: https://github.com/golaphazi/
  * Text Domain: localizepilot
@@ -13,16 +14,16 @@
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  */
 
-defined( 'ABSPATH' ) || exit;
+defined('ABSPATH') || exit;
 
 /*
  * Read from the header above rather than repeated, so the two cannot drift.
  * They already had: a release bumped in one place and not the other ships
  * asset URLs cache-busted with the wrong version.
  */
-$localizepilot_headers = get_file_data( __FILE__, array( 'version' => 'Version' ), 'plugin' );
-define( 'LOCALIZEPILOT_VERSION', (string) $localizepilot_headers['version'] );
-unset( $localizepilot_headers );
+$localizepilot_headers = get_file_data(__FILE__, array('version' => 'Version'), 'plugin');
+define('LOCALIZEPILOT_VERSION', (string) $localizepilot_headers['version']);
+unset($localizepilot_headers);
 
 /*
  * The add-on API version — see includes/class-addons.php.
@@ -43,12 +44,19 @@ unset( $localizepilot_headers );
  *      localizepilot_builders for a new one and
  *      localizepilot_builder_text_keys for a widget's own text settings.
  *      Additive again.
+ *   4  Adds localizepilot_console_icon_roots, so a screen contributed by an
+ *      add-on can ship its own navigation icon; localizepilot_console_groups,
+ *      so it can also name the sidebar section that screen sits in; and
+ *      Plugin::router(), the only way to ask what language the current
+ *      request is — the router strips the prefix from REQUEST_URI as
+ *      WordPress parses, so a Router built afterwards finds nothing to
+ *      detect. Additive: an add-on built for 3 still registers.
  */
-define( 'LOCALIZEPILOT_API', 3 );
+define('LOCALIZEPILOT_API', 4);
 
-define( 'LOCALIZEPILOT_FILE', __FILE__ );
-define( 'LOCALIZEPILOT_PATH', plugin_dir_path( __FILE__ ) );
-define( 'LOCALIZEPILOT_URL', plugin_dir_url( __FILE__ ) );
+define('LOCALIZEPILOT_FILE', __FILE__);
+define('LOCALIZEPILOT_PATH', plugin_dir_path(__FILE__));
+define('LOCALIZEPILOT_URL', plugin_dir_url(__FILE__));
 
 
 /**
@@ -59,18 +67,18 @@ define( 'LOCALIZEPILOT_URL', plugin_dir_url( __FILE__ ) );
  * convention already used by the classes in includes/.
  */
 spl_autoload_register(
-	static function ( string $class ): void {
-		if ( 0 !== strpos( $class, 'LocalizePilot\\' ) ) {
+	static function (string $class): void {
+		if (0 !== strpos($class, 'LocalizePilot\\')) {
 			return;
 		}
 
-		$parts = explode( '\\', substr( $class, strlen( 'LocalizePilot\\' ) ) );
-		$name  = array_pop( $parts );
+		$parts = explode('\\', substr($class, strlen('LocalizePilot\\')));
+		$name  = array_pop($parts);
 		$file  = LOCALIZEPILOT_PATH . 'includes/'
-			. ( $parts ? implode( '/', $parts ) . '/' : '' )
-			. 'class-' . strtolower( str_replace( '_', '-', $name ) ) . '.php';
+			. ($parts ? implode('/', $parts) . '/' : '')
+			. 'class-' . strtolower(str_replace('_', '-', $name)) . '.php';
 
-		if ( is_readable( $file ) ) {
+		if (is_readable($file)) {
 			require_once $file;
 		}
 	}
@@ -104,8 +112,8 @@ require_once LOCALIZEPILOT_PATH . 'includes/class-translation-manager.php';
 require_once LOCALIZEPILOT_PATH . 'includes/class-settings.php';
 require_once LOCALIZEPILOT_PATH . 'includes/class-plugin.php';
 
-register_activation_hook( __FILE__, array( 'LocalizePilot\\Plugin', 'activate' ) );
-register_deactivation_hook( __FILE__, array( 'LocalizePilot\\Plugin', 'deactivate' ) );
+register_activation_hook(__FILE__, array('LocalizePilot\\Plugin', 'activate'));
+register_deactivation_hook(__FILE__, array('LocalizePilot\\Plugin', 'deactivate'));
 
 LocalizePilot\Plugin::instance()->boot();
 LocalizePilot\Admin\Admin::instance()->hooks();

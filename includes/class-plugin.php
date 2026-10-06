@@ -286,6 +286,19 @@ final class Plugin {
 	 * The translation manager, for code that needs to act on translations
 	 * rather than read settings — Translation_Service, chiefly.
 	 */
+	/**
+	 * The router, for code that needs to know what language this request is.
+	 *
+	 * This one instance and no other: the router strips the language prefix
+	 * from REQUEST_URI as WordPress parses the request, so a second Router
+	 * built later reads a URL with nothing left to detect and reports the
+	 * source language for every page on the site. Anything asking "what
+	 * language is this?" has to ask the instance that did the detecting.
+	 */
+	public function router(): Router {
+		return $this->router;
+	}
+
 	public function translations(): Translation_Manager {
 		return $this->translations;
 	}
