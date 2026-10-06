@@ -65,6 +65,46 @@ final class Template {
 	}
 
 	/**
+	 * Directories searched for console icons, in order.
+	 *
+	 * The same shape as roots() above and for the same reason: a screen
+	 * contributed by an add-on needs a navigation icon, and until this existed
+	 * the only place icon() would look was LocalizePilot's own directory — so
+	 * such a screen appeared in the sidebar with a blank space where every
+	 * other item has a glyph.
+	 *
+	 * @return array<int,string> Absolute directory paths, each trailing-slashed.
+	 */
+	public static function icon_roots(): array {
+		/**
+		 * Filter the console icon search path.
+		 *
+		 * Part of add-on API 4. Each directory holds flat .svg files named as
+		 * icon() is called — "nav-order-emails" resolves to
+		 * nav-order-emails.svg — and LocalizePilot's own directory is searched
+		 * last, so an add-on may also replace an icon the console ships.
+		 *
+		 * @param array<int,string> $roots Absolute directory paths.
+		 */
+		$roots = (array) apply_filters( 'localizepilot_console_icon_roots', array() );
+
+		$roots[] = LOCALIZEPILOT_PATH . 'assets/console/icons/';
+
+		return array_values(
+			array_unique(
+				array_filter(
+					array_map(
+						static function ( $root ): string {
+							return is_string( $root ) ? trailingslashit( $root ) : '';
+						},
+						$roots
+					)
+				)
+			)
+		);
+	}
+
+	/**
 	 * Absolute path for a template name such as "layout/sidebar".
 	 *
 	 * Returns the first root that actually has the file. When no root does,
@@ -145,10 +185,16 @@ final class Template {
 		}
 
 		if ( ! isset( $cache[ $name ] ) ) {
-			$file           = LOCALIZEPILOT_PATH . 'assets/console/icons/' . $name . '.svg';
-			$cache[ $name ] = is_readable( $file )
-				? self::sanitize_svg( (string) file_get_contents( $file ) ) // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading a bundled plugin asset.
-				: '';
+			$cache[ $name ] = '';
+
+			foreach ( self::icon_roots() as $root ) {
+				$file = $root . $name . '.svg';
+
+				if ( is_readable( $file ) ) {
+					$cache[ $name ] = self::sanitize_svg( (string) file_get_contents( $file ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading a bundled plugin asset.
+					break;
+				}
+			}
 		}
 
 		if ( '' === $cache[ $name ] ) {

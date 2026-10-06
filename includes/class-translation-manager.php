@@ -32,6 +32,7 @@ final class Translation_Manager
 	{
 		add_action('init', array($this, 'register_post_type'), 5);
 		add_action('init', array($this, 'migrate_translation_parents'), 20);
+		add_action('init', array($this, 'enable_builder_editing'), 20);
 		// The generic hook, because which types are translatable is a setting
 		// that is not known yet when hooks are added.
 		add_action('add_meta_boxes', array($this, 'maybe_add_source_meta_box'), 10, 2);
@@ -46,6 +47,7 @@ final class Translation_Manager
 		add_filter('get_the_excerpt', array($this, 'filter_excerpt'), 1, 2);
 		add_filter('document_title_parts', array($this, 'filter_document_title'));
 		add_filter('get_post_metadata', array($this, 'filter_post_metadata'), 10, 5);
+		add_filter('update_post_metadata', array($this, 'redirect_builder_cache'), 10, 5);
 
 		add_filter('manage_' . self::POST_TYPE . '_posts_columns', array($this, 'translation_columns'));
 		add_action('manage_' . self::POST_TYPE . '_posts_custom_column', array($this, 'translation_column_content'), 10, 2);
@@ -103,6 +105,17 @@ final class Translation_Manager
 	 * This removes repeated post-meta queries while preserving the legacy source
 	 * ID metadata used by existing installations and REST responses.
 	 */
+	/**
+	 * Let every installed page builder edit translation records, so each
+	 * language can be opened in the builder the source was built with.
+	 */
+	public function enable_builder_editing(): void
+	{
+		foreach (Builders\Builders::available() as $builder) {
+			$builder->enable_editing(self::POST_TYPE);
+		}
+	}
+
 	public function migrate_translation_parents(): void
 	{
 		if (get_option(self::PARENT_MIGRATION_OPTION, false)) {
@@ -240,6 +253,24 @@ final class Translation_Manager
 				$status = isset($statuses[$status]) ? $status : 'automatic';
 				echo ('<span class="nt-translation-status nt-status-' . esc_attr($status) . '">' . esc_html($statuses[$status]) . '</span>');
 				echo ('<a class="button button-small" href="' . esc_url(get_edit_post_link($translation->ID, '')) . '">' . esc_html__('Edit', 'localizepilot') . '</a>');
+
+				// A page built with Elementor or Bricks is edited there, in
+				// this language, the same way the source is.
+				$builder = Builders\Builders::for_post($post);
+
+				if ($builder && '' !== $builder->edit_url($translation->ID)) {
+					printf(
+						'<a class="button button-small" href="%1$s">%2$s</a>',
+						esc_url($builder->edit_url($translation->ID)),
+						esc_html(
+							sprintf(
+								/* translators: %s: page builder name, such as Elementor. */
+								__('Edit with %s', 'localizepilot'),
+								$builder->label()
+							)
+						)
+					);
+				}
 			} else {
 				$url = wp_nonce_url(
 					add_query_arg(
@@ -531,6 +562,19 @@ final class Translation_Manager
 			? $translator->translate_editor_content($source->post_content, $language)
 			: '';
 
+		/*
+		 * A page built with Elementor or Bricks keeps its words in post meta,
+		 * not in post_content, so there is a second tree to translate. Done
+		 * before anything is saved: a provider failing halfway would otherwise
+		 * leave a translation holding half a page.
+		 */
+		$builder         = Builders\Builders::for_post($source);
+		$builder_payload = null;
+
+		if ($builder) {
+			$builder_payload = (new Builders\Translator($client, $translator))->prepare($builder, $source, $language);
+		}
+
 		$post_data = array(
 			'ID'           => $translation_id,
 			'post_type'    => self::POST_TYPE,
@@ -555,6 +599,10 @@ final class Translation_Manager
 		update_post_meta($saved_id, self::META_STATUS, 'automatic');
 		update_post_meta($saved_id, self::META_SOURCE_HASH, $this->source_hash($source));
 		update_post_meta($saved_id, self::META_PROVIDER, $client->provider());
+
+		if ($builder && null !== $builder_payload) {
+			(new Builders\Translator($client, $translator))->store($builder, (int) $saved_id, $builder_payload);
+		}
 
 		if (! $translation_id) {
 			$thumbnail_id = get_post_thumbnail_id($source_id);
@@ -836,18 +884,92 @@ final class Translation_Manager
 
 	public function filter_post_metadata($value, int $object_id, string $meta_key, bool $single, string $meta_type)
 	{
-		if ('post' !== $meta_type || '_thumbnail_id' !== $meta_key || is_admin() || ! $this->router->is_translated_request() || $object_id !== get_queried_object_id()) {
+		if ('post' !== $meta_type || is_admin() || ! $this->router->is_translated_request() || $object_id !== get_queried_object_id()) {
 			return $value;
 		}
+
+		$is_thumbnail = '_thumbnail_id' === $meta_key;
+		$is_builder   = in_array($meta_key, Builders\Builders::content_keys(), true);
+		$is_rendered  = in_array($meta_key, Builders\Builders::cache_keys(), true);
+
+		if (! $is_thumbnail && ! $is_builder && ! $is_rendered) {
+			return $value;
+		}
+
 		$translation = $this->get_translation($object_id, $this->router->current_language());
 		if (! $translation) {
 			return $value;
 		}
+
+		/*
+		 * Rendered output belongs to one language. The translation's copy is
+		 * the only acceptable answer — including when it has none, which has
+		 * to read as a miss rather than falling through to the source's, or
+		 * the page comes back in the source language.
+		 */
+		if ($is_rendered) {
+			$cached = get_post_meta($translation->ID, $meta_key, true);
+
+			return $single ? $cached : array($cached);
+		}
+
+		/*
+		 * The page a builder draws comes from the translation, not the source.
+		 * Elementor and Bricks both read their tree with get_post_meta, so
+		 * this is all it takes for them to render the translated page without
+		 * knowing that languages exist. The source's own content is left alone
+		 * when the translation has none.
+		 */
+		if ($is_builder) {
+			$content = get_post_meta($translation->ID, $meta_key, true);
+
+			if ('' === $content || null === $content || array() === $content) {
+				return $value;
+			}
+
+			return $single ? $content : array($content);
+		}
+
 		$thumbnail_id = get_post_thumbnail_id($translation->ID);
 		if (! $thumbnail_id) {
 			return $value;
 		}
 		return $single ? $thumbnail_id : array($thumbnail_id);
+	}
+
+	/**
+	 * Send a builder's rendered-output cache to the translation.
+	 *
+	 * Elementor writes the HTML it just rendered back onto the post being
+	 * viewed. On a translated request that post is the source, so without this
+	 * a German page view would leave German HTML cached against the English
+	 * page, and the next English visitor would read it.
+	 *
+	 * @param mixed  $check      Null unless another filter already answered.
+	 * @param int    $object_id  Post ID.
+	 * @param string $meta_key   Meta key.
+	 * @param mixed  $meta_value Value.
+	 * @return mixed Null to carry on, true to say it is handled.
+	 */
+	public function redirect_builder_cache($check, int $object_id, string $meta_key, $meta_value)
+	{
+		if (null !== $check || is_admin() || ! $this->router->is_translated_request() || $object_id !== get_queried_object_id()) {
+			return $check;
+		}
+
+		if (! in_array($meta_key, Builders\Builders::cache_keys(), true)) {
+			return $check;
+		}
+
+		$translation = $this->get_translation($object_id, $this->router->current_language());
+
+		if (! $translation) {
+			return $check;
+		}
+
+		update_post_meta($translation->ID, $meta_key, $meta_value);
+
+		return true;
 	}
 
 	public function protected_strings_for_current_request(): array
@@ -899,6 +1021,15 @@ final class Translation_Manager
 					}
 				}
 			}
+		}
+
+		/*
+		 * Words held in a builder's content are already translated. Without
+		 * this the whole-page pass would send them to the provider again on
+		 * every uncached view, and pay to turn German into German.
+		 */
+		foreach (Builders\Builders::texts($translation->ID) as $text) {
+			$values[$text] = true;
 		}
 
 		return array_keys($values);

@@ -25,6 +25,7 @@
 
 namespace LocalizePilot\Migration;
 
+use LocalizePilot\Builders\Builders;
 use LocalizePilot\Language_Catalog;
 use LocalizePilot\Plugin;
 use LocalizePilot\Post_Types;
@@ -419,7 +420,7 @@ final class Migrator {
 			}
 
 			try {
-				$manager->import_translation(
+				$record_id = $manager->import_translation(
 					$original->ID,
 					$language,
 					array(
@@ -437,6 +438,14 @@ final class Migrator {
 				self::fail( $run, $original, $language, wp_strip_all_tags( $exception->getMessage() ) );
 				continue;
 			}
+
+			/*
+			 * A page the other plugin built with Elementor or Bricks keeps its
+			 * words in meta, so copying the post alone would bring across an
+			 * empty page. The translation someone already made is copied as it
+			 * is — nothing is sent to a provider.
+			 */
+			Builders::copy( $translated->ID, $record_id );
 
 			++$run['created'];
 

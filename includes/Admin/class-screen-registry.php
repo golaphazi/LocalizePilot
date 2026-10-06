@@ -22,12 +22,50 @@ final class Screen_Registry {
 	 * @return array<string,string>
 	 */
 	public static function groups(): array {
-		return array(
+		$groups = array(
 			''              => '',
 			'workspace'     => __( 'Workspace', 'localizepilot' ),
 			'insights'      => __( 'Insights', 'localizepilot' ),
 			'configuration' => __( 'Configuration', 'localizepilot' ),
 		);
+
+		/**
+		 * Filter the console sidebar's sections.
+		 *
+		 * Part of add-on API 4, and the companion to
+		 * localizepilot_console_screens: a screen can already be contributed
+		 * by an add-on, but it could only ever join a section LocalizePilot
+		 * had already named. A section nobody names renders without a heading.
+		 *
+		 * The array is ordered, and the order is the sidebar's order, so an
+		 * add-on placing a section between two of these rebuilds the array
+		 * rather than appending to it. A section with no screens in it is
+		 * dropped before rendering, so adding one costs nothing until
+		 * something is in it.
+		 *
+		 * @param array<string,string> $groups Section key => heading.
+		 */
+		$filtered = (array) apply_filters( 'localizepilot_console_groups', $groups );
+
+		/*
+		 * The ungrouped section leads, whatever a filter did with it: those
+		 * are the items that sit directly under the logo, and a filter that
+		 * dropped the key would have grouped() rebuild it at the far end —
+		 * moving Overview to the bottom of the sidebar.
+		 */
+		$ordered = array( '' => (string) ( $filtered[''] ?? '' ) );
+
+		foreach ( $filtered as $key => $label ) {
+			$key = sanitize_key( (string) $key );
+
+			if ( '' === $key ) {
+				continue;
+			}
+
+			$ordered[ $key ] = is_scalar( $label ) ? (string) $label : '';
+		}
+
+		return $ordered;
 	}
 
 	/**
