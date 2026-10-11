@@ -8,11 +8,15 @@ Stable tag: 1.0.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-WordPress translation plugin to translate pages, posts & WooCommerce using DeepSeek, OpenAI, Google and more. Full Gutenberg, Elementor, Bricks & multilingual SEO support.
+Translate WordPress pages, posts & WooCommerce with DeepSeek, OpenAI, Google & more. Full support for Gutenberg, Elementor, Bricks & multilingual SEO.
 
 == Description ==
 
+AI multilingual WordPress translation plugin. Auto-translate posts, pages, WooCommerce; edit per-language content, images, and URLs. SEO-ready with hreflang.
+
 [LocalizePilot](https://localizepilot.com/) is a powerful multilingual WordPress translation plugin designed to automatically translate posts, pages, and WooCommerce products while managing each language version directly inside WordPress.
+
+[youtube https://www.youtube.com/watch?v=Bt-qGxbeO5I]
 
 Choose a translation or AI provider, generate a language version, and edit the translated content directly in Gutenberg, Elementor, Bricks. Review and customize text, blocks, links, images, featured media, and other supported content without changing the original page.
 
@@ -50,6 +54,8 @@ Administrators can configure the selected provider, test the connection, set an 
 For supported AI providers, LocalizePilot includes controls for translation style, temperature, maximum output tokens, and custom translation instructions.
 
 Automatic and AI-generated translations remain editable after generation.
+
+[youtube https://www.youtube.com/watch?v=5IazRrtuqpA]
 
 = Edit Translations in Gutenberg Block Editor =
 

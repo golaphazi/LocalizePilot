@@ -1,9 +1,9 @@
 <?php
 
 /**
- * Plugin Name: LocalizePilot – Multilingual Content & Media
+ * Plugin Name: LocalizePilot – AI Translation & Multilingual SEO
  * Plugin URL: https://localizepilot.com/
- * Description: Create multilingual WordPress content, edit translations in Gutenberg, localize media, add language switchers, and cache translated HTML.
+ * Description: Translate WordPress posts, pages, and WooCommerce with AI — edit each language in Gutenberg, Elementor, and Bricks.
  * Version: 1.0.6
  * Author: Golaphazi
  * Author URI: https://github.com/golaphazi/
