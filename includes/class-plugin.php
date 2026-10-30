@@ -41,6 +41,7 @@ final class Plugin {
 			'fallback_provider'        => '',
 			'translatex_api_key'       => '',
 			'google_api_key'           => '',
+			'deepl_api_key'            => '',
 			'openai_api_key'           => '',
 			'openai_model'             => 'gpt-4.1-mini',
 			'gemini_api_key'           => '',

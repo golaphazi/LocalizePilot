@@ -4,7 +4,7 @@ Tags: ai translation, multilingual, translate wordpress, deepl, woocommerce tran
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.6
+Stable tag: 1.0.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -291,7 +291,7 @@ Yes. LocalizePilot can generate automatic translations using the translation or 
 
 = Which translation and AI providers are supported? =
 
-LocalizePilot supports TranslateX, Google Cloud Translation, OpenAI, Google Gemini, Anthropic Claude, Kimi, DeepSeek, Mistral AI, Grok, and OpenRouter.
+LocalizePilot supports TranslateX, Google Cloud Translation, DeepL, OpenAI, Google Gemini, Anthropic Claude, Kimi, DeepSeek, Mistral AI, Grok, and OpenRouter.
 
 Each provider requires its own configuration and may have separate pricing, quotas, terms, availability, and privacy practices.
 
@@ -479,6 +479,10 @@ When analytics is enabled, anonymous visitors receive a random `localizepilot_vi
 Using WordPress's Delete action for the plugin runs `uninstall.php` and removes LocalizePilot settings, usage counters, translation records, analytics events, the analytics table, scheduled cleanup, and generated cache files. Deactivation alone does not delete data.
 
 == Changelog ==
+
+= 1.0.7 =
+* Added DeepL as a translation provider, alongside TranslateX, Google Translation, and the AI providers.
+* The Providers screen now includes a DeepL card with its own API key field. Free and paid DeepL accounts are both supported and detected automatically from the key.
 
 = 1.0.6 =
 * Added translation for pages built with Elementor. A translated Elementor page now keeps its own copy of the layout, so visitors see the page in their language instead of the original.

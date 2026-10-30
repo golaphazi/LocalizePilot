@@ -4,7 +4,7 @@
  * Plugin Name: LocalizePilot – AI Translation & Multilingual SEO
  * Plugin URL: https://localizepilot.com/
  * Description: Translate WordPress posts, pages, and WooCommerce with AI — edit each language in Gutenberg, Elementor, and Bricks.
- * Version: 1.0.6
+ * Version: 1.0.7
  * Author: Golaphazi
  * Author URI: https://github.com/golaphazi/
  * Text Domain: localizepilot
@@ -103,6 +103,7 @@ require_once LOCALIZEPILOT_PATH . 'includes/class-anthropic-client.php';
 require_once LOCALIZEPILOT_PATH . 'includes/class-fallback-client.php';
 require_once LOCALIZEPILOT_PATH . 'includes/class-translatex-client.php';
 require_once LOCALIZEPILOT_PATH . 'includes/class-google-translate-client.php';
+require_once LOCALIZEPILOT_PATH . 'includes/class-deepl-client.php';
 require_once LOCALIZEPILOT_PATH . 'includes/class-client-factory.php';
 require_once LOCALIZEPILOT_PATH . 'includes/class-analytics.php';
 require_once LOCALIZEPILOT_PATH . 'includes/class-file-cache.php';

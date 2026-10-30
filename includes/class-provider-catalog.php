@@ -30,6 +30,15 @@ final class Provider_Catalog
 				'default_model' => '',
 				'kind'          => 'translation',
 			),
+			'deepl' => array(
+				'label'         => 'DeepL',
+				'mark'          => 'DL',
+				'description'   => __('DeepL neural machine translation API', 'localizepilot'),
+				'key_field'     => 'deepl_api_key',
+				'model_field'   => '',
+				'default_model' => '',
+				'kind'          => 'translation',
+			),
 			'openai' => array(
 				'label'         => 'OpenAI',
 				'mark'          => 'AI',

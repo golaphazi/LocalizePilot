@@ -28,6 +28,9 @@ final class Client_Factory {
 			case 'google':
 				$client = new Google_Translate_Client( $settings );
 				break;
+			case 'deepl':
+				$client = new DeepL_Client( $settings );
+				break;
 			case 'gemini':
 				$client = new Gemini_Client( $settings, $provider );
 				break;
